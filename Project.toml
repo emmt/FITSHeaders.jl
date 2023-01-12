@@ -1,0 +1,13 @@
+name = "FITSCards"
+uuid = "74412db6-434d-4bd9-a98b-356cb7d43f10"
+authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
