@@ -7,7 +7,7 @@
 
 A FITS header card associates a keyword (or a name) with a value and a comment
 (both optional). A FITS header card can be efficiently stored as an instance of
-`FITSCard` which can be built by:
+`FITSCard` built by:
 
 ``` julia
 card = FITSCard(key, val, com="")
@@ -32,9 +32,9 @@ card = FITSCard(key => val::Number)
 card = FITSCard(key => str::AbstractString)
 ```
 
-In the second case, the comment is assumed to be empty. In the third case, the
-string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
-`"HISTORY"` and is assumed to be the card value otherwise.
+In the second above example, the comment is assumed to be empty. In the third
+above example, the string `str` is assumed to be the card comment if `key` is
+`"COMMENT"` or `"HISTORY"` and is assumed to be the card value otherwise.
 
 Conversely, `Pair(card)` yields the pair `key => (val, com)`. The `convert` method
 is extended by the `FITSCards` package to perform these conversions.
@@ -45,26 +45,26 @@ comment of a commentary keyword is too long, it shall be split across several
 consecutive cards with the same keyword when writing a FITS file.
 
 
-## Cards properties
+## FITS cards properties
 
 FITS cards have properties:
 
 ``` julia
-card.type    # yields the type of the card: FITS_LOGICAL, FITS_INTEGER, etc.
-card.name    # yields the name of the card
-card.value   # yields the value of the card
-card.comment # yields the comment of the card
+card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
+card.name    # name of card
+card.value   # value of card
+card.comment # comment of card
 ```
 
 Beware that `card.value` does not yield a *type-stable* result. To retrieve the
 card value with a known type, use one of:
 
 ``` julia
-card.logical   # yields the logical value of the card as a Bool
-card.integer   # yields the integer value of the card as an Int
-card.float     # yields the floating-point value of the card as a Float64
-card.complex   # yields the complex value of the card as a Complex{Float64}
-card.string    # yields the string value of the card as a String
+card.logical   # value of card as a Bool
+card.integer   # value of card as an Int
+card.float     # value of card as a Float64
+card.complex   # value of card as a Complex{Float64}
+card.string    # value of card as a String
 ```
 
 With these properties, conversion is automatically attempted if the actual card
@@ -80,8 +80,8 @@ card nor a card with an undefined value).
 
 Each FITS header card is stored in a FITS file as 80 consecutive bytes from the
 restricted set of ASCII characters from `' '` to `'~'` (hexadecimal codes 0x20
-to 0x7E). Hence Julia strings (encoded in ASCII or in UTF8) can be treated as
-vectors of bytes. The parsing methods provided by the `FITSCards` package
-exploit this to deal with either vectors of bytes (of type
-`AbstractVector{UInt8}`) or with Julia strings (of type `String` or
-`SubString{String}`).
+to 0x7E). Hence Julia strings (whether they are encoded in ASCII or in UTF8)
+can be treated as vectors of bytes. The parsing methods provided by the
+`FITSCards` package exploit this to deal with FITS headers and cards stored as
+either vectors of bytes (of type `AbstractVector{UInt8}`) or as Julia strings
+(of type `String` or `SubString{String}`).

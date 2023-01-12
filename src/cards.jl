@@ -46,19 +46,19 @@ string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 
 FITS cards have properties:
 
-    card.type    # yields the type of the card: FITS_LOGICAL, FITS_INTEGER, etc.
-    card.name    # yields the name of the card
-    card.value   # yields the value of the card
-    card.comment # yields the comment of the card
+    card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
+    card.name    # name of card
+    card.value   # value of card
+    card.comment # comment of card
 
 Beware that `card.value` does not yield a *type-stable* result. To retrieve the
 card value with a known type, use one of:
 
-    card.logical   # yields the logical value of the card as a Bool
-    card.integer   # yields the integer value of the card as an Int
-    card.float     # yields the floating-point value of the card as a Float64
-    card.complex   # yields the complex value of the card as a Complex{Float64}
-    card.string    # yields the string value of the card as a String
+    card.logical   # value of card as a Bool
+    card.integer   # value of card as an Int
+    card.float     # value of card as a Float64
+    card.complex   # value of card as a Complex{Float64}
+    card.string    # value of card as a String
 
 With these properties, conversion is automatically attempted if the actual card
 value is of a different type, throwing an error if the conversion is not
