@@ -8,6 +8,7 @@ header cards.
 module Parser
 
 using ..FITSCards
+using ..FITSCards: FITSInteger, FITSFloat, FITSComplex
 import ..FITSCards: FITSCard, FITSKey, check_short_keyword
 
 using Base: @propagate_inbounds
@@ -257,51 +258,43 @@ for sym in (:logical, :integer, :float, :string, :complex)
     end
 end
 
-@inline function try_parse_logical_value(buf::ByteBuffer,
-                                         rng::AbstractUnitRange{Int})
+function try_parse_logical_value(buf::ByteBuffer,
+                                 rng::AbstractUnitRange{Int})
     i = first(rng)
     last(rng) == i || return nothing
     @boundscheck check_byte_index(buf, i)
     @inbounds b = get_byte(buf, i)
-    return b == UInt8('T') ? true : b == UInt8('F') ? false : nothing
+    return equal(b, 'T') ? true : equal(b, 'F') ? false : nothing
 end
 
-@inline function try_parse_integer_value(buf::ByteBuffer,
-                                         rng::AbstractUnitRange{Int})
+function try_parse_integer_value(buf::ByteBuffer,
+                                 rng::AbstractUnitRange{Int})
     len = length(rng)
     len > 0 || return nothing
     @boundscheck check_byte_index(buf, rng)
     @inbounds begin
+        # Proceed as if the value was negative to avoid overflows, because
+        # abs(typemin(Int)) > typemax(Int).
         i_first, i_last = first(rng), last(rng)
         b = get_byte(buf, i_first)
+        negate = true
+        if equal(b, '-')
+            negate = false
+            i_first += 1
+        elseif equal(b, '+')
+            i_first += 1
+        end
+        i_first ≤ i_last || return nothing # no digits
         val = zero(FITSInteger)
         off = oftype(val, '0')
         ten = oftype(val, 10)
-        any_digits = false
-        # Negative values must be processed specifically because they do not
-        # overflow exactly as positive ones.
-        if equal(b, '-')
-            i_first += 1
-            for i in i_first:i_last
-                b = get_byte(buf, i)
-                is_digit(b) || return nothing
-                any_digits = true
-                val = ten*val - (oftype(val, b) - off)
-                val ≤ zero(val) || return nothing # integer overflow
-            end
-        else
-            if equal(b, '+')
-                i_first += 1
-            end
-            for i in i_first:i_last
-                b = get_byte(buf, i)
-                is_digit(b) || return nothing
-                any_digits = true
-                val = ten*val + (oftype(val, b) - off)
-                val ≥ zero(val) || return nothing # integer overflow
-            end
+        for i in i_first:i_last
+            b = get_byte(buf, i)
+            is_digit(b) || return nothing
+            val = ten*val - (oftype(val, b) - off)
+            val ≤ zero(val) || return nothing # integer overflow
         end
-        return any_digits ? val : nothing
+        return negate ? -val : val
     end
 end
 

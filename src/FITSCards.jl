@@ -147,7 +147,7 @@ the restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
 # NOTE: This function is implemented in parser.jl
 
 include("cards.jl")
-import .Cards: FITSCard
+import .Cards: FITSCard, FITSInteger, FITSFloat, FITSComplex
 
 include("parser.jl")
 

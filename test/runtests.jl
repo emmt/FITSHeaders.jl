@@ -46,6 +46,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         end
     end
     @testset "FITS constants" begin
+        @test FITS_SHORT_KEYWORD_SIZE == 8
         @test FITS_CARD_SIZE == 80
         @test FITS_BLOCK_SIZE == 2880
     end
@@ -59,6 +60,17 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS""         === make_FITSKey("        ")
         @test FITS"END"      === make_FITSKey("END     ")
     end
-end
+    @testset "Parser" begin
+        for val in (zero(Int64), typemin(Int64), typemax(Int64))
+            str = "$val"
+            @test FITSCards.Parser.try_parse_integer_value(str, 1:ncodeunits(str)) == val
+            if val > 0
+                # Add a few leading zeros.
+                str = "000$val"
+                @test FITSCards.Parser.try_parse_integer_value(str, 1:ncodeunits(str)) == val
+            end
+        end
+    end
+ end
 
 end # module
