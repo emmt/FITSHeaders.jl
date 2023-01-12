@@ -12,12 +12,16 @@ export FITSCard
 using ..FITSCards
 import ..FITSCards: FITSCardType
 
+const FITSInteger = Int64
+const FITSFloat   = Float64
+const FITSComplex = Complex{FITSFloat}
+
 const Undefined = Union{Missing,UndefInitializer}
 const EMPTY_STRING = ""
 const UNDEF_LOGICAL = false
-const UNDEF_INTEGER = 0
-const UNDEF_COMPLEX = Complex{Float64}(NaN,NaN)
-const UNDEF_FLOAT = Complex{Float64}(NaN,0.0)
+const UNDEF_INTEGER = zero(FITSInteger)
+const UNDEF_COMPLEX = FITSComplex(NaN,NaN)
+const UNDEF_FLOAT = FITSComplex(NaN,0.0)
 const UNDEF_STRING = EMPTY_STRING
 
 """
@@ -55,9 +59,9 @@ Beware that `card.value` does not yield a *type-stable* result. To retrieve the
 card value with a known type, use one of:
 
     card.logical   # value of card as a Bool
-    card.integer   # value of card as an Int
-    card.float     # value of card as a Float64
-    card.complex   # value of card as a Complex{Float64}
+    card.integer   # value of card as an $FITSInteger
+    card.float     # value of card as a $FITSFloat
+    card.complex   # value of card as a $FITSComplex
     card.string    # value of card as a String
 
 With these properties, conversion is automatically attempted if the actual card
@@ -72,8 +76,8 @@ card nor a card with an undefined value).
 struct FITSCard
     type::FITSCardType
     value_logical::Bool
-    value_integer::Int
-    value_complex::Complex{Float64}
+    value_integer::FITSInteger
+    value_complex::FITSComplex
     value_string::String
     name::String
     comment::String
@@ -126,29 +130,29 @@ get_value(::Type{Bool}, A::FITSCard) = begin
     type == FITS_COMPLEX  ? convert(Bool, get_value_complex(A)) :
     conversion_error(Bool, A)
 end
-get_value(::Type{Int}, A::FITSCard) = begin
+get_value(::Type{FITSInteger}, A::FITSCard) = begin
     type = get_type(A)
     type == FITS_INTEGER  ?              get_value_integer(A)  :
-    type == FITS_LOGICAL  ? convert(Int, get_value_logical(A)) :
-    type == FITS_FLOAT    ? convert(Int, get_value_float(  A)) :
-    type == FITS_COMPLEX  ? convert(Int, get_value_complex(A)) :
-    conversion_error(Int, A)
+    type == FITS_LOGICAL  ? convert(FITSInteger, get_value_logical(A)) :
+    type == FITS_FLOAT    ? convert(FITSInteger, get_value_float(  A)) :
+    type == FITS_COMPLEX  ? convert(FITSInteger, get_value_complex(A)) :
+    conversion_error(FITSInteger, A)
 end
-get_value(::Type{Float64}, A::FITSCard) = begin
+get_value(::Type{FITSFloat}, A::FITSCard) = begin
     type = get_type(A)
-    type == FITS_FLOAT    ?                  get_value_float(  A)  :
-    type == FITS_LOGICAL  ? convert(Float64, get_value_logical(A)) :
-    type == FITS_INTEGER  ? convert(Float64, get_value_integer(A)) :
-    type == FITS_COMPLEX  ? convert(Float64, get_value_complex(A)) :
-    conversion_error(Float64, A)
+    type == FITS_FLOAT    ?                    get_value_float(  A)  :
+    type == FITS_LOGICAL  ? convert(FITSFloat, get_value_logical(A)) :
+    type == FITS_INTEGER  ? convert(FITSFloat, get_value_integer(A)) :
+    type == FITS_COMPLEX  ? convert(FITSFloat, get_value_complex(A)) :
+    conversion_error(FITSFloat, A)
 end
-get_value(::Type{Complex{Float64}}, A::FITSCard) = begin
+get_value(::Type{FITSComplex}, A::FITSCard) = begin
     type = get_type(A)
-    type == FITS_COMPLEX  ?                           get_value_complex(A)  :
-    type == FITS_FLOAT    ? convert(Complex{Float64}, get_value_float(  A)) :
-    type == FITS_LOGICAL  ? convert(Complex{Float64}, get_value_logical(A)) :
-    type == FITS_INTEGER  ? convert(Complex{Float64}, get_value_integer(A)) :
-    conversion_error(Complex{Float64}, A)
+    type == FITS_COMPLEX  ?                      get_value_complex(A)  :
+    type == FITS_FLOAT    ? convert(FITSComplex, get_value_float(  A)) :
+    type == FITS_LOGICAL  ? convert(FITSComplex, get_value_logical(A)) :
+    type == FITS_INTEGER  ? convert(FITSComplex, get_value_integer(A)) :
+    conversion_error(FITSComplex, A)
 end
 get_value(::Type{T}, A::FITSCard) where {T<:Number} = begin
     type = get_type(A)
@@ -171,10 +175,10 @@ Base.getproperty(A::FITSCard, ::Val{:name   }) = get_name(A)
 Base.getproperty(A::FITSCard, ::Val{:value  }) = get_value(A)
 Base.getproperty(A::FITSCard, ::Val{:comment}) = get_comment(A)
 Base.getproperty(A::FITSCard, ::Val{:logical}) = get_value(Bool, A)
-Base.getproperty(A::FITSCard, ::Val{:integer}) = get_value(Int, A)
-Base.getproperty(A::FITSCard, ::Val{:float  }) = get_value(Float64, A)
+Base.getproperty(A::FITSCard, ::Val{:integer}) = get_value(FITSInteger, A)
+Base.getproperty(A::FITSCard, ::Val{:float  }) = get_value(FITSFloat, A)
 Base.getproperty(A::FITSCard, ::Val{:string }) = get_value(String, A)
-Base.getproperty(A::FITSCard, ::Val{:complex}) = get_value(Complex{Float64}, A)
+Base.getproperty(A::FITSCard, ::Val{:complex}) = get_value(FITSComplex, A)
 @noinline Base.setproperty!(A::FITSCard, sym::Symbol, x) =
     error("attempt to set read-only property of FITS card")
 
@@ -193,10 +197,10 @@ Base.isreal(A::FITSCard) =
 Base.valtype(A::FITSCard) = valtype(A.type)
 Base.valtype(type::FITSCardType) =
     type == FITS_LOGICAL ? Bool :
-    type == FITS_INTEGER ? Int :
-    type == FITS_FLOAT   ? Float64 :
+    type == FITS_INTEGER ? FITSInteger :
+    type == FITS_FLOAT   ? FITSFloat :
     type == FITS_STRING  ? String :
-    type == FITS_COMPLEX ? Complex{Float64} :
+    type == FITS_COMPLEX ? FITSComplex :
     type == FITS_COMMENT ? Nothing : Missing
 
 # FIXME: use encode_key

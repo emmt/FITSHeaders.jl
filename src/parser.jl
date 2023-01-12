@@ -266,14 +266,47 @@ end
     return b == UInt8('T') ? true : b == UInt8('F') ? false : nothing
 end
 
-@inline @propagate_inbounds function try_parse_integer_value(buf::ByteBuffer,
-                                                             rng::AbstractUnitRange{Int})
-    str = make_string(buf, rng)
-    return tryparse(Int, str, base=10)
+@inline function try_parse_integer_value(buf::ByteBuffer,
+                                         rng::AbstractUnitRange{Int})
+    len = length(rng)
+    len > 0 || return nothing
+    @boundscheck check_byte_index(buf, rng)
+    @inbounds begin
+        i_first, i_last = first(rng), last(rng)
+        b = get_byte(buf, i_first)
+        val = zero(FITSInteger)
+        off = oftype(val, '0')
+        ten = oftype(val, 10)
+        any_digits = false
+        # Negative values must be processed specifically because they do not
+        # overflow exactly as positive ones.
+        if equal(b, '-')
+            i_first += 1
+            for i in i_first:i_last
+                b = get_byte(buf, i)
+                is_digit(b) || return nothing
+                any_digits = true
+                val = ten*val - (oftype(val, b) - off)
+                val ≤ zero(val) || return nothing # integer overflow
+            end
+        else
+            if equal(b, '+')
+                i_first += 1
+            end
+            for i in i_first:i_last
+                b = get_byte(buf, i)
+                is_digit(b) || return nothing
+                any_digits = true
+                val = ten*val + (oftype(val, b) - off)
+                val ≥ zero(val) || return nothing # integer overflow
+            end
+        end
+        return any_digits ? val : nothing
+    end
 end
 
-@inline function try_parse_float_value(buf::ByteBuffer,
-                                       rng::AbstractUnitRange{Int})
+function try_parse_float_value(buf::ByteBuffer,
+                               rng::AbstractUnitRange{Int})
     len = length(rng)
     len > 0 || return nothing
     @boundscheck check_byte_index(buf, rng)
@@ -284,12 +317,12 @@ end
         b = get_byte(buf, off + i)
         wrk[i] = ifelse(equal(b, 'D')|equal(b, 'd'), oftype(b, 'e'), b)
     end
-    return tryparse(Float64, String(wrk))
+    return tryparse(FITSFloat, String(wrk))
 end
 
-@inline function try_parse_float_value(buf::ByteBuffer,
-                                       rng::AbstractUnitRange{Int},
-                                       wrk::Vector{UInt8})
+function try_parse_float_value(buf::ByteBuffer,
+                               rng::AbstractUnitRange{Int},
+                               wrk::Vector{UInt8})
     len = length(rng)
     len > 0 || return nothing
     @boundscheck check_byte_index(buf, rng)
@@ -305,19 +338,20 @@ end
     obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
     ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
     str = GC.@preserve obj unsafe_string(ptr, len)
-    return tryparse(Float64, str)
+    return tryparse(FITSFloat, str)
 end
 
-@inline function try_parse_string_value(buf::ByteBuffer,
-                                        rng::AbstractUnitRange{Int})
-
+function try_parse_string_value(buf::ByteBuffer,
+                                rng::AbstractUnitRange{Int})
     len = length(rng)
     len > 0 || return nothing
     @boundscheck check_byte_index(buf, rng)
     @inbounds begin
         # Check whether we do have a quoted string.
         i_first, i_last = first(rng), last(rng)
-        (len ≥ 2 && is_quote(get_byte(buf, i_first)) && is_quote(get_byte(buf, i_last))) || return nothing
+        (len ≥ 2 &&
+            is_quote(get_byte(buf, i_first)) &&
+            is_quote(get_byte(buf, i_last))) || return nothing
         i_first += 1 # remove opening quote
         i_last -= 1 # remove closing quote
         # Get rid of trailing spaces.

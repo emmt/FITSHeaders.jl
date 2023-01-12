@@ -61,7 +61,7 @@ card value with a known type, use one of:
 
 ``` julia
 card.logical   # value of card as a Bool
-card.integer   # value of card as an Int
+card.integer   # value of card as an Int64
 card.float     # value of card as a Float64
 card.complex   # value of card as a Complex{Float64}
 card.string    # value of card as a String
