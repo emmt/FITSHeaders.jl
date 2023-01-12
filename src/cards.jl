@@ -86,7 +86,7 @@ struct FITSCard
     FITSCard(key::AbstractString, val::Complex, com::AbstractString=EMPTY_STRING) =
          new(FITS_COMPLEX, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, key, com)
     FITSCard(key::AbstractString, val::AbstractString, com::AbstractString=EMPTY_STRING) =
-        new(FITS_LOGICAL, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, val, key, com)
+        new(FITS_STRING, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, val, key, com)
     FITSCard(key::AbstractString, ::Undefined, com::AbstractString=EMPTY_STRING) =
         new(FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, key, com)
     FITSCard(key::AbstractString, ::Nothing, com::AbstractString=EMPTY_STRING) =

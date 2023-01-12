@@ -279,9 +279,53 @@ end
     return tryparse(Float64, str)
 end
 
-@inline @propagate_inbounds function try_parse_string_value(buf::ByteBuffer,
-                                                            rng::AbstractUnitRange{Int})
-    return nothing # not yet implemented
+@inline function try_parse_string_value(buf::ByteBuffer,
+                                        rng::AbstractUnitRange{Int})
+
+    len = length(rng)
+    len > 0 || return nothing
+    @boundscheck check_byte_index(buf, rng)
+    @inbounds begin
+        # Check whether we do have a quoted string.
+        i_first, i_last = first(rng), last(rng)
+        (len ≥ 2 && is_quote(get_byte(buf, i_first)) && is_quote(get_byte(buf, i_last))) || return nothing
+        i_first += 1 # remove opening quote
+        i_last -= 1 # remove closing quote
+        # Get rid of trailing spaces.
+        while i_last ≥ i_first && is_space(get_byte(buf, i_last))
+            i_last -= 1
+        end
+        i_last ≥ i_first || return EMPTY_STRING
+        # Copy the string into a temporary buffer taking care of escaped
+        # quotes. Trailing spaces have already been stripped, so it is not
+        # necessary to treat spaces specially.
+        #
+        # NOTE: We cannot use a simple for-loop because indices may have to be
+        #       incremented inside the loop.
+        wrk = Array{UInt8}(undef, i_last - i_first + 1)
+        i = i_first - 1
+        j = firstindex(wrk) - 1
+        while i < i_last
+            b = get_byte(buf, i += 1)
+            if is_quote(b)
+                # Next character must aslo be a quote.
+                i < i_last || return nothing # error
+                b = get_byte(buf, i += 1)
+                is_quote(b) || return nothing # error
+            end
+            wrk[j += 1] = b
+        end
+        len = j - firstindex(wrk) + 1
+        if len ≤ 0
+            return EMPTY_STRING
+        else
+            # Convert temporary buffer into a string. Cannot use String(wrk)
+            # because string length may be smaller tahn taht of the buffer.
+            obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
+            ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
+            return GC.@preserve obj unsafe_string(ptr, len)
+        end
+    end
 end
 
 @inline @propagate_inbounds function try_parse_complex_value(buf::ByteBuffer,
