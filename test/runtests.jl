@@ -45,6 +45,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             end
         end
     end
+    @testset "FITS constants" begin
+        @test FITS_CARD_SIZE == 80
+        @test FITS_BLOCK_SIZE == 2880
+    end
     @testset "FITS keywords" begin
         @test FITS"SIMPLE"   === make_FITSKey("SIMPLE  ")
         @test FITS"BITPIX"   === make_FITSKey("BITPIX  ")

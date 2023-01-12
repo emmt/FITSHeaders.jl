@@ -7,9 +7,14 @@ A package implementing methods to store and parse FITS header cards.
 module FITSCards
 
 export
+    # Fast FITS keyword:
     @FITS_str,
     FITSKey,
+
+    # FITS cards:
     FITSCard,
+
+    # Cards types:
     FITSCardType,
     FITS_LOGICAL,
     FITS_INTEGER,
@@ -18,9 +23,31 @@ export
     FITS_COMPLEX,
     FITS_COMMENT,
     FITS_UNDEFINED,
-    FITS_END
+    FITS_END,
+
+    # Sizes:
+    FITS_CARD_SIZE,
+    FITS_BLOCK_SIZE
+
+
 
 using Requires
+
+"""
+    FITS_CARD_SIZE
+
+is the number of bytes per FITS header card.
+
+"""
+const FITS_CARD_SIZE = 80
+
+"""
+    FITS_BLOCK_SIZE
+
+is the number of bytes per FITS header/data block.
+
+"""
+const FITS_BLOCK_SIZE = 36*FITS_CARD_SIZE # 2880
 
 # Enumeration of keyword value type identifiers.
 @enum FITSCardType::Cint begin
@@ -42,13 +69,16 @@ end
     FITSKey(buf, off=0, n=last_byte_index(buf))
 
 encodes the, at most, first 8 bytes (or ASCII characters) of `buf`, starting at
-offset `off`, in a 64-bit integer value. This value is exactly equal to the
-8-byte FITS keyword as stored in a FITS header. Argument `buf` may be a string
-or a vector of bytes.
+offset `off`, in a 64-bit integer value which is exactly equal to the first
+8 bytes of a FITS keyword as stored in a FITS header. Argument `buf` may be a
+string or a vector of bytes.
 
 Optional argument `n` is the index of the last byte available in `buf`. If
 fewer than 8 bytes are available (that is, if `off + 8 > n`), the result is as
 if `buf` has been padded with ASCII spaces (hexadecimal code 0x20).
+
+The only operation that makes sense with an instance of `FITSKey` is comparison
+for equality for fast searching of keywords in a FITS header.
 
 The caller may use `@inbounds` macro if it certain that bytes in the range
 `off+1:n` are in bounds for `buf`.
@@ -58,10 +88,10 @@ For the fastest, but unsafe, computations call:
     FITSKey(Val(:full), buf, off)
     FITSKey(Val(:trunc), buf, off, n)
 
-where first argument is `Val(:full)` if there are at least 8 bytes available
-after `off`, or `Val(:trunc)` otherwise. These variants do not perfom bounds
-checking, it is the caller responsibility to insure that the arguments are
-consistent.
+where first argument should be `Val(:full)` if there are at least 8 bytes
+available after `off`, and `Val(:trunc)` otherwise. These variants do not
+perfom bounds checking, it is the caller's responsibility to insure that the
+arguments are consistent.
 
 """
 FITSKey() = FITSKey(zero(UInt64))
