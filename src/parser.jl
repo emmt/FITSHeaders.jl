@@ -11,6 +11,8 @@ using ..FITSCards
 using ..FITSCards: FITSInteger, FITSFloat, FITSComplex
 import ..FITSCards: FITSCard, FITSKey, check_short_keyword
 
+using ..FITSCards.Cards: EMPTY_STRING
+
 using Base: @propagate_inbounds
 
 """
@@ -255,6 +257,8 @@ for sym in (:logical, :integer, :float, :string, :complex)
             isnothing(val) && throw(ArgumentError($mesg))
             return val
         end
+        $try_parse_func(buf::ByteBuffer) =
+            @inbounds $try_parse_func(buf, byte_index_range(buf))
     end
 end
 
@@ -298,6 +302,20 @@ function try_parse_integer_value(buf::ByteBuffer,
     end
 end
 
+# Replace 'd' or 'D' by 'e' and leave other characters unchanged.
+filter_character_in_float_value(c::Union{UInt8,Char}) =
+    ifelse(equal(c, 'D')|equal(c, 'd'), oftype(c, 'e'), c)
+
+# Similar to try_parse_float_value but characters have been filtered
+# and `len` is the number of bytes to process.
+function try_parse_float(wrk::Vector{UInt8}, len::Int = length(wrk))
+    len > 0 || return nothing
+    obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
+    ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
+    str = GC.@preserve obj unsafe_string(ptr, len)
+    return tryparse(FITSFloat, str)
+end
+
 function try_parse_float_value(buf::ByteBuffer,
                                rng::AbstractUnitRange{Int})
     len = length(rng)
@@ -307,10 +325,9 @@ function try_parse_float_value(buf::ByteBuffer,
     wrk = Array{UInt8}(undef, len)
     off = first(rng) - firstindex(wrk)
     @inbounds for i in eachindex(wrk)
-        b = get_byte(buf, off + i)
-        wrk[i] = ifelse(equal(b, 'D')|equal(b, 'd'), oftype(b, 'e'), b)
+        wrk[i] = filter_character_in_float_value(get_byte(buf, off + i))
     end
-    return tryparse(FITSFloat, String(wrk))
+    return try_parse_float(wrk, len)
 end
 
 function try_parse_float_value(buf::ByteBuffer,
@@ -325,13 +342,9 @@ function try_parse_float_value(buf::ByteBuffer,
     i_last = i_first - 1 + len
     off = first(rng) - i_first
     @inbounds for i in i_first:i_last
-        b = get_byte(buf, off + i)
-        wrk[i] = ifelse(equal(b, 'D')|equal(b, 'd'), oftype(b, 'e'), b)
+        wrk[i] = filter_character_in_float_value(get_byte(buf, off + i))
     end
-    obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
-    ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
-    str = GC.@preserve obj unsafe_string(ptr, len)
-    return tryparse(FITSFloat, str)
+    return try_parse_float(wrk, len)
 end
 
 function try_parse_string_value(buf::ByteBuffer,
@@ -384,9 +397,52 @@ function try_parse_string_value(buf::ByteBuffer,
     end
 end
 
-@inline @propagate_inbounds function try_parse_complex_value(buf::ByteBuffer,
-                                                             rng::AbstractUnitRange{Int})
-    return nothing # not yet implemented
+function try_parse_complex_value(buf::ByteBuffer,
+                                 rng::AbstractUnitRange{Int})
+    len = length(rng)
+    len > 0 || return nothing
+    @boundscheck check_byte_index(buf, rng)
+    @inbounds begin
+        # Check whether we do have a string like "(re,im)", hence with at least
+        # 5 characters, starting with '(' and ending with ')'.
+        i_first, i_last = first(rng), last(rng)
+        (len ≥ 5 &&
+            is_opening_parenthesis(get_byte(buf, i_first)) &&
+            is_closing_parenthesis(get_byte(buf, i_last))) || return nothing
+        i_first += 1 # remove opening parenthesis
+        i_last -= 1 # remove closing parenthesis
+        len -= 2
+        # Copy the real and imaginary parts into a temporary buffer taking care
+        # of the exponent.
+        #
+        # NOTE: We cannot use a simple for-loop because indices may have to be
+        #       incremented inside the loop.
+        wrk = Array{UInt8}(undef, len)
+        i = i_first - 1
+        j = firstindex(wrk) - 1
+        re = NaN
+        state = 1
+        while i < i_last
+            b = get_byte(buf, i += 1)
+            if equal(b, ',')
+                # Parse real part.
+                state == 1 || break
+                val = try_parse_float(wrk, j - firstindex(wrk) + 1)
+                isnothing(val) && break
+                re = oftype(re, val)
+                state = 2
+                j = firstindex(wrk) - 1
+            else
+                wrk[j += 1] = filter_character_in_float_value(b)
+            end
+        end
+        if state == 2
+            # Parse imaginary part.
+            im = try_parse_float(wrk, j - firstindex(wrk) + 1)
+            isnothing(im) || return FITSComplex(re, im)
+        end
+        return nothing
+    end
 end
 
 # Extend FITSCard constructor. # FIXME: speedup string allocation.

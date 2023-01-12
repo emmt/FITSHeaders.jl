@@ -61,15 +61,49 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS"END"      === make_FITSKey("END     ")
     end
     @testset "Parser" begin
+        # FITS logical value.
+        @test FITSCards.Parser.try_parse_logical_value("T") === true
+        @test FITSCards.Parser.try_parse_logical_value("F") === false
+        @test FITSCards.Parser.try_parse_logical_value("t") === nothing
+        @test FITSCards.Parser.try_parse_logical_value("f") === nothing
+        @test FITSCards.Parser.try_parse_logical_value("true") === nothing
+        @test FITSCards.Parser.try_parse_logical_value("false") === nothing
+        # FITS integer value.
         for val in (zero(Int64), typemin(Int64), typemax(Int64))
             str = "$val"
-            @test FITSCards.Parser.try_parse_integer_value(str, 1:ncodeunits(str)) == val
+            @test FITSCards.Parser.try_parse_integer_value(str) == val
             if val > 0
                 # Add a few leading zeros.
                 str = "000$val"
-                @test FITSCards.Parser.try_parse_integer_value(str, 1:ncodeunits(str)) == val
+                @test FITSCards.Parser.try_parse_integer_value(str) == val
             end
+            @test FITSCards.Parser.try_parse_integer_value(" "*str) === nothing
+            @test FITSCards.Parser.try_parse_integer_value(str*" ") === nothing
         end
+        # FITS float value;
+        for val in (0.0, 1.0, -1.0, float(π))
+            str = "$val"
+            @test FITSCards.Parser.try_parse_float_value(str) ≈ val
+            @test FITSCards.Parser.try_parse_integer_value(" "*str) === nothing
+            @test FITSCards.Parser.try_parse_integer_value(str*" ") === nothing
+        end
+        # FITS complex value;
+        @test FITSCards.Parser.try_parse_float_value("2.3d4") ≈ 2.3e4
+        @test FITSCards.Parser.try_parse_float_value("-1.09D3") ≈ -1.09e3
+        @test FITSCards.Parser.try_parse_complex_value("(2.3d4,-1.8)") ≈ complex(2.3e4,-1.8)
+        @test FITSCards.Parser.try_parse_complex_value("(-1.09e5,7.6D2)") ≈ complex(-1.09e5,7.6e2)
+        # FITS string value;
+        @test FITSCards.Parser.try_parse_string_value("''") == ""
+        @test FITSCards.Parser.try_parse_string_value("'''") === nothing
+        @test FITSCards.Parser.try_parse_string_value("''''") == "'"
+        @test FITSCards.Parser.try_parse_string_value("'Hello!'") == "Hello!"
+        @test FITSCards.Parser.try_parse_string_value("'Hello! '") == "Hello!"
+        @test FITSCards.Parser.try_parse_string_value("' Hello!'") == " Hello!"
+        @test FITSCards.Parser.try_parse_string_value("' Hello! '") == " Hello!"
+        @test FITSCards.Parser.try_parse_string_value("' Hello! '") == " Hello!"
+        @test FITSCards.Parser.try_parse_string_value("'Joe''s taxi'") == "Joe's taxi"
+        @test FITSCards.Parser.try_parse_string_value("'Joe's taxi'") === nothing
+        @test FITSCards.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
     end
  end
 
