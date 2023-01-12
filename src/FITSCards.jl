@@ -107,8 +107,8 @@ include("parser.jl")
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin
-        @inline FastKey(val::Val, buf::MappedBuffers.MappedBuffer, args...) =
-            FastKey(val, MappedBuffers.storage(buf), args...)
+        @inline FITSKey(val::Val, buf::MappedBuffers.MappedBuffer, args...) =
+            FITSKey(val, MappedBuffers.storage(buf), args...)
     end
 end
 
