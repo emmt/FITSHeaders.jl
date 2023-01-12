@@ -272,10 +272,39 @@ end
     return tryparse(Int, str, base=10)
 end
 
-@inline @propagate_inbounds function try_parse_float_value(buf::ByteBuffer,
-                                                           rng::AbstractUnitRange{Int})
-    str = make_string(buf, rng)
-    # FIXME: replace 'd' and 'D' by 'e'
+@inline function try_parse_float_value(buf::ByteBuffer,
+                                       rng::AbstractUnitRange{Int})
+    len = length(rng)
+    len > 0 || return nothing
+    @boundscheck check_byte_index(buf, rng)
+    # Use a temporary array to copy the range of bytes replacing 'd' and 'D' by 'e'.
+    wrk = Array{UInt8}(undef, len)
+    off = first(rng) - firstindex(wrk)
+    @inbounds for i in eachindex(wrk)
+        b = get_byte(buf, off + i)
+        wrk[i] = ifelse(equal(b, 'D')|equal(b, 'd'), oftype(b, 'e'), b)
+    end
+    return tryparse(Float64, String(wrk))
+end
+
+@inline function try_parse_float_value(buf::ByteBuffer,
+                                       rng::AbstractUnitRange{Int},
+                                       wrk::Vector{UInt8})
+    len = length(rng)
+    len > 0 || return nothing
+    @boundscheck check_byte_index(buf, rng)
+    # Use a temporary array to copy the range of bytes replacing 'd' and 'D' by 'e'.
+    length(wrk) ≥ len || resize!(wrk, len)
+    i_first = firstindex(wrk)
+    i_last = i_first - 1 + len
+    off = first(rng) - i_first
+    @inbounds for i in i_first:i_last
+        b = get_byte(buf, off + i)
+        wrk[i] = ifelse(equal(b, 'D')|equal(b, 'd'), oftype(b, 'e'), b)
+    end
+    obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
+    ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
+    str = GC.@preserve obj unsafe_string(ptr, len)
     return tryparse(Float64, str)
 end
 
