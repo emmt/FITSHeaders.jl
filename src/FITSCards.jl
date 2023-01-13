@@ -111,10 +111,20 @@ end
 
 @assert sizeof(FITSKey) == FITS_SHORT_KEYWORD_SIZE
 
+"""
+    FITSKey()
+    zero(FITSKey)
+
+yield a null FITS key, that is whose bytes are all 0. This can be asserted by
+calling `issero` on the returned key. Since any valid FITS key cannot contain
+null bytes, a null FITS key may be useful for searching keys.
+
+"""
 FITSKey() = FITSKey(zero(UInt64))
 # NOTE: Other constructors are implemented in parser.jl
 
 Base.iszero(key::FITSKey) = iszero(key.val)
+Base.zero(::Union{FITSKey,Type{FITSKey}}) = FITSKey()
 Base.:(==)(a::FITSKey, b::FITSKey) = a.val === b.val
 Base.convert(::Type{T}, key::FITSKey) where {T<:Integer} = convert(T, key.val)
 Base.UInt64(key::FITSKey) = key.val
