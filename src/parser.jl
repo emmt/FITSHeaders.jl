@@ -10,9 +10,9 @@ module Parser
 using ..FITSCards
 using ..FITSCards: FITSInteger, FITSFloat, FITSComplex
 import ..FITSCards: FITSCard, FITSKey, check_short_keyword
-
 using ..FITSCards.Cards: EMPTY_STRING
 
+using Compat
 using Base: @propagate_inbounds
 
 """
