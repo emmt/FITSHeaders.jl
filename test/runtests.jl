@@ -62,6 +62,29 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS"HIERARCH" === make_FITSKey("HIERARCH")
         @test FITS""         === make_FITSKey("        ")
         @test FITS"END"      === make_FITSKey("END     ")
+        @test_throws Exception FITSCards.parse_keyword("SIMPLE#")
+        @test_throws Exception FITSCards.parse_keyword(" SIMPLE")
+        @test_throws Exception FITSCards.parse_keyword("SIMPLE ")
+        @test_throws Exception FITSCards.parse_keyword("SImPLE")
+        @test_throws Exception FITSCards.parse_keyword("TOO  MANY SPACES")
+        # Simple (short) FITS keywords.
+        @test FITSCards.parse_keyword("SIMPLE") == (FITS"SIMPLE", "SIMPLE")
+        @test FITSCards.parse_keyword("HISTORY") == (FITS"HISTORY", "HISTORY")
+        # Keywords longer than 8-characters are HIERARCH ones.
+        @test FITSCards.parse_keyword("LONG-NAME") == (FITS"HIERARCH", "LONG-NAME")
+        @test FITSCards.parse_keyword("HIERARCHY") == (FITS"HIERARCH", "HIERARCHY")
+        @test FITSCards.parse_keyword("HIERARCHOLOGIST") == (FITS"HIERARCH", "HIERARCHOLOGIST")
+        # Keywords starting by "HIERARCH " are HIERARCH ones.
+        for key in ("HIERARCH GIZMO", "HIERARCH MY GIZMO", "HIERARCH MY BIG GIZMO")
+            @test FITSCards.parse_keyword(key) == (FITS"HIERARCH", SubString(key, 10:length(key)))
+        end
+        # Keywords with spaces are HIERARCH ones whatever their lengths.
+        for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
+            @test FITSCards.parse_keyword(key) == (FITS"HIERARCH", key)
+        end
+        # The following cases are consequences of the implemented scanner.
+        @test FITSCards.parse_keyword("HIERARCH") == (FITS"HIERARCH", "HIERARCH")
+        @test FITSCards.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", "SIMPLE")
     end
     @testset "Parser" begin
         # Representation of a character.

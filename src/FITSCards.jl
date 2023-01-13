@@ -138,6 +138,19 @@ end
 function check_short_keyword end
 function scan_keyword end
 
+"""
+    FITSCards.parse_keyword(str) -> key, name
+
+scans the FITS keyword in string `str` and returns its short identifier `key`
+and its name (with leading `"HIERARCH "` stripped if any) as a sub-string.
+
+See also [`FITSCards.scan_keyword`](@ref).
+
+"""
+function parse_keyword(name::AbstractString)
+    key, rng = scan_keyword(name)
+    return key, @inbounds SubString(name, rng)
+end
 
 include("cards.jl")
 import .Cards: FITSCard, FITSInteger, FITSFloat, FITSComplex
