@@ -10,7 +10,7 @@ module Cards
 export FITSCard
 
 using ..FITSCards
-using ..FITSCards: parse_keyword, is_end
+using ..FITSCards: parse_keyword, is_comment, is_end
 import ..FITSCards: FITSCardType
 
 const FITSInteger = Int64
@@ -198,9 +198,11 @@ Base.getproperty(A::FITSCard, ::Val{:complex}) = get_value(FITSComplex, A)
 
 FITSCardType(A::FITSCard) = get_type(A)
 
-Base.isassigned(A::FITSCard) = (A.type != FITS_COMMENT) & (A.type != FITS_UNDEFINED)
+Base.isassigned(A::FITSCard) =
+    (A.type != FITS_COMMENT) & (A.type != FITS_UNDEFINED) & (A.type != FITS_END)
 
-Base.isinteger(A::FITSCard) = (A.type == FITS_INTEGER) | (A.type == FITS_LOGICAL)
+Base.isinteger(A::FITSCard) =
+    (A.type == FITS_INTEGER) | (A.type == FITS_LOGICAL)
 
 Base.isreal(A::FITSCard) =
     (A.type == FITS_FLOAT) |
@@ -234,8 +236,10 @@ function FITSCard(pair::Pair{<:AbstractString, <:Union{Number,Undefined}})
     return FITSCard(first(pair), last(pair))
 end
 function FITSCard(pair::Pair{<:AbstractString, <:AbstractString})
-    key = first(pair)
-    return is_comment(key) ? FITSCard(key, nothing, last(pair)) : FITSCard(key, last(pair))
+    key, name = parse_keyword(first(pair))
+    return is_comment(key) ?
+        FITSCard(key, name, nothing, last(pair)) :
+        FITSCard(key, name, last(pair))
 end
 
 end # module
