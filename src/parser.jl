@@ -455,25 +455,25 @@ function try_parse_complex_value(buf::ByteBuffer,
     end
 end
 
-# Extend FITSCard constructor. # FIXME: speedup string allocation.
+# Extend FITSCard constructor.
 function FITSCard(buf::ByteBuffer, off::Int = 0)
     type, key, name_rng, val_rng, com_rng = scan_card(buf, off)
     name = make_string(buf, name_rng)
     com = make_string(buf, com_rng)
     if type == FITS_LOGICAL
-        return FITSCard(name, parse_logical_value(buf, val_rng), com)
+        return FITSCard(key, name, parse_logical_value(buf, val_rng), com)
     elseif type == FITS_INTEGER
-        return FITSCard(name, parse_integer_value(buf, val_rng), com)
+        return FITSCard(key, name, parse_integer_value(buf, val_rng), com)
     elseif type == FITS_FLOAT
-        return FITSCard(name, parse_float_value(buf, val_rng), com)
+        return FITSCard(key, name, parse_float_value(buf, val_rng), com)
     elseif type == FITS_STRING
-        return FITSCard(name, parse_string_value(buf, val_rng), com)
+        return FITSCard(key, name, parse_string_value(buf, val_rng), com)
     elseif type == FITS_COMPLEX
-        return FITSCard(name, parse_complex_value(buf, val_rng), com)
+        return FITSCard(key, name, parse_complex_value(buf, val_rng), com)
     elseif type == FITS_UNDEFINED
-        return FITSCard(name, missing, com)
+        return FITSCard(key, name, missing, com)
     else # must be commentary or END card
-        return FITSCard(name, nothing, com)
+        return FITSCard(key, name, nothing, com)
     end
 end
 

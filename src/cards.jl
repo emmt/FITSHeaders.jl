@@ -51,6 +51,7 @@ string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 FITS cards have properties:
 
     card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
+    card.key     # short key of card: FITS"BITPIX", FITS"HIERARCH", etc.
     card.name    # name of card
     card.value   # value of card
     card.comment # comment of card
@@ -74,6 +75,7 @@ card nor a card with an undefined value).
 
 """
 struct FITSCard
+    key::FITSKey
     type::FITSCardType
     value_logical::Bool
     value_integer::FITSInteger
@@ -81,25 +83,27 @@ struct FITSCard
     value_string::String
     name::String
     comment::String
-    FITSCard(key::AbstractString, val::Bool, com::AbstractString=EMPTY_STRING) =
-        new(FITS_LOGICAL, val, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, key, com)
-    FITSCard(key::AbstractString, val::Integer, com::AbstractString=EMPTY_STRING) =
-        new(FITS_INTEGER, UNDEF_LOGICAL, val, UNDEF_COMPLEX, UNDEF_STRING, key, com)
-    FITSCard(key::AbstractString, val::Real, com::AbstractString=EMPTY_STRING) =
-         new(FITS_FLOAT, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, key, com)
-    FITSCard(key::AbstractString, val::Complex, com::AbstractString=EMPTY_STRING) =
-         new(FITS_COMPLEX, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, key, com)
-    FITSCard(key::AbstractString, val::AbstractString, com::AbstractString=EMPTY_STRING) =
-        new(FITS_STRING, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, val, key, com)
-    FITSCard(key::AbstractString, ::Undefined, com::AbstractString=EMPTY_STRING) =
-        new(FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, key, com)
-    FITSCard(key::AbstractString, ::Nothing, com::AbstractString=EMPTY_STRING) =
-        new(FITS_COMMENT, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, key, com)
+    FITSCard(key::FITSKey, name::AbstractString, val::Bool, com::AbstractString=EMPTY_STRING) =
+        new(key, FITS_LOGICAL, val, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+    FITSCard(key::FITSKey, name::AbstractString, val::Integer, com::AbstractString=EMPTY_STRING) =
+        new(key, FITS_INTEGER, UNDEF_LOGICAL, val, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+    FITSCard(key::FITSKey, name::AbstractString, val::Real, com::AbstractString=EMPTY_STRING) =
+         new(key, FITS_FLOAT, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
+    FITSCard(key::FITSKey, name::AbstractString, val::Complex, com::AbstractString=EMPTY_STRING) =
+         new(key, FITS_COMPLEX, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
+    FITSCard(key::FITSKey, name::AbstractString, val::AbstractString, com::AbstractString=EMPTY_STRING) =
+        new(key, FITS_STRING, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, val, name, com)
+    FITSCard(key::FITSKey, name::AbstractString, ::Undefined, com::AbstractString=EMPTY_STRING) =
+        new(key, FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+    FITSCard(key::FITSKey, name::AbstractString, ::Nothing, com::AbstractString=EMPTY_STRING) =
+        new(key, (key === FITS"END" ? FITS_END : FITS_COMMENT),
+            UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
 # If the FITSCard structure changes, it should be almost sufficient to change
 # the following simple accessors.
 get_type(         A::FITSCard) = getfield(A, :type)
+get_key(          A::FITSCard) = getfield(A, :key)
 get_name(         A::FITSCard) = getfield(A, :name)
 get_comment(      A::FITSCard) = getfield(A, :comment)
 get_value_logical(A::FITSCard) = getfield(A, :value_logical)
@@ -169,9 +173,10 @@ get_value(T::Type, A::FITSCard) = conversion_error(T, A) # catch errors
 
 # Properties.
 Base.propertynames(A::FITSCard) =
-    (:type, :name, :value, :comment, :logical, :integer, :float, :string, :complex)
+    (:type, :key, :name, :value, :comment, :logical, :integer, :float, :string, :complex)
 Base.getproperty(A::FITSCard, sym::Symbol) = getproperty(A, Val(sym))
 Base.getproperty(A::FITSCard, ::Val{:type   }) = get_type(A)
+Base.getproperty(A::FITSCard, ::Val{:key    }) = get_key(A)
 Base.getproperty(A::FITSCard, ::Val{:name   }) = get_name(A)
 Base.getproperty(A::FITSCard, ::Val{:value  }) = get_value(A)
 Base.getproperty(A::FITSCard, ::Val{:comment}) = get_comment(A)
