@@ -51,6 +51,9 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS_BLOCK_SIZE == 2880
     end
     @testset "FITS keywords" begin
+        @test convert(Integer, FITSKey()) === zero(UInt64)
+        @test UInt64(FITSKey()) === zero(UInt64)
+        @test FITS"SIMPLE"   ==  make_FITSKey("SIMPLE  ")
         @test FITS"SIMPLE"   === make_FITSKey("SIMPLE  ")
         @test FITS"BITPIX"   === make_FITSKey("BITPIX  ")
         @test FITS"NAXIS"    === make_FITSKey("NAXIS   ")

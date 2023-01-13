@@ -49,7 +49,6 @@ is the number of bytes per FITS header/data block.
 """
 const FITS_BLOCK_SIZE = 36*FITS_CARD_SIZE # 2880
 
-
 """
     FITS_SHORT_KEYWORD_SIZE
 
@@ -71,13 +70,6 @@ const FITS_SHORT_KEYWORD_SIZE = 8
     FITS_UNDEFINED = 6 # no value given
     FITS_END       = 7 # END card
 end
-
-struct FITSKey
-    val::UInt64
-end
-
-sizeof(FITSKey) == FITS_SHORT_KEYWORD_SIZE ||
-    throw(AssertionError("sizeof(FITSKey) != FITS_SHORT_KEYWORD_SIZE"))
 
 """
     FITSKey(buf, off=0, n=last_byte_index(buf))
@@ -110,11 +102,19 @@ otherwise. These variants do not perfom bounds checking, it is the caller's
 responsibility to insure that the arguments are consistent.
 
 """
+struct FITSKey
+    val::UInt64
+end
+
+@assert sizeof(FITSKey) == FITS_SHORT_KEYWORD_SIZE
+
 FITSKey() = FITSKey(zero(UInt64))
 # NOTE: Other constructors are implemented in parser.jl
 
 Base.iszero(key::FITSKey) = iszero(key.val)
 Base.:(==)(a::FITSKey, b::FITSKey) = a.val === b.val
+Base.convert(::Type{T}, key::FITSKey) where {T<:Integer} = convert(T, key.val)
+Base.UInt64(key::FITSKey) = key.val
 
 """
     @FITS_str
