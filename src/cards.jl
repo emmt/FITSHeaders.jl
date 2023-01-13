@@ -10,6 +10,7 @@ module Cards
 export FITSCard
 
 using ..FITSCards
+using ..FITSCards: parse_keyword
 import ..FITSCards: FITSCardType
 
 const FITSInteger = Int64
@@ -98,6 +99,13 @@ struct FITSCard
     FITSCard(key::FITSKey, name::AbstractString, ::Nothing, com::AbstractString=EMPTY_STRING) =
         new(key, (key === FITS"END" ? FITS_END : FITS_COMMENT),
             UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+end
+
+function FITSCard(name::AbstractString,
+                  val::Union{Real,Complex,AbstractString,Nothing,Undefined},
+                  com::AbstractString=EMPTY_STRING)
+    key, str = parse_keyword(name)
+    return FITSCard(key, str, val, com)
 end
 
 # If the FITSCard structure changes, it should be almost sufficient to change

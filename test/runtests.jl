@@ -138,6 +138,87 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.Parser.try_parse_string_value("'Joe's taxi'") === nothing
         @test FITSCards.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
     end
+    @testset "FITS cards" begin
+        str = "SIMPLE  =                    T / this is a FITS file                            "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_LOGICAL, FITS"SIMPLE", "SIMPLE", "this is a FITS file")
+        @test card.value isa Bool
+        @test card.value == true
+        @test card.value === card.logical
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "BITPIX  =                  -32 / number of bits per data pixel                  "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_INTEGER, FITS"BITPIX", "BITPIX", "number of bits per data pixel")
+        @test card.value isa Integer
+        @test card.value == -32
+        @test card.value === card.integer
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy"
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_COMMENT, FITS"COMMENT", "COMMENT",
+             "  FITS (Flexible Image Transport System) format is defined in 'Astronomy")
+        @test card.value isa Nothing
+        @test card.value === nothing
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "DATE    = '2015-07-07T14:38:51' / file creation date (YYYY-MM-DDThh:mm:ss UT)   "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_STRING, FITS"DATE", "DATE", "file creation date (YYYY-MM-DDThh:mm:ss UT)")
+        @test card.value isa AbstractString
+        @test card.value == "2015-07-07T14:38:51"
+        @test card.value === card.string
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "EXTNAME = 'SCIDATA '                                                            "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_STRING, FITS"EXTNAME", "EXTNAME", "")
+        @test card.value isa AbstractString
+        @test card.value == "SCIDATA"
+        @test card.value === card.string
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "CRPIX1  =                   1.                                                  "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_FLOAT, FITS"CRPIX1", "CRPIX1", "")
+        @test card.value isa AbstractFloat
+        @test card.value ≈ 1.0
+        @test card.value === card.float
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "CRVAL3  =                 0.96 / CRVAL along 3rd axis                           "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_FLOAT, FITS"CRVAL3", "CRVAL3", "CRVAL along 3rd axis")
+        @test card.value isa AbstractFloat
+        @test card.value ≈ 0.96
+        @test card.value === card.float
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "HIERARCH ESO OBS EXECTIME = 2919 / Expected execution time                      "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_INTEGER, FITS"HIERARCH", "ESO OBS EXECTIME", "Expected execution time")
+        @test card.value isa Integer
+        @test card.value == 2919
+        @test card.value === card.integer
+        @test valtype(card) === typeof(card.value)
+        #
+        str = "END                                                                             "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_END, FITS"END", "END", "")
+        @test card.value isa Nothing
+        @test card.value === nothing
+        @test valtype(card) === typeof(card.value)
+    end
  end
 
 end # module
