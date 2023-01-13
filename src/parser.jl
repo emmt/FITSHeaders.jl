@@ -457,8 +457,8 @@ end
 
 # Extend FITSCard constructor. # FIXME: speedup string allocation.
 function FITSCard(buf::ByteBuffer, off::Int = 0)
-    type, key, key_rng, val_rng, com_rng = scan_card(buf, off)
-    name = make_string(buf, key_rng)
+    type, key, name_rng, val_rng, com_rng = scan_card(buf, off)
+    name = make_string(buf, name_rng)
     com = make_string(buf, com_rng)
     if type == FITS_LOGICAL
         return FITSCard(name, parse_logical_value(buf, val_rng), com)
@@ -511,7 +511,7 @@ yields a string from the bytes of `buf` in the range `rng`.
 end
 
 """
-    FITSCards.Parser.scan_card(A, off=0) -> type, key, key_rng, val_rng, com_rng
+    FITSCards.Parser.scan_card(A, off=0) -> type, key, name_rng, val_rng, com_rng
 
 parses a FITS header card `A` as it is written in a FITS file. `A` may be a
 string or a vector of bytes. Optional argument `off` is an offset in bytes
@@ -523,9 +523,9 @@ header). The result is a 5-tuple:
 
 - `key::FITSKey` is the code corresponding to the short keyword of the card.
 
-- `key_rng` is the range of bytes containing the keyword name without trailing
+- `name_rng` is the range of bytes containing the keyword name without trailing
   spaces. For `HIERARCH` keywords, the leading `"HIERARCH "` part has been
-  removed from `key_rng` and `key` is equal to the constant `FITS"HIERARCH"`.
+  removed from `name_rng` and `key` is equal to the constant `FITS"HIERARCH"`.
 
 - `val_rng` is the range of bytes containing the unparsed value part, without
   leading and trailing spaces but with parenthesis or quote delimiters for a
@@ -541,7 +541,7 @@ function scan_card(buf::ByteBuffer, off::Int = 0)
     i_first = off + first_byte_index(buf)
     i_last = min(last_byte_index(buf), i_first - 1 + FITS_CARD_SIZE)
     @inbounds begin # NOTE: above settings warrant that
-        key, key_rng, i_next = scan_keyword_part(buf, i_first:i_last)
+        key, name_rng, i_next = scan_keyword_part(buf, i_first:i_last)
         if !is_comment(key)
             # May be a non-commentary FITS card.
             if key == FITS"END"
@@ -549,24 +549,24 @@ function scan_card(buf::ByteBuffer, off::Int = 0)
                 com_rng = trim_leading_spaces(buf, i_next:i_last)
                 isempty(com_rng) || nonspace_in_end_card(get_byte(buf, first(com_rng)))
                 val_rng = empty_range(i_last)
-                return FITS_END, key, key_rng, val_rng, com_rng
+                return FITS_END, key, name_rng, val_rng, com_rng
             elseif i_first ≤ i_next ≤ i_last - 1 &&
                 is_equals_sign(get_byte(buf, i_next)) &&
                 is_space(get_byte(buf, i_next + 1))
                 # Value marker found, scan for the value and comment parts.
                 type, val_rng, com_rng = scan_value_comment_parts(buf, i_next+2:i_last)
-                return type, key, key_rng, val_rng, com_rng
+                return type, key, name_rng, val_rng, com_rng
             end
         end
         # Commentary card: no value and a comment in bytes 9-80.
         val_rng = empty_range(i_next)
         com_rng = trim_trailing_spaces(buf, i_next:i_last)
-        return FITS_COMMENT, key, key_rng, val_rng, com_rng
+        return FITS_COMMENT, key, name_rng, val_rng, com_rng
     end
 end
 
 """
-    FITSCards.Parser.scan_short_keyword_part(A, rng) -> key_rng
+    FITSCards.Parser.scan_short_keyword_part(A, rng) -> name_rng
 
 scans the first bytes of `A` in the index range `rng` for a valid short FITS
 keyword and returns the index range to this keyword. A short FITS keyword
@@ -577,13 +577,13 @@ restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
 
 The following relations hold:
 
-    first(key_rng) == first(rng)
-    length(key_rng) ≤ min(length(rng), $FITS_SHORT_KEYWORD_SIZE)
+    first(name_rng) == first(rng)
+    length(name_rng) ≤ min(length(rng), $FITS_SHORT_KEYWORD_SIZE)
 
 In case scanning shall be pursued, the next token to scan starts at or after
 index:
 
-    i_next = first(key_rng) + $FITS_SHORT_KEYWORD_SIZE
+    i_next = first(name_rng) + $FITS_SHORT_KEYWORD_SIZE
 
 """
 @inline function scan_short_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
@@ -607,17 +607,17 @@ index:
 end
 
 """
-    FITSCards.Parser.scan_keyword_part(A, rng) -> key, key_rng, i_next
+    FITSCards.Parser.scan_keyword_part(A, rng) -> key, name_rng, i_next
 
 parses a the keyword part of FITS header card stored in bytes `rng` of `A`.
-Returns `key` the keyword code, `key_rng` the byte index range for the keyword
+Returns `key` the keyword code, `name_rng` the byte index range for the keyword
 name (with leading "HIERARCH "` and trailing spaces removed), and `i_next` the
 index of the first byte where next token (value marker of comment) may start.
 
 """
 function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     # Scan for the short FITS keyword part.
-    key_rng = scan_short_keyword_part(buf, rng)
+    name_rng = scan_short_keyword_part(buf, rng)
 
     # Retrieve limits for byte indices and index of next token assuming a short
     # FITS keyword for now.
@@ -637,29 +637,29 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
             # marker "= " is eventually found.
             i_error = i_first - 1 # index of first bad character
             nspaces = 1 # to count the number of consecutive spaces so far
-            key_first = i_next + 1 # byte index where long FITS keyword may start
-            key_last = i_next      # byte index where long FITS keyword may end
-            for i in key_first:i_last
+            name_first = i_next + 1 # byte index where long FITS keyword may start
+            name_last = i_next      # byte index where long FITS keyword may end
+            for i in name_first:i_last
                 b = get_byte(buf, i)
                 if is_space(b)
                     nspaces += 1
                 elseif is_keyword(b)
                     # Update last index of long keyword to that of the last non-space.
-                    key_last = i
+                    name_last = i
                     if (nspaces > 1) & (i_error < i_first)
                         # Having more than one consecutive space is forbidden.
                         i_error = i
                     end
                     nspaces = 0
                 elseif is_equals_sign(b)
-                    if key_last ≥ key_first && i < i_last && is_space(get_byte(buf, i+1))
+                    if name_last ≥ name_first && i < i_last && is_space(get_byte(buf, i+1))
                         # Value marker found. The index for the next token is
                         # that of the = sign.
                         if i_error ≥ i_first
                             # Some illegal character was found.
                             bad_character_in_keyword(get_byte(buf, i_error))
                         end
-                        return key, key_first:key_last, i
+                        return key, name_first:name_last, i
                     else
                         # This is not a long keyword, it will result in a
                         # commentary HIERARCH card.
@@ -673,7 +673,7 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     end
 
     # Short FITS keyword.
-    return key, key_rng, i_next
+    return key, name_rng, i_next
 end
 
 """
