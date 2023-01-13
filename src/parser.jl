@@ -9,7 +9,7 @@ module Parser
 
 using ..FITSCards
 using ..FITSCards: FITSInteger, FITSFloat, FITSComplex
-import ..FITSCards: FITSCard, FITSKey, check_short_keyword
+import ..FITSCards: FITSCard, FITSKey, check_short_keyword, scan_keyword
 using ..FITSCards.Cards: EMPTY_STRING
 
 using Compat
@@ -674,6 +674,103 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
 
     # Short FITS keyword.
     return key, name_rng, i_next
+end
+
+"""
+    FITSCards.scan_keyword(A, rng=byte_index_range(A)) -> key, name_rng
+
+scans the FITS keyword given by `A`, a string or a vector of bytes, and returns
+`key` the short keyword code and `name_rng` the byte index range for the keyword
+name with leading "HIERARCH "` removed if any. If any single space separator
+occurs in the range of bytes, a `HIERARCH` keyword is assumed even though the
+first bytes are not `"HIERARCH "`. Leading and trailing spaces are not allowed.
+
+The returned `key` is `FITS"HIERARCH"` in 3 cases:
+
+- The first bytes of the sequence are `"HIERARCH "` followed by the name.
+
+- At least one single space separator occurs in the byte sequence.
+
+- The byte sequence is longer than $FITS_SHORT_KEYWORD_SIZE.
+
+See also [`FITSCards.parse_keyword`](@ref).
+
+"""
+scan_keyword(buf::ByteBuffer) = unsafe_scan_keyword(buf, byte_index_range(buf))
+
+function scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+    @boundscheck check_byte_index(buf, rng)
+    return unsafe_scan_keyword(buf, rng)
+end
+
+function unsafe_scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+    @inbounds begin
+        # Compute identifier of the short FITS keyword, this is a cheap way to
+        # figure out whether the sequence of bytes starts with "HIERARCH".
+        # This does not check for the validity of the leading bytes, unless
+        # the key is FITS"HIERARCH".
+        i_first, i_last = first(rng), last(rng)
+        i_start = i_first # where to start scanning
+        any_space = false # any space found so far?
+        off = i_first - 1
+        len = length(rng)
+        key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FITSKey(Val(:full), buf, off) :
+            FITSKey(Val(:pad), buf, off, len)
+        if key === FITS"HIERARCH"
+            # Byte sequence starts with "HIERARCH".
+            #
+            # If next byte is a space, we expect a standard HIERARCH keyword
+            # whose name starts right after this space; otherwise, we have a
+            # keyword name spanning the whole sequence. In any cases, we adjust
+            # the scanner initial settings accordingly but there are no needs
+            # to recompute the short keyword key (i.e., it is a HIERARCH one).
+            #
+            # As a consequence, if the byte sequence is exactly "HIERARCH", the
+            # returned keyword name (in the name_rng range) is "HIERARCH". The
+            # other possibility would have been to assume a HIERARCH keyword
+            # whose name is "" (hence an empty name_rng) which would have been
+            # rather confusing.
+            if i_first + FITS_SHORT_KEYWORD_SIZE ≤ i_last &&
+                is_space(get_byte(buf, i_first + FITS_SHORT_KEYWORD_SIZE))
+                # Manage to strip the leading "HIERARCH " bytes.
+                i_first += FITS_SHORT_KEYWORD_SIZE + 1
+                # The leading FITS_SHORT_KEYWORD_SIZE + 1 bytes are valid.
+                any_space = true
+                i_start = i_first
+            else
+                # The leading FITS_SHORT_KEYWORD_SIZE bytes are valid.
+                i_start = i_first + FITS_SHORT_KEYWORD_SIZE
+            end
+        elseif len ≥ 1
+            # We must verify that the first byte is valid (not a space).
+            b = get_byte(buf, i_start)
+            is_keyword(b) || bad_character_in_keyword(b)
+            i_start += 1
+            # A long keyword requires to use the HIERARCH convention.
+            if len > FITS_SHORT_KEYWORD_SIZE
+                key = FITS"HIERARCH"
+            end
+        end
+        # Check the validity of the remaining byte sequence.
+        for i in i_start:i_last
+            b = get_byte(buf, i)
+            if is_space(b)
+                # It is an error to have 2 or more consecutive spaces.
+                any_space && bad_character_in_keyword(b)
+                any_space = true
+                # Keyword must be a HIERARCH one because it has at least one
+                # space separator.
+                key = FITS"HIERARCH"
+            elseif is_keyword(b)
+                # Not a space.
+                any_space = false
+            else
+                bad_character_in_keyword(b)
+            end
+        end
+        any_space && bad_character_in_keyword(' ')
+        return key, i_first:i_last
+    end
 end
 
 """

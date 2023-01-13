@@ -134,7 +134,10 @@ macro FITS_str(str::String)
     FITSKey(check_short_keyword(str))
 end
 
-function check_short_keyword end # NOTE: this function is implemented in parser.jl
+ # NOTE: these functions are implemented in parser.jl:
+function check_short_keyword end
+function scan_keyword end
+
 
 include("cards.jl")
 import .Cards: FITSCard, FITSInteger, FITSFloat, FITSComplex
