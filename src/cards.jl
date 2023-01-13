@@ -108,6 +108,105 @@ function FITSCard(name::AbstractString,
     return FITSCard(key, str, val, com)
 end
 
+# This version shall print something equivalent to Julia code to produce the
+# same object. We try to use the most concise syntax.
+function Base.show(io::IO, A::FITSCard)
+    print(io, "FITSCard(\"")
+    if A.key === FITS"HIERARCH" && A.name != "HIERARCH"
+        print(io, "HIERARCH ")
+    end
+    print(io, A.name, "\"")
+    if A.type != FITS_END
+        if A.type == FITS_COMMENT
+            if A.key === FITS"COMMENT" || A.key === FITS"HSITORY"
+                print(io, " => ")
+                show(io, A.comment)
+            else
+                print(io, " => (nothing, ")
+                show(io, A.comment)
+                print(io, "=> (nothing, ")
+            end
+        else
+            commented = !isempty(A.comment)
+            if commented
+                print(io, " => (")
+            else
+                print(io, " => ")
+            end
+            if A.type == FITS_LOGICAL
+                print(io, A.logical ? "true" : "false")
+            elseif A.type == FITS_INTEGER
+                show(io, A.integer)
+            elseif A.type == FITS_FLOAT
+                show(io, A.float)
+            elseif A.type == FITS_COMPLEX
+                show(io, A.complex)
+            elseif A.type == FITS_STRING
+                show(io, A.string)
+            elseif A.type == FITS_UNDEFINED
+                print(io, "missing")
+            end
+            if commented
+                print(io, ", ")
+                show(io, A.comment)
+                print(io, ")")
+            end
+        end
+    end
+    print(io, ")")
+end
+
+# This version is for the REPL. We try to approximate FITS syntax.
+function Base.show(io::IO, mime::MIME"text/plain", A::FITSCard)
+    print(io, "FITSCard: ")
+    if A.key === FITS"HIERARCH" && A.name != "HIERARCH"
+        print(io, "HIERARCH ", A.name, " ")
+    else
+        print(io, A.name)
+        if A.type != FITS_END
+            len = length(A.name)
+            while len < FITS_SHORT_KEYWORD_SIZE
+                print(io, ' ')
+                len += 1
+            end
+        end
+    end
+    if A.type == FITS_COMMENT
+        print(io, A.comment)
+    elseif A.type != FITS_END
+        print(io, "= ")
+        if A.type == FITS_LOGICAL
+            print(io, A.logical ? 'T' : 'F')
+        elseif A.type == FITS_INTEGER
+            show(io, A.integer)
+        elseif A.type == FITS_FLOAT
+            show(io, A.float)
+        elseif A.type == FITS_COMPLEX
+            print(io, "(")
+            show(io, real(A.complex))
+            print(io, ", ")
+            show(io, imag(A.complex))
+            print(io, ")")
+        elseif A.type == FITS_STRING
+            q = '\''
+            print(io, q)
+            for c in A.string
+                if c == q
+                    print(io, q, q)
+                else
+                    print(io, c)
+                end
+            end
+            print(io, q)
+        elseif A.type == FITS_UNDEFINED
+            print(io, "<undefined>")
+        end
+        if !isempty(A.comment)
+            print(io, " / ", A.comment)
+        end
+    end
+end
+
 # If the FITSCard structure changes, it should be almost sufficient to change
 # the following simple accessors.
 get_type(         A::FITSCard) = getfield(A, :type)

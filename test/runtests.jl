@@ -178,6 +178,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == true
         @test card.value === card.logical
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === true
         @test isreal(card) === true
@@ -190,6 +192,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == -32
         @test card.value === card.integer
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === true
         @test isreal(card) === true
@@ -201,6 +205,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == 3
         @test card.value === card.integer
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === true
         @test isreal(card) === true
@@ -213,6 +219,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Nothing
         @test card.value === nothing
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === false
         @test isinteger(card) === false
         @test isreal(card) === false
@@ -223,6 +231,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Nothing
         @test card.value === nothing
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === false
         @test isinteger(card) === false
         @test isreal(card) === false
@@ -241,6 +251,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == "2015-07-07T14:38:51"
         @test card.value === card.string
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === false
         @test isreal(card) === false
@@ -261,6 +273,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == "SCIDATA"
         @test card.value === card.string
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === false
         @test isreal(card) === false
@@ -273,6 +287,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value ≈ 1.0
         @test card.value === card.float
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === false
         @test isreal(card) === true
@@ -285,6 +301,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value ≈ 0.96
         @test card.value === card.float
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === false
         @test isreal(card) === true
@@ -297,6 +315,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == +2919
         @test card.value === card.integer
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === true
         @test isreal(card) === true
@@ -308,6 +328,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Missing
         @test card.value === missing
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === false
         @test isinteger(card) === false
         @test isreal(card) === false
@@ -318,6 +340,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Missing
         @test card.value === missing
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === false
         @test isinteger(card) === false
         @test isreal(card) === false
@@ -329,6 +353,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Complex
         @test card.value ≈ complex(1,0)
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === false
         @test isreal(card) === iszero(imag(card.value))
@@ -339,6 +365,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Complex
         @test card.value ≈ complex(-2.7,+3.1e5)
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === true
         @test isinteger(card) === false
         @test isreal(card) === iszero(imag(card.value))
@@ -350,6 +378,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Nothing
         @test card.value === nothing
         @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
         @test isassigned(card) === false
         @test isinteger(card) === false
         @test isreal(card) === false
