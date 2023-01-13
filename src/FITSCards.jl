@@ -143,8 +143,8 @@ the restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
 (hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or underscore
 (hexadecimal code 0x5F).
 
-""" function check_short_keyword end
-# NOTE: This function is implemented in parser.jl
+"""
+function check_short_keyword end # NOTE: this function is implemented in parser.jl
 
 include("cards.jl")
 import .Cards: FITSCard, FITSInteger, FITSFloat, FITSComplex
@@ -153,8 +153,8 @@ include("parser.jl")
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin
-        @inline FITSKey(val::Val, buf::MappedBuffers.MappedBuffer, args...) =
-            FITSKey(val, MappedBuffers.storage(buf), args...)
+        FITSCards.Parser.PointerCapability(::Type{<:MappedBuffers.MappedBuffer}) =
+            FITSCards.Parser.PointerFull()
     end
 end
 
