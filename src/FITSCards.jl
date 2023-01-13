@@ -134,16 +134,6 @@ macro FITS_str(str::String)
     FITSKey(check_short_keyword(str))
 end
 
-"""
-    FITSCards.check_short_keyword(str) -> str
-
-returns the string `str` throwing an exception if `str` is not a short FITS
-keyword consisting in, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters from
-the restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
-(hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or underscore
-(hexadecimal code 0x5F).
-
-"""
 function check_short_keyword end # NOTE: this function is implemented in parser.jl
 
 include("cards.jl")

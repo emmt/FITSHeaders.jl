@@ -64,6 +64,13 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS"END"      === make_FITSKey("END     ")
     end
     @testset "Parser" begin
+        # Representation of a character.
+        @test FITSCards.Parser.repr_char(' ') == repr(' ')
+        @test FITSCards.Parser.repr_char(0x20) == repr(' ')
+        @test FITSCards.Parser.repr_char('\0') == repr(0x00)
+        @test FITSCards.Parser.repr_char(0x00) == repr(0x00)
+        @test FITSCards.Parser.repr_char('i') == repr('i')
+        @test FITSCards.Parser.repr_char(0x69) == repr('i')
         # FITS logical value.
         @test FITSCards.Parser.try_parse_logical_value("T") === true
         @test FITSCards.Parser.try_parse_logical_value("F") === false

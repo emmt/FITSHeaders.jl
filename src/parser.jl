@@ -136,6 +136,16 @@ end
     ((i > j) | ((i ≥ first_byte_index(buf)) & (j ≤ n))) || throw(BoundsError(buf, i:j))
 end
 
+"""
+    FITSCards.check_short_keyword(str) -> str
+
+returns the string `str` throwing an exception if `str` is not a short FITS
+keyword consisting in, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters from
+the restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
+(hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or underscore
+(hexadecimal code 0x5F).
+
+"""
 function check_short_keyword(str::ByteString)
     rng = byte_index_range(str)
     @inbounds for i in rng
@@ -531,20 +541,20 @@ function scan_card(buf::ByteBuffer, off::Int = 0)
     i_first = off + first_byte_index(buf)
     i_last = min(last_byte_index(buf), i_first - 1 + FITS_CARD_SIZE)
     @inbounds begin # NOTE: above settings warrant that
-        key, key_rng, i_next = scan_keyword(buf, i_first:i_last)
+        key, key_rng, i_next = scan_keyword_part(buf, i_first:i_last)
         if !is_comment(key)
             # May be a non-commentary FITS card.
             if key == FITS"END"
                 # Remaining part shall contains only spaces
                 com_rng = trim_leading_spaces(buf, i_next:i_last)
-                isempty(com_rng) || bad_character_in_end_card(get_byte(buf, first(com_rng)))
+                isempty(com_rng) || nonspace_in_end_card(get_byte(buf, first(com_rng)))
                 val_rng = empty_range(i_last)
                 return FITS_END, key, key_rng, val_rng, com_rng
             elseif i_first ≤ i_next ≤ i_last - 1 &&
                 is_equals_sign(get_byte(buf, i_next)) &&
                 is_space(get_byte(buf, i_next + 1))
                 # Value marker found, scan for the value and comment parts.
-                type, val_rng, com_rng = scan_value_and_comment(buf, i_next+2:i_last)
+                type, val_rng, com_rng = scan_value_comment_parts(buf, i_next+2:i_last)
                 return type, key, key_rng, val_rng, com_rng
             end
         end
@@ -556,7 +566,7 @@ function scan_card(buf::ByteBuffer, off::Int = 0)
 end
 
 """
-    FITSCards.Parser.scan_short_keyword(A, rng) -> key_rng
+    FITSCards.Parser.scan_short_keyword_part(A, rng) -> key_rng
 
 scans the first bytes of `A` in the index range `rng` for a valid short FITS
 keyword and returns the index range to this keyword. A short FITS keyword
@@ -576,7 +586,7 @@ index:
     i_next = first(key_rng) + $FITS_SHORT_KEYWORD_SIZE
 
 """
-@inline function scan_short_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+@inline function scan_short_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @boundscheck check_byte_index(buf, rng)
     @inbounds begin
         i_first = first(rng)
@@ -597,7 +607,7 @@ index:
 end
 
 """
-    FITSCards.Parser.scan_keyword(A, rng) -> key, key_rng, i_next
+    FITSCards.Parser.scan_keyword_part(A, rng) -> key, key_rng, i_next
 
 parses a the keyword part of FITS header card stored in bytes `rng` of `A`.
 Returns `key` the keyword code, `key_rng` the byte index range for the keyword
@@ -605,16 +615,16 @@ name (with leading "HIERARCH "` and trailing spaces removed), and `i_next` the
 index of the first byte where next token (value marker of comment) may start.
 
 """
-function scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     # Scan for the short FITS keyword part.
-    key_rng = scan_short_keyword(buf, rng)
+    key_rng = scan_short_keyword_part(buf, rng)
 
     # Retrieve limits for byte indices and index of next token assuming a short
     # FITS keyword for now.
     i_first, i_last = first(rng), last(rng)
-    i_next = i_first  + FITS_SHORT_KEYWORD_SIZE
+    i_next = i_first + FITS_SHORT_KEYWORD_SIZE
 
-    # NOTE: scan_short_keyword() has already checked the range for us.
+    # NOTE: scan_short_keyword_part() has already checked the range for us.
     @inbounds begin
         # Compute fast code equivalent to the short FITS keyword.
         off = i_first - 1
@@ -647,7 +657,7 @@ function scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
                         # that of the = sign.
                         if i_error ≥ i_first
                             # Some illegal character was found.
-                            bad_character_in_long_keyword(get_byte(buf, i_error))
+                            bad_character_in_keyword(get_byte(buf, i_error))
                         end
                         return key, key_first:key_last, i
                     else
@@ -667,7 +677,7 @@ function scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
 end
 
 """
-    FITSCards.Parser.scan_value_and_comment(buf, rng) -> type, val_rng, com_rng
+    FITSCards.Parser.scan_value_comment_parts(buf, rng) -> type, val_rng, com_rng
 
 scans the range `rng` of bytes to find the value and comment of a FITS card
 stored in `buf`. If `rng` is not empty, `first(rng)` shall be the index of the
@@ -678,7 +688,7 @@ the FITS card value, `val_rng` the index range for the unparsed value part, and
 `com_rng` the index range of the comment part without leading spaces.
 
 """
-function scan_value_and_comment(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+function scan_value_comment_parts(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     # Skip leading spaces.
     i, k = first(rng), last(rng)
     @inbounds while i ≤ k && is_space(get_byte(buf, i))
@@ -699,7 +709,7 @@ function scan_value_and_comment(buf::ByteBuffer, rng::AbstractUnitRange{Int})
             if is_digit(b)
                 continue
             elseif is_space(b) | is_comment_separator(b)
-                return type, i:j-1, scan_comment(buf, j:k)
+                return type, i:j-1, scan_comment_part(buf, j:k)
             else
                 type = FITS_FLOAT
             end
@@ -717,31 +727,31 @@ function scan_value_and_comment(buf::ByteBuffer, rng::AbstractUnitRange{Int})
                 j += 1
                 if j > k || !is_quote(get_byte(buf, j))
                     # Closing quote found.
-                    return FITS_STRING, i:j-1, scan_comment(buf, j:k)
+                    return FITS_STRING, i:j-1, scan_comment_part(buf, j:k)
                 end
             end
         end
         error("no closing quote in string value of FITS header card")
     elseif equal(b, 'F') | equal(b, 'T')
-        return FITS_LOGICAL, i:i, scan_comment(buf, i+1:k)
+        return FITS_LOGICAL, i:i, scan_comment_part(buf, i+1:k)
     elseif is_opening_parenthesis(b)
         # Complex value.
         for j in i+1:k
             if is_closing_parenthesis(get_byte(buf, j))
-                return FITS_COMPLEX, i:j, scan_comment(buf, j+1:k)
+                return FITS_COMPLEX, i:j, scan_comment_part(buf, j+1:k)
             end
         end
         error("no closing parenthesis in complex value of FITS header card")
     elseif is_comment_separator(b)
         # Comment marker found before value, the value is undefined.
-        return FITS_UNDEFINED, i:i-1, scan_comment(buf, i:k)
+        return FITS_UNDEFINED, i:i-1, scan_comment_part(buf, i:k)
     else
         error("unexpected character in FITS header card")
     end
 end
 
 """
-    FITSCards.Parser.scan_comment(buf, rng) -> com_rng
+    FITSCards.Parser.scan_comment_part(buf, rng) -> com_rng
 
 scans the range `rng` of bytes to find the comment part of a FITS card stored
 in `buf`. If `rng` is not empty, `first(rng)` shall be the index of the first
@@ -753,7 +763,7 @@ comment part.
 This method honors the bound-checking state.
 
 """
-@inline function scan_comment(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+@inline function scan_comment_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @boundscheck check_byte_index(buf, rng)
     @inbounds begin
         # Find beginning of comment skipping all spaces before and after the
@@ -804,15 +814,15 @@ end
     end
 end
 
-@noinline bad_character_in_end_card(c::Union{Char,UInt8}) =
-    error("invalid non-space character $c in FITS END card")
+# Human readable Representation of a character.
+repr_char(b::UInt8) = is_restricted_ascii(b) ? repr(Char(b)) : repr(b)
+repr_char(c::Char) = (is_restricted_ascii(c) || ! isascii(c)) ? repr(c) : repr(UInt8(c))
 
-@noinline bad_character_in_long_keyword(c::Union{Char,UInt8}) =
-    is_space(c) ?  error("only single space separators are allowed in HIERARCH keywords") :
-    error("invalid character $c in FITS HIERARCH keyword")
+@noinline nonspace_in_end_card(c::Union{Char,UInt8}) =
+    error("invalid non-space character $(repr_char(c)) in FITS END card")
 
 @noinline bad_character_in_keyword(c::Union{Char,UInt8}) =
-    is_space(c) ? error("invalid space character in FITS keyword") :
-    error("invalid character $c in FITS keyword")
+    is_space(c) ? error("extra space character in FITS keyword") :
+    error("invalid character $(repr_char(c)) in FITS keyword")
 
 end # module
