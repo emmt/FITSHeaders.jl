@@ -109,12 +109,13 @@ get_value_float(  A::FITSCard) = real(get_value_complex(A))
 get_value_string( A::FITSCard) = getfield(A, :value_string)
 get_value(        A::FITSCard) = begin
     type = get_type(A)
-    type == FITS_LOGICAL ? get_value_logical(A) :
-    type == FITS_INTEGER ? get_value_integer(A) :
-    type == FITS_FLOAT   ? get_value_float(  A) :
-    type == FITS_STRING  ? get_value_string( A) :
-    type == FITS_COMPLEX ? get_value_complex(A) :
-    type == FITS_COMMENT ? nothing : missing
+    type == FITS_LOGICAL   ? get_value_logical(A) :
+    type == FITS_INTEGER   ? get_value_integer(A) :
+    type == FITS_FLOAT     ? get_value_float(  A) :
+    type == FITS_STRING    ? get_value_string( A) :
+    type == FITS_COMPLEX   ? get_value_complex(A) :
+    type == FITS_UNDEFINED ? missing :
+    nothing # FITS_COMMENT or FITS_END
 end
 get_value(::Type{Missing}, A::FITSCard) =
     get_type(A) == FITS_UNDEFINED ? missing : conversion_error(Missing, A)
@@ -196,12 +197,13 @@ Base.isreal(A::FITSCard) =
 
 Base.valtype(A::FITSCard) = valtype(A.type)
 Base.valtype(type::FITSCardType) =
-    type == FITS_LOGICAL ? Bool :
-    type == FITS_INTEGER ? FITSInteger :
-    type == FITS_FLOAT   ? FITSFloat :
-    type == FITS_STRING  ? String :
-    type == FITS_COMPLEX ? FITSComplex :
-    type == FITS_COMMENT ? Nothing : Missing
+    type == FITS_LOGICAL   ? Bool :
+    type == FITS_INTEGER   ? FITSInteger :
+    type == FITS_FLOAT     ? FITSFloat :
+    type == FITS_STRING    ? String :
+    type == FITS_COMPLEX   ? FITSComplex :
+    type == FITS_UNDEFINED ? Missing :
+    Nothing # FITS_COMMENT or FITS_END
 
 # FIXME: use encode_key
 is_comment(key::AbstractString) = (key == "HISTORY" || key == "COMMENT")
