@@ -16,13 +16,36 @@ end
 make_FITSKey(str::AbstractString) =
     FITSKey(reinterpret(UInt64,UInt8[c for c in str])[1])
 
+function make_byte_vector(str::AbstractString)
+    @assert codeunit(str) === UInt8
+    vec = Array{UInt8}(undef, ncodeunits(str))
+    I, = axes(vec)
+    k = firstindex(str) - first(I)
+    for i in I
+        vec[i] = codeunit(str, i + k)
+    end
+    return vec
+end
+
+function make_discontinuous_byte_vector(str::AbstractString)
+    @assert codeunit(str) === UInt8
+    arr = Array{UInt8}(undef, 2, ncodeunits(str))
+    I, J = axes(arr)
+    i = last(I)
+    k = firstindex(str) - first(J)
+    for j in J
+        arr[i,j] = codeunit(str, j + k)
+    end
+    return view(arr, i, :)
+end
+
 _load(::Type{T}, buf::Vector{UInt8}, off::Integer = 0) where {T} =
     GC.@preserve buf unsafe_load(Base.unsafe_convert(Ptr{T}, buf) + off)
 _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     GC.@preserve buf unsafe_store!(Base.unsafe_convert(Ptr{T}, buf) + off, convert(T, x)::T)
 
 @testset "FITSCards.jl" begin
-    @testset "unsafe_load/unsafe_store!" begin
+    @testset "Assertions" begin
         # Check that `unsafe_load` and `unsafe_store!` are unaligned operations
         # and that in `pointer + offset` expression the offset is in bytes (not
         # in number of elements).
@@ -44,13 +67,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
                 end
             end
         end
-    end
-    @testset "FITS constants" begin
+        @test sizeof(FITSKey) == 8
         @test FITS_SHORT_KEYWORD_SIZE == 8
         @test FITS_CARD_SIZE == 80
         @test FITS_BLOCK_SIZE == 2880
     end
-    @testset "FITS keywords" begin
+    @testset "Keywords" begin
         @test convert(Integer, FITSKey()) === zero(UInt64)
         @test UInt64(FITSKey()) === zero(UInt64)
         @test FITS"SIMPLE"   ==  make_FITSKey("SIMPLE  ")
@@ -87,6 +109,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", "SIMPLE")
     end
     @testset "Parser" begin
+        # Trimming of spaces.
+        for str in ("", "  a string ", "another string", "  yet  another  string    ")
+            @test SubString(str, FITSCards.Parser.trim_leading_spaces(str)) == lstrip(str)
+            @test SubString(str, FITSCards.Parser.trim_trailing_spaces(str)) == rstrip(str)
+            rng = firstindex(str):ncodeunits(str)
+            @test SubString(str, FITSCards.Parser.trim_leading_spaces(str, rng)) == lstrip(str)
+            @test SubString(str, FITSCards.Parser.trim_trailing_spaces(str, rng)) == rstrip(str)
+        end
         # Representation of a character.
         @test FITSCards.Parser.repr_char(' ') == repr(' ')
         @test FITSCards.Parser.repr_char(0x20) == repr(' ')
@@ -138,7 +168,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.Parser.try_parse_string_value("'Joe's taxi'") === nothing
         @test FITSCards.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
     end
-    @testset "FITS cards" begin
+    @testset "Cards from strings" begin
+        # Logical FITS cards.
         str = "SIMPLE  =                    T / this is a FITS file                            "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
@@ -147,7 +178,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == true
         @test card.value === card.logical
         @test valtype(card) === typeof(card.value)
-        #
+        @test isassigned(card) === true
+        @test isinteger(card) === true
+        @test isreal(card) === true
+        # Integer valued cards.
         str = "BITPIX  =                  -32 / number of bits per data pixel                  "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
@@ -156,16 +190,49 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == -32
         @test card.value === card.integer
         @test valtype(card) === typeof(card.value)
-        #
-        str = "COMMENT   FITS (Flexible Image Transport System) format is defined in 'Astronomy"
+        @test isassigned(card) === true
+        @test isinteger(card) === true
+        @test isreal(card) === true
+       str = "NAXIS   =                    3 /      number of axes                            "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_INTEGER, FITS"NAXIS", "NAXIS", "number of axes")
+        @test card.value isa Integer
+        @test card.value == 3
+        @test card.value === card.integer
+        @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === true
+        @test isinteger(card) === true
+        @test isreal(card) === true
+        # COMMENT and HISTORY.
+        str = "COMMENT   Some comments (with leading spaces that should not be removed)        "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
             (FITS_COMMENT, FITS"COMMENT", "COMMENT",
-             "  FITS (Flexible Image Transport System) format is defined in 'Astronomy")
+             "  Some comments (with leading spaces that should not be removed)")
         @test card.value isa Nothing
         @test card.value === nothing
         @test valtype(card) === typeof(card.value)
-        #
+        @test isassigned(card) === false
+        @test isinteger(card) === false
+        @test isreal(card) === false
+        str = "HISTORY A new history starts here...                                            "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_COMMENT, FITS"HISTORY", "HISTORY", "A new history starts here...")
+        @test card.value isa Nothing
+        @test card.value === nothing
+        @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === false
+        @test isinteger(card) === false
+        @test isreal(card) === false
+        @test FITSCards.is_comment(card) == true
+        @test FITSCards.is_comment(card.type) == true
+        @test FITSCards.is_comment(card.key) == true
+        @test FITSCards.is_end(card) == false
+        @test FITSCards.is_end(card.type) == false
+        @test FITSCards.is_end(card.key) == false
+        # String valued card.
         str = "DATE    = '2015-07-07T14:38:51' / file creation date (YYYY-MM-DDThh:mm:ss UT)   "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
@@ -174,15 +241,29 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value == "2015-07-07T14:38:51"
         @test card.value === card.string
         @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === true
+        @test isinteger(card) === false
+        @test isreal(card) === false
+        @test FITSCards.is_comment(card) == false
+        @test FITSCards.is_comment(card.type) == false
+        @test FITSCards.is_comment(card.key) == false
+        @test FITSCards.is_end(card) == false
+        @test FITSCards.is_end(card.type) == false
+        @test FITSCards.is_end(card.key) == false
         #
         str = "EXTNAME = 'SCIDATA '                                                            "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
             (FITS_STRING, FITS"EXTNAME", "EXTNAME", "")
+        @test isinteger(card) === false
+        @test isassigned(card) === true
         @test card.value isa AbstractString
         @test card.value == "SCIDATA"
         @test card.value === card.string
         @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === true
+        @test isinteger(card) === false
+        @test isreal(card) === false
         #
         str = "CRPIX1  =                   1.                                                  "
         card = FITSCard(str)
@@ -192,6 +273,9 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value ≈ 1.0
         @test card.value === card.float
         @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === true
+        @test isinteger(card) === false
+        @test isreal(card) === true
         #
         str = "CRVAL3  =                 0.96 / CRVAL along 3rd axis                           "
         card = FITSCard(str)
@@ -201,16 +285,64 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value ≈ 0.96
         @test card.value === card.float
         @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === true
+        @test isinteger(card) === false
+        @test isreal(card) === true
         #
-        str = "HIERARCH ESO OBS EXECTIME = 2919 / Expected execution time                      "
+        str = "HIERARCH ESO OBS EXECTIME = +2919 / Expected execution time                     "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
             (FITS_INTEGER, FITS"HIERARCH", "ESO OBS EXECTIME", "Expected execution time")
         @test card.value isa Integer
-        @test card.value == 2919
+        @test card.value == +2919
         @test card.value === card.integer
         @test valtype(card) === typeof(card.value)
-        #
+        @test isassigned(card) === true
+        @test isinteger(card) === true
+        @test isreal(card) === true
+        # FITS cards with undefined value.
+        str = "DUMMY   =                        / no value given                               "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_UNDEFINED, FITS"DUMMY", "DUMMY", "no value given")
+        @test card.value isa Missing
+        @test card.value === missing
+        @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === false
+        @test isinteger(card) === false
+        @test isreal(card) === false
+        str = "HIERARCH DUMMY   =               / no value given                               "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_UNDEFINED, FITS"HIERARCH", "DUMMY", "no value given")
+        @test card.value isa Missing
+        @test card.value === missing
+        @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === false
+        @test isinteger(card) === false
+        @test isreal(card) === false
+        # Complex valued cards.
+        str = "COMPLEX = (1,0)                  / some complex value                           "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_COMPLEX, FITS"COMPLEX", "COMPLEX", "some complex value")
+        @test card.value isa Complex
+        @test card.value ≈ complex(1,0)
+        @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === true
+        @test isinteger(card) === false
+        @test isreal(card) === iszero(imag(card.value))
+        str = "COMPLEX = (-2.7,+3.1d5)          / some other complex value                           "
+        card = FITSCard(str)
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_COMPLEX, FITS"COMPLEX", "COMPLEX", "some other complex value")
+        @test card.value isa Complex
+        @test card.value ≈ complex(-2.7,+3.1e5)
+        @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === true
+        @test isinteger(card) === false
+        @test isreal(card) === iszero(imag(card.value))
+        # END card.
         str = "END                                                                             "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
@@ -218,6 +350,74 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value isa Nothing
         @test card.value === nothing
         @test valtype(card) === typeof(card.value)
+        @test isassigned(card) === false
+        @test isinteger(card) === false
+        @test isreal(card) === false
+        @test FITSCards.is_comment(card) == false
+        @test FITSCards.is_comment(card.type) == false
+        @test FITSCards.is_comment(card.key) == false
+        @test FITSCards.is_end(card) == true
+        @test FITSCards.is_end(card.type) == true
+        @test FITSCards.is_end(card.key) == true
+    end
+    @testset "Cards from bytes" begin
+        # Logical FITS cards.
+        str = "SIMPLE  =                    T / this is a FITS file                            "
+        for buf in (make_byte_vector(str), make_discontinuous_byte_vector(str))
+            card = FITSCard(buf)
+            @test (card.type, card.key, card.name, card.comment) ==
+                (FITS_LOGICAL, FITS"SIMPLE", "SIMPLE", "this is a FITS file")
+            @test card.value isa Bool
+            @test card.value == true
+            @test card.value === card.logical
+            @test valtype(card) === typeof(card.value)
+        end
+    end
+    @testset "Cards from pairs" begin
+        # Logical FITS cards.
+        com = "some comment"
+        card = FITSCard("SIMPLE" => (true, com))
+        @test card.type === FITS_LOGICAL
+        @test card.key === FITS"SIMPLE"
+        @test card.name === "SIMPLE"
+        @test card.value === true
+        @test card.comment == com
+        card = FITSCard("TWO KEYS" => (π, com))
+        @test card.type === FITS_FLOAT
+        @test card.key === FITS"HIERARCH"
+        @test card.name == "TWO KEYS"
+        @test card.value ≈ π
+        @test card.comment == com
+        card = convert(FITSCard, "HIERARCH NAME" => ("some name", com))
+        @test card.type === FITS_STRING
+        @test card.key === FITS"HIERARCH"
+        @test card.name == "NAME"
+        @test card.value == "some name"
+        @test card.comment == com
+        card = convert(FITSCard, "HIERARCH COMMENT" => (nothing, com))
+        @test card.type === FITS_COMMENT
+        @test card.key === FITS"HIERARCH"
+        @test card.name == "COMMENT"
+        @test card.value === nothing
+        @test card.comment == com
+        card = convert(FITSCard, "COMMENT" => com)
+        @test card.type === FITS_COMMENT
+        @test card.key === FITS"COMMENT"
+        @test card.name == "COMMENT"
+        @test card.value === nothing
+        @test card.comment == com
+        card = convert(FITSCard, "REASON" => undef)
+        @test card.type === FITS_UNDEFINED
+        @test card.key === FITS"REASON"
+        @test card.name == "REASON"
+        @test card.value === missing
+        @test card.comment == ""
+        card = convert(FITSCard, "REASON" => (missing, com))
+        @test card.type === FITS_UNDEFINED
+        @test card.key === FITS"REASON"
+        @test card.name == "REASON"
+        @test card.value === missing
+        @test card.comment == com
     end
  end
 
