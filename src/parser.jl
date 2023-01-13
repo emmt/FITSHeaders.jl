@@ -883,7 +883,7 @@ This method honors the bound-checking state.
                 error("non-space before comment separator in FITS header card")
             end
         end
-        return empty_space(i_first)
+        return empty_range(i_first)
     end
 end
 
