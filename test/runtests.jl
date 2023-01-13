@@ -73,6 +73,9 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS_BLOCK_SIZE == 2880
     end
     @testset "Keywords" begin
+        @test iszero(FITSKey())
+        @test zero(FITSKey()) === FITSKey()
+        @test zero(FITSKey) === FITSKey()
         @test convert(Integer, FITSKey()) === zero(UInt64)
         @test UInt64(FITSKey()) === zero(UInt64)
         @test FITS"SIMPLE"   ==  make_FITSKey("SIMPLE  ")
@@ -109,6 +112,24 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", "SIMPLE")
     end
     @testset "Parser" begin
+        # Character classes according to FITS standard.
+        for b in 0x00:0xFF
+            c = Char(b)
+            @test FITSCards.Parser.is_digit(c) === ('0' ≤ c ≤ '9')
+            @test FITSCards.Parser.is_uppercase(c) === ('A' ≤ c ≤ 'Z')
+            @test FITSCards.Parser.is_lowercase(c) === ('a' ≤ c ≤ 'z')
+            @test FITSCards.Parser.is_space(c) === (c == ' ')
+            @test FITSCards.Parser.is_quote(c) === (c == '\'')
+            @test FITSCards.Parser.is_equals_sign(c) === (c == '=')
+            @test FITSCards.Parser.is_hyphen(c) === (c == '-')
+            @test FITSCards.Parser.is_underscore(c) === (c == '_')
+            @test FITSCards.Parser.is_comment_separator(c) === (c == '/')
+            @test FITSCards.Parser.is_opening_parenthesis(c) === (c == '(')
+            @test FITSCards.Parser.is_closing_parenthesis(c) === (c == ')')
+            @test FITSCards.Parser.is_restricted_ascii(c) === (' ' ≤ c ≤ '~')
+            @test FITSCards.Parser.is_keyword(c) ===
+                (('0' ≤ c ≤ '9') | ('A' ≤ c ≤ 'Z') | (c == '-') | (c == '_'))
+        end
         # Trimming of spaces.
         for str in ("", "  a string ", "another string", "  yet  another  string    ")
             @test SubString(str, FITSCards.Parser.trim_leading_spaces(str)) == lstrip(str)
@@ -169,6 +190,16 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
     end
     @testset "Cards from strings" begin
+        # Errors...
+        @test_throws Exception FITSCard("END     nothing allowed here")
+        @test_throws Exception FITSCard("VALUE   =     # / invalid character")
+        @test_throws Exception FITSCard("VALUE   =  .-123 / invalid number")
+        @test_throws Exception FITSCard("VALUE   =  -12x3 / invalid number")
+        @test_throws Exception FITSCard("VALUE   = (1,3.0 / unclosed complex")
+        @test_throws Exception FITSCard("VALUE   =   (1,) / bad complex")
+        @test_throws Exception FITSCard("VALUE   =   (,1) / bad complex")
+        @test_throws Exception FITSCard("VALUE   = 'hello / unclosed string")
+        @test_throws Exception FITSCard("VALUE   = 'Joe's taxi' / unescaped quote")
         # Logical FITS cards.
         str = "SIMPLE  =                    T / this is a FITS file                            "
         card = FITSCard(str)
