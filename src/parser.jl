@@ -9,14 +9,20 @@ module Parser
 
 using ..FITSCards
 using ..FITSCards:
-    FITSInteger, FITSFloat, FITSComplex
+    FITSInteger,
+    FITSFloat,
+    FITSComplex
 import ..FITSCards:
-    FITSCard, FITSKey, check_short_keyword, scan_keyword, is_comment, is_end
-using ..FITSCards.Cards:
-    EMPTY_STRING
+    FITSKey,
+    check_short_keyword,
+    scan_keyword,
+    is_comment,
+    is_end
 
 using Compat
 using Base: @propagate_inbounds
+
+const EMPTY_STRING = ""
 
 """
     FITSCards.Parser.PointerCapability(T) -> Union{PointerNone,PointerFull}
@@ -261,7 +267,6 @@ yields whether `A` indicates a commentary FITS keyword.
 """
 is_comment(key::FITSKey) = (key == FITS"COMMENT") | (key == FITS"HISTORY")
 is_comment(type::FITSCardType) = type === FITS_COMMENT
-is_comment(card::FITSCard) = is_comment(card.type)
 
 """
     is_end(A::Union{FITSKey,FITSCardType,FITSCard})
@@ -271,7 +276,6 @@ yields whether `A` indicates the END FITS keyword.
 """
 is_end(key::FITSKey) = (key == FITS"END")
 is_end(type::FITSCardType) = type === FITS_END
-is_end(card::FITSCard) = is_end(card.type)
 
 for sym in (:logical, :integer, :float, :string, :complex)
     parse_func = Symbol("parse_$(sym)_value")
@@ -451,28 +455,6 @@ function try_parse_complex_value(buf::ByteBuffer,
     end
 end
 
-# Extend FITSCard constructor.
-function FITSCard(buf::ByteBuffer, off::Int = 0)
-    type, key, name_rng, val_rng, com_rng = scan_card(buf, off)
-    name = make_string(buf, name_rng)
-    com = make_string(buf, com_rng)
-    if type == FITS_LOGICAL
-        return FITSCard(key, name, parse_logical_value(buf, val_rng), com)
-    elseif type == FITS_INTEGER
-        return FITSCard(key, name, parse_integer_value(buf, val_rng), com)
-    elseif type == FITS_FLOAT
-        return FITSCard(key, name, parse_float_value(buf, val_rng), com)
-    elseif type == FITS_STRING
-        return FITSCard(key, name, parse_string_value(buf, val_rng), com)
-    elseif type == FITS_COMPLEX
-        return FITSCard(key, name, parse_complex_value(buf, val_rng), com)
-    elseif type == FITS_UNDEFINED
-        return FITSCard(key, name, missing, com)
-    else # must be commentary or END card
-        return FITSCard(key, name, nothing, com)
-    end
-end
-
 """
     FITSCards.Parser.make_string(buf, rng) -> str::String
 
@@ -541,6 +523,12 @@ function scan_card(buf::ByteBuffer, off::Int = 0)
     off ≥ 0 || throw(ArgumentError("offset must be nonnegative"))
     i_first = off + first_byte_index(buf)
     i_last = min(last_byte_index(buf), i_first - 1 + FITS_CARD_SIZE)
+    if i_first > i_last
+        # Empty range, return the parameters of an END card to reflect that
+        # except that the name range is empty.
+        rng = empty_range(i_first)
+        return FITS_END, FITS"END", rng, rng, rng
+    end
     @inbounds begin # NOTE: above settings warrant that
         key, name_rng, i_next = scan_keyword_part(buf, i_first:i_last)
         if !is_comment(key)

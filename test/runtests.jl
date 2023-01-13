@@ -402,6 +402,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value === card.logical
             @test valtype(card) === typeof(card.value)
         end
+        # "END", empty string "" or out of range offset yield an END card.
+        @test FITSCard("END").type === FITS_END
+        @test FITSCard("").type === FITS_END
+        @test FITSCard("SOMETHING", 250).type === FITS_END
     end
     @testset "Cards from pairs" begin
         # Logical FITS cards.

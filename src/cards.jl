@@ -10,15 +10,30 @@ module Cards
 export FITSCard
 
 using ..FITSCards
-using ..FITSCards: parse_keyword, is_comment, is_end
-import ..FITSCards: FITSCardType
-
-const FITSInteger = Int64
-const FITSFloat   = Float64
-const FITSComplex = Complex{FITSFloat}
+using ..FITSCards:
+    FITSInteger,
+    FITSFloat,
+    FITSComplex,
+    parse_keyword,
+    is_comment,
+    is_end
+import ..FITSCards:
+    FITSCardType,
+    is_comment,
+    is_end
+using ..FITSCards.Parser:
+    EMPTY_STRING,
+    ByteBuffer,
+    make_string,
+    parse_logical_value,
+    parse_integer_value,
+    parse_float_value,
+    parse_string_value,
+    parse_complex_value,
+    scan_card
 
 const Undefined = Union{Missing,UndefInitializer}
-const EMPTY_STRING = ""
+const END_STRING = "END"
 const UNDEF_LOGICAL = false
 const UNDEF_INTEGER = zero(FITSInteger)
 const UNDEF_COMPLEX = FITSComplex(NaN,NaN)
@@ -97,7 +112,7 @@ struct FITSCard
     FITSCard(key::FITSKey, name::AbstractString, ::Undefined, com::AbstractString=EMPTY_STRING) =
         new(key, FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
     FITSCard(key::FITSKey, name::AbstractString, ::Nothing, com::AbstractString=EMPTY_STRING) =
-        new(key, (is_end(key) ? FITS_END : FITS_COMMENT),
+        new(key, key === FITS"END" ? FITS_END : FITS_COMMENT,
             UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
@@ -107,6 +122,48 @@ function FITSCard(name::AbstractString,
     key, str = parse_keyword(name)
     return FITSCard(key, str, val, com)
 end
+
+"""
+    FITSCard(buf, off=0)
+
+yields a `FITSCard` object built by parsing the FITS header card stored in the
+string or vector of bytes `buf`. Optional argument `off` is the number of bytes
+to skip at the beginning of `buf`, so that it is possible to extract a specific
+FITS header card, not just the first one. At most, the $FITS_CARD_SIZE first
+bytes after the offset are scanned to build the `FITSCard` object. The next
+FITS card to parse is then at offset `off + $FITS_CARD_SIZE` and so on.
+
+The considered card may be shorter than $FITS_CARD_SIZE bytes, the result being
+exactly the same as if the missing bytes were spaces. If there are no bytes
+left, a `FITSCard` object equivalent to the final `END` card of a FITS header
+is returned.
+
+"""
+function FITSCard(buf::ByteBuffer, off::Int = 0)
+    type, key, name_rng, val_rng, com_rng = scan_card(buf, off)
+    name = type == FITS_END ? END_STRING : make_string(buf, name_rng)
+    com = make_string(buf, com_rng)
+    if type == FITS_LOGICAL
+        return FITSCard(key, name, parse_logical_value(buf, val_rng), com)
+    elseif type == FITS_INTEGER
+        return FITSCard(key, name, parse_integer_value(buf, val_rng), com)
+    elseif type == FITS_FLOAT
+        return FITSCard(key, name, parse_float_value(buf, val_rng), com)
+    elseif type == FITS_STRING
+        return FITSCard(key, name, parse_string_value(buf, val_rng), com)
+    elseif type == FITS_COMPLEX
+        return FITSCard(key, name, parse_complex_value(buf, val_rng), com)
+    elseif type == FITS_UNDEFINED
+        return FITSCard(key, name, missing, com)
+    elseif type == FITS_COMMENT
+        return FITSCard(key, name, nothing, com)
+    else # must be commentary or END card
+        return FITSCard(key, name, nothing, com)
+    end
+end
+
+is_comment(card::FITSCard) = is_comment(card.type)
+is_end(card::FITSCard) = is_end(card.type)
 
 # This version shall print something equivalent to Julia code to produce the
 # same object. We try to use the most concise syntax.

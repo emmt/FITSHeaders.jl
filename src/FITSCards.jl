@@ -30,7 +30,6 @@ export
     FITS_BLOCK_SIZE,
     FITS_SHORT_KEYWORD_SIZE
 
-
 using Requires
 
 """
@@ -70,6 +69,10 @@ const FITS_SHORT_KEYWORD_SIZE = 8
     FITS_UNDEFINED = 6 # no value given
     FITS_END       = 7 # END card
 end
+
+const FITSInteger = Int64
+const FITSFloat   = Float64
+const FITSComplex = Complex{FITSFloat}
 
 """
     FITSKey(buf, off=0, n=last_byte_index(buf))
@@ -154,10 +157,9 @@ function parse_keyword(name::AbstractString)
     return key, @inbounds SubString(name, rng)
 end
 
+include("parser.jl")
 include("cards.jl")
 import .Cards: FITSCard, FITSInteger, FITSFloat, FITSComplex
-
-include("parser.jl")
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin

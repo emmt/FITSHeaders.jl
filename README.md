@@ -86,3 +86,21 @@ can be treated as vectors of bytes. The parsing methods provided by the
 `FITSCards` package exploit this to deal with FITS headers and cards stored as
 either vectors of bytes (of type `AbstractVector{UInt8}`) or as Julia strings
 (of type `String` or `SubString{String}`).
+
+A `FITSCard` object can be built by parsing a FITS header card as it is stored
+in a FITS file:
+
+``` julia
+card = FITSCard(buf, off=0)
+```
+
+where `buf` is either a string or a vector of bytes. Optional argument `off` is
+the number of bytes to skip at the beginning of `buf`, so that it is possible
+to extract a specific FITS header card, not just the first one. At most, the 80
+first bytes after the offset are scanned to build the `FITSCard` object. The
+next FITS card to parse is then at offset `off + 80` and so on.
+
+The considered card may be shorter than 80 bytes, the result being exactly the
+same as if the missing bytes were spaces. If there are no bytes left, a
+`FITSCard` object equivalent to the final `END` card of a FITS header is
+returned.
