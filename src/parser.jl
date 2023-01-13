@@ -189,11 +189,6 @@ end
     off + FITS_SHORT_KEYWORD_SIZE ≤ n ? FITSKey(Val(:full), buf, off) : FITSKey(Val(:pad), buf, off, n)
 end
 
-@inline function Base.checkbounds(::Type{FITSKey}, buf::ByteBuffer, i::Int, j::Int,
-                                  n::Int = last_byte_index(buf))
-    ((i > j) | (i ≥ first_byte_index(buf)) & (j ≤ n)) || throw(BoundsError(buf, i:j))
-end
-
 @inline FITSKey(val::Val{:full}, buf::ByteBuffer, off::Int) =
     FITSKey(PointerCapability(buf), val, buf, off)
 
@@ -356,23 +351,6 @@ function try_parse_float_value(buf::ByteBuffer,
     wrk = Array{UInt8}(undef, len)
     off = first(rng) - firstindex(wrk)
     @inbounds for i in eachindex(wrk)
-        wrk[i] = filter_character_in_float_value(get_byte(buf, off + i))
-    end
-    return try_parse_float(wrk, len)
-end
-
-function try_parse_float_value(buf::ByteBuffer,
-                               rng::AbstractUnitRange{Int},
-                               wrk::Vector{UInt8})
-    len = length(rng)
-    len > 0 || return nothing
-    @boundscheck check_byte_index(buf, rng)
-    # Use a temporary array to copy the range of bytes replacing 'd' and 'D' by 'e'.
-    length(wrk) ≥ len || resize!(wrk, len)
-    i_first = firstindex(wrk)
-    i_last = i_first - 1 + len
-    off = first(rng) - i_first
-    @inbounds for i in i_first:i_last
         wrk[i] = filter_character_in_float_value(get_byte(buf, off + i))
     end
     return try_parse_float(wrk, len)

@@ -218,10 +218,6 @@ Base.valtype(type::FITSCardType) =
     type == FITS_UNDEFINED ? Missing :
     Nothing # FITS_COMMENT or FITS_END
 
-# FIXME: use encode_key
-is_comment(key::AbstractString) = (key == "HISTORY" || key == "COMMENT")
-is_comment(A::FITSCard) = (A.type == FITS_COMMENT)
-
 # FITS cards can be specified as pairs and conversely.
 Base.convert(::Type{T}, A::FITSCard) where {T<:FITSCard} = A
 Base.convert(::Type{T}, A::FITSCard) where {T<:Pair} = T(A)
