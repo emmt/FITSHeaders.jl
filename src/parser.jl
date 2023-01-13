@@ -394,15 +394,12 @@ function try_parse_string_value(buf::ByteBuffer,
             wrk[j += 1] = b
         end
         len = j - firstindex(wrk) + 1
-        if len ≤ 0
-            return EMPTY_STRING
-        else
-            # Convert temporary buffer into a string. Cannot use String(wrk)
-            # because string length may be smaller tahn taht of the buffer.
-            obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
-            ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
-            return GC.@preserve obj unsafe_string(ptr, len)
-        end
+        len > 0 || return EMPTY_STRING
+        # Convert temporary buffer into a string. Cannot use String(wrk)
+        # because string length may be smaller tahn taht of the buffer.
+        obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
+        ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
+        return GC.@preserve obj unsafe_string(ptr, len)
     end
 end
 
@@ -479,34 +476,39 @@ end
 """
     FITSCards.Parser.make_string(buf, rng) -> str::String
 
-yields a string from the bytes of `buf` in the range `rng`.
+yields a string from the bytes of `buf` in the range of indices `rng`.
 
 """
 @inline function make_string(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     len = length(rng)
     iszero(len) && return EMPTY_STRING
     @boundscheck check_byte_index(buf, rng)
-    if PointerCapability(buf) === PointerFull()
-        # Directly build a string from the buffer.
-        off = first(rng) - 1
-        obj = Base.cconvert(Ptr{UInt8}, buf) # object to be preserved
-        ptr = Base.unsafe_convert(Ptr{UInt8}, obj) + off
-        return GC.@preserve obj unsafe_string(ptr, len)
-    else
-        # Use a temporary array to copy the range of bytes.
-        tmp = Array{UInt8}(undef, len)
-        off = first(rng) - firstindex(tmp)
-        @inbounds for i in eachindex(tmp)
-            tmp[i] = get_byte(buf, off + i)
-        end
-        if true # FIXME: select which one is the fastest
-            obj = Base.cconvert(Ptr{UInt8}, tmp) # object to be preserved
-            ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
-            return GC.@preserve obj unsafe_string(ptr, len)
-        else
-            return String(tmp)
-        end
+    return unsafe_make_string(PointerCapability(buf), buf, rng)
+end
+
+function unsafe_make_string(::PointerFull, buf::ByteBuffer,
+                            rng::AbstractUnitRange{Int})
+    # Directly build a string from the buffer.
+    len = length(rng)
+    off = first(rng) - 1
+    obj = Base.cconvert(Ptr{UInt8}, buf) # object to be preserved
+    ptr = Base.unsafe_convert(Ptr{UInt8}, obj) + off
+    return GC.@preserve obj unsafe_string(ptr, len)
+end
+
+function unsafe_make_string(::PointerCapability, buf::ByteBuffer,
+                            rng::AbstractUnitRange{Int})
+    # Use a temporary workspace to copy the range of bytes.
+    len = length(rng)
+    wrk = Array{UInt8}(undef, len)
+    off = first(rng) - firstindex(wrk)
+    @inbounds for i in eachindex(wrk)
+        wrk[i] = get_byte(buf, off + i)
     end
+    # FIXME: other possibility: String(wrk)
+    obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
+    ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
+    return GC.@preserve obj unsafe_string(ptr, len)
 end
 
 """
@@ -694,15 +696,9 @@ The returned `key` is `FITS"HIERARCH"` in 3 cases:
 
 See also [`FITSCards.parse_keyword`](@ref).
 
-"""
-scan_keyword(buf::ByteBuffer) = unsafe_scan_keyword(buf, byte_index_range(buf))
+""" scan_keyword
 
-function scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
-    @boundscheck check_byte_index(buf, rng)
-    return unsafe_scan_keyword(buf, rng)
-end
-
-function unsafe_scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+@inline function unsafe_scan_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @inbounds begin
         # Compute identifier of the short FITS keyword, this is a cheap way to
         # figure out whether the sequence of bytes starts with "HIERARCH".
@@ -886,27 +882,59 @@ This method honors the bound-checking state.
     end
 end
 
-# Remove trailing spaces.
-@inline function trim_trailing_spaces(buf::ByteBuffer, rng::AbstractUnitRange{Int})
-    @boundscheck check_byte_index(buf, rng)
-    @inbounds begin
-        i_first, i_last = first(rng), last(rng)
-        while i_last ≥ i_first && is_space(get_byte(buf, i_last))
-            i_last -= 1
-        end
-        return i_first:i_last
+"""
+    FITSCards.Parser.trim_leading_spaces(buf[, rng]) -> sub_rng
+
+yields the range `sub_rng` of byte indices in `buf` (a string or a vector of
+bytes) without the leading spaces in `buf`. Optional argument `rng` is to
+specify the range of byte indices to consider in `buf`. If `rng` is not
+provided, all the bytes of `buf` are considered. If `rng` is provided,
+`sub_rng` is such that:
+
+    first(sub_rng) ≥ first(rng)
+    last(sub_rng) == last(rng)
+
+""" trim_leading_spaces
+
+@inline function unsafe_trim_leading_spaces(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+    i_first, i_last = first(rng), last(rng)
+    @inbounds while i_first ≤ i_last && is_space(get_byte(buf, i_first))
+        i_first += 1
     end
+    return i_first:i_last
 end
 
-# Remove leading spaces.
-@inline function trim_leading_spaces(buf::ByteBuffer, rng::AbstractUnitRange{Int})
-    @boundscheck check_byte_index(buf, rng)
-    @inbounds begin
-        i_first, i_last = first(rng), last(rng)
-        while i_first ≤ i_last && is_space(get_byte(buf, i_first))
-            i_first += 1
+"""
+    FITSCards.Parser.trim_trailing_spaces(buf[, rng]) -> sub_rng
+
+yields the range `sub_rng` of byte indices in `buf` (a string or a vector of
+bytes) without the trailing spaces in `buf`. Optional argument `rng` is to
+specify the range of byte indices to consider in `buf`. If `rng` is not
+provided, all the bytes of `buf` are considered. If `rng` is provided,
+`sub_rng` is such that:
+
+    first(sub_rng) == first(rng)
+    last(sub_rng) ≤ last(rng)
+
+""" trim_trailing_spaces
+
+@inline function unsafe_trim_trailing_spaces(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+    i_first, i_last = first(rng), last(rng)
+    @inbounds while i_last ≥ i_first && is_space(get_byte(buf, i_last))
+        i_last -= 1
+    end
+    return i_first:i_last
+end
+
+# Implement higher level "safe" methods.
+for func in (:scan_keyword, :trim_leading_spaces, :trim_trailing_spaces)
+    unsafe_func = Symbol("unsafe_$func")
+    @eval begin
+        $func(buf::ByteBuffer) = $unsafe_func(buf, byte_index_range(buf))
+        function $func(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+            @boundscheck check_byte_index(buf, rng)
+            return $unsafe_func(buf, rng)
         end
-        return i_first:i_last
     end
 end
 
