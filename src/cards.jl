@@ -10,7 +10,7 @@ module Cards
 export FITSCard
 
 using ..FITSCards
-using ..FITSCards: parse_keyword
+using ..FITSCards: parse_keyword, is_end
 import ..FITSCards: FITSCardType
 
 const FITSInteger = Int64
@@ -97,7 +97,7 @@ struct FITSCard
     FITSCard(key::FITSKey, name::AbstractString, ::Undefined, com::AbstractString=EMPTY_STRING) =
         new(key, FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
     FITSCard(key::FITSKey, name::AbstractString, ::Nothing, com::AbstractString=EMPTY_STRING) =
-        new(key, (key === FITS"END" ? FITS_END : FITS_COMMENT),
+        new(key, (is_end(key) ? FITS_END : FITS_COMMENT),
             UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 

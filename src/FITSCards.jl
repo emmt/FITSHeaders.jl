@@ -137,6 +137,8 @@ end
  # NOTE: these functions are implemented in parser.jl:
 function check_short_keyword end
 function scan_keyword end
+function is_comment end
+function is_end end
 
 """
     FITSCards.parse_keyword(str) -> key, name

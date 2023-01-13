@@ -8,9 +8,12 @@ header cards.
 module Parser
 
 using ..FITSCards
-using ..FITSCards: FITSInteger, FITSFloat, FITSComplex
-import ..FITSCards: FITSCard, FITSKey, check_short_keyword, scan_keyword
-using ..FITSCards.Cards: EMPTY_STRING
+using ..FITSCards:
+    FITSInteger, FITSFloat, FITSComplex
+import ..FITSCards:
+    FITSCard, FITSKey, check_short_keyword, scan_keyword, is_comment, is_end
+using ..FITSCards.Cards:
+    EMPTY_STRING
 
 using Compat
 using Base: @propagate_inbounds
@@ -255,7 +258,25 @@ end
     return FITSKey(k)
 end
 
+"""
+    is_comment(A::Union{FITSKey,FITSCardType,FITSCard})
+
+yields whether `A` indicates a commentary FITS keyword.
+
+"""
 is_comment(key::FITSKey) = (key == FITS"COMMENT") | (key == FITS"HISTORY")
+is_comment(type::FITSCardType) = type === FITS_COMMENT
+is_comment(card::FITSCard) = is_comment(card.type)
+
+"""
+    is_end(A::Union{FITSKey,FITSCardType,FITSCard})
+
+yields whether `A` indicates the END FITS keyword.
+
+"""
+is_end(key::FITSKey) = (key == FITS"END")
+is_end(type::FITSCardType) = type === FITS_END
+is_end(card::FITSCard) = is_end(card.type)
 
 for sym in (:logical, :integer, :float, :string, :complex)
     parse_func = Symbol("parse_$(sym)_value")
