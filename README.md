@@ -91,14 +91,15 @@ A `FITSCard` object can be built by parsing a FITS header card as it is stored
 in a FITS file:
 
 ``` julia
-card = FITSCard(buf, off=0)
+card = FITSCard(buf; offset=0)
 ```
 
-where `buf` is either a string or a vector of bytes. Optional argument `off` is
-the number of bytes to skip at the beginning of `buf`, so that it is possible
-to extract a specific FITS header card, not just the first one. At most, the 80
-first bytes after the offset are scanned to build the `FITSCard` object. The
-next FITS card to parse is then at offset `off + 80` and so on.
+where `buf` is either a string or a vector of bytes. Keyword `offset` can be
+used to specify the number of bytes to skip at the beginning of `buf`, so that
+it is possible to extract a specific FITS header card, not just the first one.
+At most, the 80 first bytes after the offset are scanned to build the
+`FITSCard` object. The next FITS card to parse is then at `offset + 80` and so
+on.
 
 The considered card may be shorter than 80 bytes, the result being exactly the
 same as if the missing bytes were spaces. If there are no bytes left, a

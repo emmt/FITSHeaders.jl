@@ -54,8 +54,8 @@ comment string `com`. The value `val` may be:
 - `nothing` to yield a card of type `FITS_COMMENT`;
 - `missing` or `undef` to yield a card of type `FITS_UNDEFINED`.
 
-Only the value may be specified for valued FITS card with no comments, only the
-comment may be specified for a commentary FITS card:
+The comment may be omitted for a normal FITS card and the value may be omitted
+for a commentary FITS card:
 
     card = FITSCard(key => val::Number)
     card = FITSCard(key => str::AbstractString)
@@ -120,11 +120,12 @@ end
     FITSCard(buf; offset=0)
 
 yields a `FITSCard` object built by parsing the FITS header card stored in the
-string or vector of bytes `buf`. Optional argument `off` is the number of bytes
-to skip at the beginning of `buf`, so that it is possible to extract a specific
-FITS header card, not just the first one. At most, the $FITS_CARD_SIZE first
-bytes after the offset are scanned to build the `FITSCard` object. The next
-FITS card to parse is then at offset `off + $FITS_CARD_SIZE` and so on.
+string or vector of bytes `buf`. Keyword `offset` can be used to specify the
+number of bytes to skip at the beginning of `buf`, so that it is possible to
+extract a specific FITS header card, not just the first one. At most, the
+$FITS_CARD_SIZE first bytes after the offset are scanned to build the
+`FITSCard` object. The next FITS card to parse is then at `offset +
+$FITS_CARD_SIZE` and so on.
 
 The considered card may be shorter than $FITS_CARD_SIZE bytes, the result being
 exactly the same as if the missing bytes were spaces. If there are no bytes
