@@ -10,7 +10,7 @@ A FITS header card associates a keyword (or a name) with a value and a comment
 `FITSCard` built by:
 
 ``` julia
-card = FITSCard(key, val, com="")
+card = FITSCard(key => (val, com))
 ```
 
 with `key` the card name, `val` its value, and `com` its comment. The value
@@ -24,17 +24,17 @@ with `key` the card name, `val` its value, and `com` its comment. The value
 - `nothing` to yield a card of type `FITS_COMMENT`;
 - `missing` or `undef` to yield a card of type `FITS_UNDEFINED`.
 
-A FITS card can also be built from a pair:
+The comment may be omitted for a normal FITS card and the value may be omitted
+for a commentary FITS card:
 
 ``` julia
-card = FITSCard(key => (val, com))
 card = FITSCard(key => val::Number)
 card = FITSCard(key => str::AbstractString)
 ```
 
-In the second above example, the comment is assumed to be empty. In the third
-above example, the string `str` is assumed to be the card comment if `key` is
-`"COMMENT"` or `"HISTORY"` and is assumed to be the card value otherwise.
+In the 1st case, the comment is assumed to be empty. In the 2nd case, the
+string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
+`"HISTORY"` and the card value otherwise.
 
 Conversely, `Pair(card)` yields the pair `key => (val, com)`. The `convert` method
 is extended by the `FITSCards` package to perform these conversions.

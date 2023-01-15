@@ -149,27 +149,49 @@ end
 
  # NOTE: these functions are implemented in parser.jl:
 function check_short_keyword end
-function scan_keyword end
 function is_comment end
 function is_end end
-
-"""
-    FITSCards.parse_keyword(str) -> key, name
-
-scans the FITS keyword in string `str` and returns its short identifier `key`
-and its name (with leading `"HIERARCH "` stripped if any) as a sub-string.
-
-See also [`FITSCards.scan_keyword`](@ref).
-
-"""
-function parse_keyword(name::AbstractString)
-    key, rng = scan_keyword(name)
-    return key, @inbounds SubString(name, rng)
-end
 
 include("parser.jl")
 include("cards.jl")
 import .Cards: FITSCard, FITSInteger, FITSFloat, FITSComplex
+
+"""
+    FITSCards.keyword(name) -> full_name
+
+yields the full FITS keyword corresponding to `name`, throwing an exception if
+`name` is not a valid FITS keyword.  The result is equal to either `name` or
+to `"HIERARCH "*name`.
+
+Examples:
+
+``` jldoctest
+julia> FITSCards.keyword("GIZMO")
+"GIZMO"
+
+julia> FITSCards.keyword("HIERARCH GIZMO")
+"HIERARCH GIZMO"
+
+julia> FITSCards.keyword("GIZ MO")
+"HIERARCH GIZ MO"
+
+julia> FITSCards.keyword("VERYLONGNAME")
+"HIERARCH VERYLONGNAME"
+```
+
+where the 1st one is a short FITS keyword (with less than
+$FITS_SHORT_KEYWORD_SIZE characters), the 3rd one is explictely a `HIERARCH`
+keyword, while the 3rd and 4th ones are automatically turned into `HIERARCH`
+keywords because the 3rd one contains a space and because the 4th one is longer
+than $FITS_SHORT_KEYWORD_SIZE characters.
+
+See also [`FITSCards.Parser.check_keyword`](@ref).
+
+"""
+function keyword(name::AbstractString)
+    key, pfx = Parser.check_keyword(name)
+    return pfx ? "HIERARCH "*name : String(name)
+end
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin

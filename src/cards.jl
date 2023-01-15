@@ -14,7 +14,6 @@ using ..FITSCards:
     FITSInteger,
     FITSFloat,
     FITSComplex,
-    parse_keyword,
     is_comment,
     is_end
 import ..FITSCards:
@@ -24,12 +23,13 @@ import ..FITSCards:
 using ..FITSCards.Parser:
     EMPTY_STRING,
     ByteBuffer,
+    check_keyword,
     make_string,
-    parse_logical_value,
-    parse_integer_value,
-    parse_float_value,
-    parse_string_value,
     parse_complex_value,
+    parse_float_value,
+    parse_integer_value,
+    parse_logical_value,
+    parse_string_value,
     scan_card
 
 const Undefined = Union{Missing,UndefInitializer}
@@ -41,10 +41,10 @@ const UNDEF_FLOAT = FITSComplex(NaN,0.0)
 const UNDEF_STRING = EMPTY_STRING
 
 """
-    card = FITSCard(key, val, com=$EMPTY_STRING)
+    card = FITSCard(key => (val, com))
 
 builds a FITS header card associating keyword `key` with value `val` and
-comment `com`. The value `val` may be:
+comment string `com`. The value `val` may be:
 
 - a boolean to yield a card of type `FITS_LOGICAL`;
 - an integer to yield a card of type `FITS_INTEGER`;
@@ -54,13 +54,13 @@ comment `com`. The value `val` may be:
 - `nothing` to yield a card of type `FITS_COMMENT`;
 - `missing` or `undef` to yield a card of type `FITS_UNDEFINED`.
 
-A FITS card can also be built from a pair:
+Only the value may be specified for valued FITS card with no comments, only the
+comment may be specified for a commentary FITS card:
 
-    card = FITSCard(key => (val, com))
     card = FITSCard(key => val::Number)
     card = FITSCard(key => str::AbstractString)
 
-In the second case, the comment is assumed to be empty. In the third case, the
+In the 1st case, the comment is assumed to be empty. In the 2nd case, the
 string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 `"HISTORY"` and the card value otherwise.
 
@@ -99,32 +99,25 @@ struct FITSCard
     value_string::String
     name::String
     comment::String
-    FITSCard(key::FITSKey, name::AbstractString, val::Bool, com::AbstractString=EMPTY_STRING) =
+    FITSCard(key::FITSKey, name::AbstractString, val::Bool, com::AbstractString) =
         new(key, FITS_LOGICAL, val, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::Integer, com::AbstractString=EMPTY_STRING) =
+    FITSCard(key::FITSKey, name::AbstractString, val::Integer, com::AbstractString) =
         new(key, FITS_INTEGER, UNDEF_LOGICAL, val, UNDEF_COMPLEX, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::Real, com::AbstractString=EMPTY_STRING) =
+    FITSCard(key::FITSKey, name::AbstractString, val::Real, com::AbstractString) =
          new(key, FITS_FLOAT, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::Complex, com::AbstractString=EMPTY_STRING) =
+    FITSCard(key::FITSKey, name::AbstractString, val::Complex, com::AbstractString) =
          new(key, FITS_COMPLEX, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::AbstractString, com::AbstractString=EMPTY_STRING) =
+    FITSCard(key::FITSKey, name::AbstractString, val::AbstractString, com::AbstractString) =
         new(key, FITS_STRING, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, val, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, ::Undefined, com::AbstractString=EMPTY_STRING) =
+    FITSCard(key::FITSKey, name::AbstractString, ::Undefined, com::AbstractString) =
         new(key, FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, ::Nothing, com::AbstractString=EMPTY_STRING) =
+    FITSCard(key::FITSKey, name::AbstractString, ::Nothing, com::AbstractString) =
         new(key, key === FITS"END" ? FITS_END : FITS_COMMENT,
             UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
-function FITSCard(name::AbstractString,
-                  val::Union{Real,Complex,AbstractString,Nothing,Undefined},
-                  com::AbstractString=EMPTY_STRING)
-    key, str = parse_keyword(name)
-    return FITSCard(key, str, val, com)
-end
-
 """
-    FITSCard(buf, off=0)
+    FITSCard(buf; offset=0)
 
 yields a `FITSCard` object built by parsing the FITS header card stored in the
 string or vector of bytes `buf`. Optional argument `off` is the number of bytes
@@ -139,8 +132,8 @@ left, a `FITSCard` object equivalent to the final `END` card of a FITS header
 is returned.
 
 """
-function FITSCard(buf::ByteBuffer, off::Int = 0)
-    type, key, name_rng, val_rng, com_rng = scan_card(buf, off)
+function FITSCard(buf::ByteBuffer; offset::Int = 0)
+    type, key, name_rng, val_rng, com_rng = scan_card(buf, offset)
     name = type == FITS_END ? END_STRING : make_string(buf, name_rng)
     com = make_string(buf, com_rng)
     if type == FITS_LOGICAL
@@ -155,8 +148,6 @@ function FITSCard(buf::ByteBuffer, off::Int = 0)
         return FITSCard(key, name, parse_complex_value(buf, val_rng), com)
     elseif type == FITS_UNDEFINED
         return FITSCard(key, name, missing, com)
-    elseif type == FITS_COMMENT
-        return FITSCard(key, name, nothing, com)
     else # must be commentary or END card
         return FITSCard(key, name, nothing, com)
     end
@@ -169,13 +160,10 @@ is_end(card::FITSCard) = is_end(card.type)
 # same object. We try to use the most concise syntax.
 function Base.show(io::IO, A::FITSCard)
     print(io, "FITSCard(\"")
-    if A.key === FITS"HIERARCH" && A.name != "HIERARCH"
-        print(io, "HIERARCH ")
-    end
     print(io, A.name, "\"")
     if A.type != FITS_END
         if A.type == FITS_COMMENT
-            if A.key === FITS"COMMENT" || A.key === FITS"HSITORY"
+            if A.key === FITS"COMMENT" || A.key === FITS"HISTORY"
                 print(io, " => ")
                 show(io, A.comment)
             else
@@ -216,15 +204,15 @@ end
 # This version is for the REPL. We try to approximate FITS syntax.
 function Base.show(io::IO, mime::MIME"text/plain", A::FITSCard)
     print(io, "FITSCard: ")
-    if A.key === FITS"HIERARCH" && A.name != "HIERARCH"
-        print(io, "HIERARCH ", A.name, " ")
-    else
-        print(io, A.name)
-        if A.type != FITS_END
-            len = length(A.name)
-            while len < FITS_SHORT_KEYWORD_SIZE
+    print(io, A.name)
+    if A.type != FITS_END
+        if A.key === FITS"HIERARCH"
+            print(io, ' ')
+        else
+            n = ncodeunits(A.name)
+            while n < FITS_SHORT_KEYWORD_SIZE
                 print(io, ' ')
-                len += 1
+                n += 1
             end
         end
     end
@@ -386,16 +374,27 @@ Base.Pair{K,V}(A::FITSCard) where {K,V} = Pair{K,V}(A.name, (A.value, A.comment)
 function FITSCard(pair::Pair{<:AbstractString,
                              <:Tuple{Union{AbstractString,Number,Undefined,Nothing},
                                      AbstractString}})
-    return FITSCard(first(pair), last(pair)...)
+    key, name = form_key_and_name(first(pair))
+    val, com = last(pair)
+    return FITSCard(key, name, val, com)
 end
 function FITSCard(pair::Pair{<:AbstractString, <:Union{Number,Undefined}})
-    return FITSCard(first(pair), last(pair))
+    key, name = form_key_and_name(first(pair))
+    val = last(pair)
+    return FITSCard(key, name, val, EMPTY_STRING)
 end
 function FITSCard(pair::Pair{<:AbstractString, <:AbstractString})
-    key, name = parse_keyword(first(pair))
+    key, name = form_key_and_name(first(pair))
+    val_or_com = last(pair)
     return is_comment(key) ?
-        FITSCard(key, name, nothing, last(pair)) :
-        FITSCard(key, name, last(pair))
+        FITSCard(key, name, nothing, val_or_com) :
+        FITSCard(key, name, val_or_com, EMPTY_STRING)
+end
+
+@inline function form_key_and_name(name::AbstractString)
+    key, pfx = check_keyword(name)
+    full_name = pfx ? "HIERARCH "*name : String(name)
+    return key, full_name
 end
 
 end # module

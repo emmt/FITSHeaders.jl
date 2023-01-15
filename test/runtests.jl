@@ -87,29 +87,36 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS"HIERARCH" === make_FITSKey("HIERARCH")
         @test FITS""         === make_FITSKey("        ")
         @test FITS"END"      === make_FITSKey("END     ")
-        @test_throws Exception FITSCards.parse_keyword("SIMPLE#")
-        @test_throws Exception FITSCards.parse_keyword(" SIMPLE")
-        @test_throws Exception FITSCards.parse_keyword("SIMPLE ")
-        @test_throws Exception FITSCards.parse_keyword("SImPLE")
-        @test_throws Exception FITSCards.parse_keyword("TOO  MANY SPACES")
+        @test_throws Exception FITSCards.keyword("SIMPLE#")
+        @test_throws Exception FITSCards.keyword(" SIMPLE")
+        @test_throws Exception FITSCards.keyword("SIMPLE ")
+        @test_throws Exception FITSCards.keyword("SImPLE")
+        @test_throws Exception FITSCards.keyword("TOO  MANY SPACES")
         # Simple (short) FITS keywords.
-        @test FITSCards.parse_keyword("SIMPLE") == (FITS"SIMPLE", "SIMPLE")
-        @test FITSCards.parse_keyword("HISTORY") == (FITS"HISTORY", "HISTORY")
+        @test FITSCards.Parser.check_keyword("SIMPLE") == (FITS"SIMPLE", false)
+        @test FITSCards.keyword("SIMPLE") == "SIMPLE"
+        @test FITSCards.Parser.check_keyword("HISTORY") == (FITS"HISTORY", false)
+        @test FITSCards.keyword("HISTORY") == "HISTORY"
         # Keywords longer than 8-characters are HIERARCH ones.
-        @test FITSCards.parse_keyword("LONG-NAME") == (FITS"HIERARCH", "LONG-NAME")
-        @test FITSCards.parse_keyword("HIERARCHY") == (FITS"HIERARCH", "HIERARCHY")
-        @test FITSCards.parse_keyword("HIERARCHOLOGIST") == (FITS"HIERARCH", "HIERARCHOLOGIST")
+        @test FITSCards.Parser.check_keyword("LONG-NAME") == (FITS"HIERARCH", true)
+        @test FITSCards.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
+        @test FITSCards.Parser.check_keyword("HIERARCHY") == (FITS"HIERARCH", true)
+        @test FITSCards.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
         # Keywords starting by "HIERARCH " are HIERARCH ones.
         for key in ("HIERARCH GIZMO", "HIERARCH MY GIZMO", "HIERARCH MY BIG GIZMO")
-            @test FITSCards.parse_keyword(key) == (FITS"HIERARCH", SubString(key, 10:length(key)))
+            @test FITSCards.Parser.check_keyword(key) == (FITS"HIERARCH", false)
+            @test FITSCards.keyword(key) === key # should return the same object
         end
         # Keywords with spaces are HIERARCH ones whatever their lengths.
         for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
-            @test FITSCards.parse_keyword(key) == (FITS"HIERARCH", key)
+            @test FITSCards.Parser.check_keyword(key) == (FITS"HIERARCH", true)
+            @test FITSCards.keyword(key) == "HIERARCH "*key
         end
         # The following cases are consequences of the implemented scanner.
-        @test FITSCards.parse_keyword("HIERARCH") == (FITS"HIERARCH", "HIERARCH")
-        @test FITSCards.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", "SIMPLE")
+        @test FITSCards.Parser.check_keyword("HIERARCH") == (FITS"HIERARCH", false)
+        @test FITSCards.keyword("HIERARCH") == "HIERARCH"
+        @test FITSCards.Parser.check_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", false)
+        @test FITSCards.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
     end
     @testset "Parser" begin
         # Character classes according to FITS standard.
@@ -341,7 +348,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         str = "HIERARCH ESO OBS EXECTIME = +2919 / Expected execution time                     "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_INTEGER, FITS"HIERARCH", "ESO OBS EXECTIME", "Expected execution time")
+            (FITS_INTEGER, FITS"HIERARCH", "HIERARCH ESO OBS EXECTIME", "Expected execution time")
         @test card.value isa Integer
         @test card.value == +2919
         @test card.value === card.integer
@@ -367,7 +374,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         str = "HIERARCH DUMMY   =               / no value given                               "
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_UNDEFINED, FITS"HIERARCH", "DUMMY", "no value given")
+            (FITS_UNDEFINED, FITS"HIERARCH", "HIERARCH DUMMY", "no value given")
         @test card.value isa Missing
         @test card.value === missing
         @test valtype(card) === typeof(card.value)
@@ -436,7 +443,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # "END", empty string "" or out of range offset yield an END card.
         @test FITSCard("END").type === FITS_END
         @test FITSCard("").type === FITS_END
-        @test FITSCard("SOMETHING", 250).type === FITS_END
+        @test FITSCard("SOMETHING", offset=250).type === FITS_END
     end
     @testset "Cards from pairs" begin
         # Logical FITS cards.
@@ -450,19 +457,19 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         card = FITSCard("TWO KEYS" => (π, com))
         @test card.type === FITS_FLOAT
         @test card.key === FITS"HIERARCH"
-        @test card.name == "TWO KEYS"
+        @test card.name == "HIERARCH TWO KEYS"
         @test card.value ≈ π
         @test card.comment == com
         card = convert(FITSCard, "HIERARCH NAME" => ("some name", com))
         @test card.type === FITS_STRING
         @test card.key === FITS"HIERARCH"
-        @test card.name == "NAME"
+        @test card.name == "HIERARCH NAME"
         @test card.value == "some name"
         @test card.comment == com
         card = convert(FITSCard, "HIERARCH COMMENT" => (nothing, com))
         @test card.type === FITS_COMMENT
         @test card.key === FITS"HIERARCH"
-        @test card.name == "COMMENT"
+        @test card.name == "HIERARCH COMMENT"
         @test card.value === nothing
         @test card.comment == com
         card = convert(FITSCard, "COMMENT" => com)
