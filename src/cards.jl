@@ -13,13 +13,9 @@ using ..FITSCards
 using ..FITSCards:
     FITSInteger,
     FITSFloat,
-    FITSComplex,
-    is_comment,
-    is_end
+    FITSComplex
 import ..FITSCards:
-    FITSCardType,
-    is_comment,
-    is_end
+    FITSCardType
 using ..FITSCards.Parser:
     EMPTY_STRING,
     ByteBuffer,
@@ -31,6 +27,9 @@ using ..FITSCards.Parser:
     parse_logical_value,
     parse_string_value,
     scan_card
+import ..FITSCards.Parser:
+    is_comment,
+    is_end
 
 const Undefined = Union{Missing,UndefInitializer}
 const END_STRING = "END"
@@ -375,27 +374,21 @@ Base.Pair{K,V}(A::FITSCard) where {K,V} = Pair{K,V}(A.name, (A.value, A.comment)
 function FITSCard(pair::Pair{<:AbstractString,
                              <:Tuple{Union{AbstractString,Number,Undefined,Nothing},
                                      AbstractString}})
-    key, name = form_key_and_name(first(pair))
+    key, name = check_keyword(first(pair))
     val, com = last(pair)
     return FITSCard(key, name, val, com)
 end
 function FITSCard(pair::Pair{<:AbstractString, <:Union{Number,Undefined}})
-    key, name = form_key_and_name(first(pair))
+    key, name = check_keyword(first(pair))
     val = last(pair)
     return FITSCard(key, name, val, EMPTY_STRING)
 end
 function FITSCard(pair::Pair{<:AbstractString, <:AbstractString})
-    key, name = form_key_and_name(first(pair))
+    key, name = check_keyword(first(pair))
     val_or_com = last(pair)
     return is_comment(key) ?
         FITSCard(key, name, nothing, val_or_com) :
         FITSCard(key, name, val_or_com, EMPTY_STRING)
-end
-
-@inline function form_key_and_name(name::AbstractString)
-    key, pfx = check_keyword(name)
-    full_name = pfx ? "HIERARCH "*name : String(name)
-    return key, full_name
 end
 
 end # module

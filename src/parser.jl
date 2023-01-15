@@ -12,16 +12,37 @@ using ..FITSCards:
     FITSInteger,
     FITSFloat,
     FITSComplex
-import ..FITSCards:
-    FITSKey,
-    check_short_keyword,
-    is_comment,
-    is_end
 
 using Compat
 using Base: @propagate_inbounds
 
 const EMPTY_STRING = ""
+
+"""
+    FITS_CARD_SIZE
+
+is the number of bytes per FITS header card.
+
+"""
+const FITS_CARD_SIZE = 80
+
+"""
+    FITS_BLOCK_SIZE
+
+is the number of bytes per FITS header/data block.
+
+"""
+const FITS_BLOCK_SIZE = 36*FITS_CARD_SIZE # 2880
+
+"""
+    FITS_SHORT_KEYWORD_SIZE
+
+is the number of bytes in a short FITS keyword, that is all FITS keyword but
+the `HIERARCH` ones. If a FITS keyword is shorther than this, it is equivalent
+to pad it with ASCII spaces (hexadecimal code 0x20).
+
+"""
+const FITS_SHORT_KEYWORD_SIZE = 8
 
 """
     FITSCards.Parser.PointerCapability(T) -> Union{PointerNone,PointerFull}
@@ -145,6 +166,79 @@ end
 end
 
 """
+    FITSKey(buf, off=0, n=last_byte_index(buf))
+
+encodes the, at most, first $FITS_SHORT_KEYWORD_SIZE bytes (or ASCII
+characters) of `buf`, starting at offset `off`, in a 64-bit integer value which
+is exactly equal to the first $FITS_SHORT_KEYWORD_SIZE bytes of a FITS keyword
+as stored in a FITS header. Argument `buf` may be a string or a vector of
+bytes.
+
+Optional argument `n` is the index of the last byte available in `buf`. If
+fewer than $FITS_SHORT_KEYWORD_SIZE bytes are available (that is, if `off +
+$FITS_SHORT_KEYWORD_SIZE > n`), the result is as if `buf` has been padded with
+ASCII spaces (hexadecimal code 0x20).
+
+The only operation that makes sense with an instance of `FITSKey` is comparison
+for equality for fast searching of keywords in a FITS header.
+
+The caller may use `@inbounds` macro if it certain that bytes in the range
+`off+1:n` are in bounds for `buf`.
+
+For the fastest, but unsafe, computations call:
+
+    FITSKey(Val(:full), buf, off)
+    FITSKey(Val(:pad), buf, off, n)
+
+where first argument should be `Val(:full)` if there are at least
+$FITS_SHORT_KEYWORD_SIZE bytes available after `off`, and `Val(:pad)`
+otherwise. These variants do not perfom bounds checking, it is the caller's
+responsibility to insure that the arguments are consistent.
+
+"""
+struct FITSKey
+    val::UInt64
+end
+
+@assert sizeof(FITSKey) == FITS_SHORT_KEYWORD_SIZE
+
+"""
+    FITSKey()
+    zero(FITSKey)
+
+yield a null FITS key, that is whose bytes are all 0. This can be asserted by
+calling `issero` on the returned key. Since any valid FITS key cannot contain
+null bytes, a null FITS key may be useful for searching keys.
+
+"""
+FITSKey() = FITSKey(zero(UInt64))
+# NOTE: Other constructors are implemented in parser.jl
+
+Base.iszero(key::FITSKey) = iszero(key.val)
+Base.zero(::Union{FITSKey,Type{FITSKey}}) = FITSKey()
+Base.:(==)(a::FITSKey, b::FITSKey) = a.val === b.val
+Base.convert(::Type{T}, key::FITSKey) where {T<:Integer} = convert(T, key.val)
+Base.UInt64(key::FITSKey) = key.val
+
+"""
+    @FITS_str
+
+A macro to construct a 64-bit identifier equivalent to the FITS keyword given
+in argument and as it is stored in the header of a FITS file. The argument must
+be a short FITS keyword (e.g., not a `HIERARCH` one) specified as a literal
+string of, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters with no trailing
+spaces. For example `FITS"SIMPLE"` or `FITS"NAXIS2"`.
+
+The result is the same as that computed by `FITSKey` but since the identifier
+is given by a string macro, it is like a constant computed at compile time with
+no runtime penalty.
+
+"""
+macro FITS_str(str::String)
+    FITSKey(check_short_keyword(str))
+end
+
+"""
     FITSCards.check_short_keyword(str) -> str
 
 returns the string `str` throwing an exception if `str` is not a short FITS
@@ -259,7 +353,7 @@ end
 end
 
 """
-    is_comment(A::Union{FITSKey,FITSCardType,FITSCard})
+    FITSCards.is_comment(A::Union{FITSKey,FITSCardType,FITSCard})
 
 yields whether `A` indicates a commentary FITS keyword.
 
@@ -268,7 +362,7 @@ is_comment(key::FITSKey) = (key == FITS"COMMENT") | (key == FITS"HISTORY")
 is_comment(type::FITSCardType) = type === FITS_COMMENT
 
 """
-    is_end(A::Union{FITSKey,FITSCardType,FITSCard})
+    FITSCards.is_end(A::Union{FITSKey,FITSCardType,FITSCard})
 
 yields whether `A` indicates the END FITS keyword.
 
@@ -663,32 +757,84 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
 end
 
 """
-    FITSCards.check_keyword(A, rng=byte_index_range(A)) -> key, pfx
+    FITSCards.keyword(name) -> full_name
 
-checks the FITS keyword given by `A`, a string or a vector of bytes, throwing an
-exception if the name is invalid. The result is a 2-tuple: `key` is the short
-keyword code and `pfx` is a boolean indicating whether the `"HIERARCH "` prefix
-should be prepended to `A` to form the full keyword name. If the range of bytes
-is longer than $FITS_SHORT_KEYWORD_SIZE or if any single space separator occurs
-in the range of bytes, a `HIERARCH` keyword is assumed even though the first
-bytes are not `"HIERARCH "`. Leading and trailing spaces are not allowed.
+yields the full FITS keyword corresponding to `name`, throwing an exception if
+`name` is not a valid FITS keyword.  The result is equal to either `name` or
+to `"HIERARCH "*name`.
+
+Examples:
+
+``` jldoctest
+julia> FITSCards.keyword("GIZMO")
+"GIZMO"
+
+julia> FITSCards.keyword("HIERARCH GIZMO")
+"HIERARCH GIZMO"
+
+julia> FITSCards.keyword("GIZ MO")
+"HIERARCH GIZ MO"
+
+julia> FITSCards.keyword("VERYLONGNAME")
+"HIERARCH VERYLONGNAME"
+```
+
+where the 1st one is a short FITS keyword (with less than
+$FITS_SHORT_KEYWORD_SIZE characters), the 3rd one is explictely a `HIERARCH`
+keyword, while the 3rd and 4th ones are automatically turned into `HIERARCH`
+keywords because the 3rd one contains a space and because the 4th one is longer
+than $FITS_SHORT_KEYWORD_SIZE characters.
+
+See also [`FITSCards.check_keyword`](@ref).
+
+"""
+keyword(name::AbstractString) = check_keyword(name)[2]
+
+"""
+    FITSCards.check_keyword(name) -> key, full_name
+
+checks the FITS keyword `name` and returns the corresponding short key and full
+keyword name throwing an exception if `name` is not a valid FITS keyword. The
+full keyword name is a `string` instance either equal to `name` or to `"HIERARCH "*name`.
+
+See also [`FITSCards.keyword`](@ref), [`FITSCards.parse_keyword`](@ref).
+
+"""
+function check_keyword(name::AbstractString)
+    key, pfx = parse_keyword(name)
+    return key, pfx ? "HIERARCH "*name : String(name)
+end
+
+"""
+    FITSCards.Parser.parse_keyword(A, rng=byte_index_range(A)) -> key, pfx
+
+parses the FITS keyword given by `A`, a string or a vector of bytes, throwing
+an exception if the name is invalid. The result is a 2-tuple: `key` is the
+short keyword code and `pfx` is a boolean indicating whether the `"HIERARCH "`
+prefix should be prepended to `A` to form the full keyword name. If the range
+of bytes is longer than $FITS_SHORT_KEYWORD_SIZE or if any single space
+separator occurs in the range of bytes, a `HIERARCH` keyword is assumed even
+though the first bytes are not `"HIERARCH "`. Leading and trailing spaces are
+not allowed.
 
 The returned `key` is `FITS"HIERARCH"` in 4 cases:
 
-- The first bytes of the sequence are `"HIERARCH "` followed by the name, `pfx`
-  is `false`.
+- The first bytes of the sequence are `"HIERARCH "` followed by a name,
+  possibly slit in several parts and possibly longer than
+  $FITS_SHORT_KEYWORD_SIZE, `pfx` is `false`.
 
-- At least one single space separator occurs in the byte sequence, `pfx` is
-  true.
+- The sequence does not starts by `"HIERARCH "` but at least one single space
+  separator occurs in the sequence, `pfx` is true.
 
-- The byte sequence is longer than $FITS_SHORT_KEYWORD_SIZE, `pfx` is true.
+- The sequence does not starts by `"HIERARCH "` but the sequence is longer than
+  $FITS_SHORT_KEYWORD_SIZE, `pfx` is true.
 
 - The byte sequence is `"HIERARCH"`, `pfx` is `false`.
 
-""" check_keyword
+""" parse_keyword
 
 # FIXME: This function should only be used on strings.
-@inline function unsafe_check_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+@inline function unsafe_parse_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @inbounds begin
         # Compute identifier of the short FITS keyword, this is a cheap way to
         # figure out whether the sequence of bytes starts with "HIERARCH".
@@ -931,7 +1077,7 @@ provided, all the bytes of `buf` are considered. If `rng` is provided,
 end
 
 # Implement higher level "safe" methods.
-for func in (:check_keyword, :trim_leading_spaces, :trim_trailing_spaces)
+for func in (:parse_keyword, :trim_leading_spaces, :trim_trailing_spaces)
     unsafe_func = Symbol("unsafe_$func")
     @eval begin
         $func(buf::ByteBuffer) = $unsafe_func(buf, byte_index_range(buf))

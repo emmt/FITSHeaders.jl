@@ -92,30 +92,31 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSCards.keyword("SIMPLE ")
         @test_throws Exception FITSCards.keyword("SImPLE")
         @test_throws Exception FITSCards.keyword("TOO  MANY SPACES")
+        @test_throws Exception FITSCards.keyword("HIERARCH  A") # more than one space
         # Simple (short) FITS keywords.
-        @test FITSCards.Parser.check_keyword("SIMPLE") == (FITS"SIMPLE", false)
+        @test FITSCards.Parser.parse_keyword("SIMPLE") == (FITS"SIMPLE", false)
         @test FITSCards.keyword("SIMPLE") == "SIMPLE"
-        @test FITSCards.Parser.check_keyword("HISTORY") == (FITS"HISTORY", false)
+        @test FITSCards.Parser.parse_keyword("HISTORY") == (FITS"HISTORY", false)
         @test FITSCards.keyword("HISTORY") == "HISTORY"
         # Keywords longer than 8-characters are HIERARCH ones.
-        @test FITSCards.Parser.check_keyword("LONG-NAME") == (FITS"HIERARCH", true)
+        @test FITSCards.Parser.parse_keyword("LONG-NAME") == (FITS"HIERARCH", true)
         @test FITSCards.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
-        @test FITSCards.Parser.check_keyword("HIERARCHY") == (FITS"HIERARCH", true)
+        @test FITSCards.Parser.parse_keyword("HIERARCHY") == (FITS"HIERARCH", true)
         @test FITSCards.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
         # Keywords starting by "HIERARCH " are HIERARCH ones.
         for key in ("HIERARCH GIZMO", "HIERARCH MY GIZMO", "HIERARCH MY BIG GIZMO")
-            @test FITSCards.Parser.check_keyword(key) == (FITS"HIERARCH", false)
+            @test FITSCards.Parser.parse_keyword(key) == (FITS"HIERARCH", false)
             @test FITSCards.keyword(key) === key # should return the same object
         end
         # Keywords with spaces are HIERARCH ones whatever their lengths.
         for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
-            @test FITSCards.Parser.check_keyword(key) == (FITS"HIERARCH", true)
+            @test FITSCards.Parser.parse_keyword(key) == (FITS"HIERARCH", true)
             @test FITSCards.keyword(key) == "HIERARCH "*key
         end
         # The following cases are consequences of the implemented scanner.
-        @test FITSCards.Parser.check_keyword("HIERARCH") == (FITS"HIERARCH", false)
+        @test FITSCards.Parser.parse_keyword("HIERARCH") == (FITS"HIERARCH", false)
         @test FITSCards.keyword("HIERARCH") == "HIERARCH"
-        @test FITSCards.Parser.check_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", false)
+        @test FITSCards.Parser.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", false)
         @test FITSCards.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
     end
     @testset "Parser" begin
