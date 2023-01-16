@@ -282,12 +282,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.is_end(card.type) == false
         @test FITSCards.is_end(card.key) == false
         # String valued card.
-        str = "DATE    = '2015-07-07T14:38:51' / file creation date (YYYY-MM-DDThh:mm:ss UT)   "
+        str = "REMARK  = 'Joe''s taxi'        / a string with an embedded quote"
         card = FITSCard(str)
         @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_STRING, FITS"DATE", "DATE", "file creation date (YYYY-MM-DDThh:mm:ss UT)")
+            (FITS_STRING, FITS"REMARK", "REMARK", "a string with an embedded quote")
         @test card.value isa AbstractString
-        @test card.value == "2015-07-07T14:38:51"
+        @test card.value == "Joe's taxi"
         @test card.value === card.string
         @test valtype(card) === typeof(card.value)
         @test repr(card) isa String
