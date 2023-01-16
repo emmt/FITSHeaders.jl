@@ -281,6 +281,24 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.is_end(card) == false
         @test FITSCards.is_end(card.type) == false
         @test FITSCards.is_end(card.key) == false
+        # Non standard commentary card.
+        card = FITSCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
+        @test (card.type, card.key, card.name, card.comment) ==
+            (FITS_COMMENT, FITS"HIERARCH", "HIERARCH NON-STANDARD COMMENT", "some comment")
+        @test card.value isa Nothing
+        @test card.value === nothing
+        @test valtype(card) === typeof(card.value)
+        @test repr(card) isa String
+        @test repr("text/plain", card) isa String
+        @test isassigned(card) === false
+        @test isinteger(card) === false
+        @test isreal(card) === false
+        @test FITSCards.is_comment(card) == true
+        @test FITSCards.is_comment(card.type) == true
+        @test FITSCards.is_comment(card.key) == false # non-standard comment
+        @test FITSCards.is_end(card) == false
+        @test FITSCards.is_end(card.type) == false
+        @test FITSCards.is_end(card.key) == false
         # String valued card.
         str = "REMARK  = 'Joe''s taxi'        / a string with an embedded quote"
         card = FITSCard(str)

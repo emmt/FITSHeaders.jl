@@ -353,9 +353,14 @@ end
 end
 
 """
-    FITSCards.is_comment(A::Union{FITSKey,FITSCardType,FITSCard})
+    FITSCards.is_comment(A::Union{FITSCardType,FITSCard})
 
-yields whether `A` indicates a commentary FITS keyword.
+yields whether `A` indicates a, possibly non-standard, commentary FITS keyword.
+
+    FITSCards.is_comment(key::FITSKey)
+
+yields whether `key` is `FITS"COMMENT"` or `FITS"HISTORY"` which corresponds to
+a standard commentary FITS keyword.
 
 """
 is_comment(key::FITSKey) = (key == FITS"COMMENT") | (key == FITS"HISTORY")
