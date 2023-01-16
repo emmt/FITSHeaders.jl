@@ -93,7 +93,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSCards.keyword("SImPLE")
         @test_throws Exception FITSCards.keyword("TOO  MANY SPACES")
         @test_throws Exception FITSCards.keyword("HIERARCH  A") # more than one space
-        # Simple (short) FITS keywords.
+        # Short FITS keywords.
         @test FITSCards.Parser.parse_keyword("SIMPLE") == (FITS"SIMPLE", false)
         @test FITSCards.keyword("SIMPLE") == "SIMPLE"
         @test FITSCards.Parser.parse_keyword("HISTORY") == (FITS"HISTORY", false)
@@ -108,7 +108,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test FITSCards.Parser.parse_keyword(key) == (FITS"HIERARCH", false)
             @test FITSCards.keyword(key) === key # should return the same object
         end
-        # Keywords with spaces are HIERARCH ones whatever their lengths.
+        # Keywords with multiple words are HIERARCH ones whatever their lengths.
         for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
             @test FITSCards.Parser.parse_keyword(key) == (FITS"HIERARCH", true)
             @test FITSCards.keyword(key) == "HIERARCH "*key

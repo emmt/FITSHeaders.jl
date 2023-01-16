@@ -51,7 +51,7 @@ FITS cards have properties:
 
 ``` julia
 card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
-card.key     # short key of card: FITS"BITPIX", FITS"HIERARCH", etc.
+card.key     # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
 card.name    # name of card
 card.value   # value of card
 card.comment # comment of card

@@ -223,15 +223,15 @@ Base.UInt64(key::FITSKey) = key.val
 """
     @FITS_str
 
-A macro to construct a 64-bit identifier equivalent to the FITS keyword given
-in argument and as it is stored in the header of a FITS file. The argument must
-be a short FITS keyword (e.g., not a `HIERARCH` one) specified as a literal
-string of, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters with no trailing
-spaces. For example `FITS"SIMPLE"` or `FITS"NAXIS2"`.
+A macro to construct a 64-bit quick key equivalent to the FITS keyword given in
+argument and as it is stored in the header of a FITS file. The argument must be
+a short FITS keyword (e.g., not a `HIERARCH` one) specified as a literal string
+of, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters with no trailing spaces.
+For example `FITS"SIMPLE"` or `FITS"NAXIS2"`.
 
-The result is the same as that computed by `FITSKey` but since the identifier
-is given by a string macro, it is like a constant computed at compile time with
-no runtime penalty.
+The result is the same as that computed by `FITSKey` but since the quick key is
+given by a string macro, it is like a constant computed at compile time with no
+runtime penalty.
 
 """
 macro FITS_str(str::String)
@@ -597,7 +597,8 @@ header). The result is a 5-tuple:
 
 - `type::FITSCardType` is the type of the card value.
 
-- `key::FITSKey` is the code corresponding to the short keyword of the card.
+- `key::FITSKey` is the quick key corresponding to the short keyword of the
+  card.
 
 - `name_rng` is the range of bytes containing the keyword name without trailing
   spaces.
@@ -691,9 +692,10 @@ end
     FITSCards.Parser.scan_keyword_part(A, rng) -> key, name_rng, i_next
 
 parses a the keyword part of FITS header card stored in bytes `rng` of `A`.
-Returns `key` the keyword code, `name_rng` the byte index range for the keyword
-name (with leading "HIERARCH "` and trailing spaces removed), and `i_next` the
-index of the first byte where next token (value marker of comment) may start.
+Returns `key` the keyword quick key, `name_rng` the byte index range for the
+keyword name (with leading "HIERARCH "` and trailing spaces removed), and
+`i_next` the index of the first byte where next token (value marker of comment)
+may start.
 
 """
 function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
@@ -793,7 +795,7 @@ keyword(name::AbstractString) = check_keyword(name)[2]
 """
     FITSCards.check_keyword(name) -> key, full_name
 
-checks the FITS keyword `name` and returns the corresponding short key and full
+checks the FITS keyword `name` and returns the corresponding quick key and full
 keyword name throwing an exception if `name` is not a valid FITS keyword. The
 full keyword name is a `string` instance either equal to `name` or to `"HIERARCH "*name`.
 
@@ -810,7 +812,7 @@ end
 
 parses the FITS keyword given by `A`, a string or a vector of bytes, throwing
 an exception if the name is invalid. The result is a 2-tuple: `key` is the
-short keyword code and `pfx` is a boolean indicating whether the `"HIERARCH "`
+quick keyword key and `pfx` is a boolean indicating whether the `"HIERARCH "`
 prefix should be prepended to `A` to form the full keyword name. If the range
 of bytes is longer than $FITS_SHORT_KEYWORD_SIZE or if any single space
 separator occurs in the range of bytes, a `HIERARCH` keyword is assumed even
@@ -836,10 +838,10 @@ The returned `key` is `FITS"HIERARCH"` in 4 cases:
 # FIXME: This function should only be used on strings.
 @inline function unsafe_parse_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @inbounds begin
-        # Compute identifier of the short FITS keyword, this is a cheap way to
-        # figure out whether the sequence of bytes starts with "HIERARCH".
-        # This does not check for the validity of the leading bytes, unless
-        # the key is FITS"HIERARCH".
+        # Compute quick key of the short FITS keyword, this is a cheap way to
+        # figure out whether the sequence of bytes starts with "HIERARCH". This
+        # does not check for the validity of the leading bytes, unless the key
+        # is FITS"HIERARCH".
         i_first, i_last = first(rng), last(rng)
         any_space = false # any space found so far?
         pfx = false # add "HIERARCH " prefix?

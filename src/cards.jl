@@ -66,7 +66,7 @@ string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 FITS cards have properties:
 
     card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
-    card.key     # short key of card: FITS"BITPIX", FITS"HIERARCH", etc.
+    card.key     # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
     card.name    # name of card
     card.value   # value of card
     card.comment # comment of card
