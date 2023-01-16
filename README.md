@@ -77,6 +77,89 @@ yields whether `card` has a value (that is whether it is neither a commentary
 card nor a card with an undefined value).
 
 
+## FITS keywords
+
+There are two kinds of FITS keywords:
+
+- Short FITS keywords are words with at most 8 ASCII characters from the
+  restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
+  (hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or
+  underscore (hexadecimal code 0x5F). In a FITS file, keywords shorter than 8
+  characters are padded with ordinary spaces (hexadecimal code 0x20).
+
+- `HIERARCH` FITS keywords start with the string `"HIERARCH "` (with a single
+  trailing space) followed by one or more words composed from the same
+  restricted set of ASCII characters as short keywords and separated by a
+  single space.
+
+Keywords longer than 8 characters or composed of several words can only be
+represented as `HIERARCH` FITS keywords. To simplify the representation of FITS
+cards as pairs, the `FITSCard` constructor automatically converts long keywords
+or multi-word keywords into a `HIERARCH` FITS keyword by prefixing the keyword
+with the string `"HIERARCH "` for example:
+
+``` julia
+julia> card = FITSCard("VERY-LONG-NAME" => (2, "keyword is longer than 8 characters"))
+FITSCard: HIERARCH VERY-LONG-NAME = 2 / keyword is longer than 8 characters
+
+julia> card.name
+"HIERARCH VERY-LONG-NAME"
+
+julia> FITSCard("SOME KEY" => (3, "keyword has 8 characters but 2 words"))
+FITSCard: HIERARCH SOME KEY = 3 / keyword has 8 characters but 2 words
+
+julia> card.name
+"HIERARCH SOME KEY"
+
+```
+
+This rule is only applied to the construction of FITS cards from pairs. When
+parsing a FITS header card from a file, the `"HIERARCH "` prefix must be
+present.
+
+The non-exported method `FITSCards.keyword` may be used to apply this rule:
+
+``` julia
+julia> FITSCards.keyword("VERY-LONG-NAME")
+"HIERARCH VERY-LONG-NAME"
+
+julia> FITSCards.keyword("SOME KEY")
+"HIERARCH SOME KEY"
+
+julia> FITSCards.keyword("NAME")
+"NAME"
+
+julia> FITSCards.keyword("HIERARCH NAME")
+"HIERARCH NAME"
+```
+
+
+## Quick FITS keys
+
+In `FITSCards`, a key of type `FITSKey` is a 64-bit value computed from a FITS
+keyword. The key of a short FITS keyword is unique and exactly matches the
+first 8 bytes of the keyword as it is stored in a FITS file. Thus quick keys
+provide fast means to compare and search FITS keywords. The constructor
+`FITSKey(name)` yields the quick key of the string `name`. A quick key may be
+literally expressed by using the `@FITS_str` macro in Julia code. For example:
+
+``` julia
+card.key == FITS"NAXIS"
+```
+
+is faster than, say `card.name == "NAXIS"`, to check whether the name of the
+FITS header card `card` is `"NAXIS"`. This is because, the comparison is
+performed on a single integer (not on several characters) and expression
+`FITS"...."` is a constant computed at compile time with no run-time penalty.
+Compared to `FITSKey(name)`, `FITS"...."` checks the validity of the characters
+composing the literal short keyword (again this is done at compile time so
+without run-time penalty) and, for readability, does not allow for trailing
+spaces.
+
+For a `HIERARCH` keyword, the quick key is equal to the constant
+`FITS"HIERARCH"` whatever the other part of the keyword.
+
+
 ## Parsing of FITS header cards
 
 Each FITS header card is stored in a FITS file as 80 consecutive bytes from the
