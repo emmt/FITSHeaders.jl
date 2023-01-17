@@ -764,9 +764,8 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @inbounds begin
         # Compute fast code equivalent to the short FITS keyword.
         off = i_first - 1
-        len = length(rng)
-        key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FITSKey(Val(:full), buf, off) :
-            FITSKey(Val(:pad), buf, off, len)
+        key = off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FITSKey(Val(:full), buf, off) :
+            FITSKey(Val(:pad), buf, off, i_last)
 
         if key == FITS"HIERARCH" && i_first ≤ i_next ≤ i_last - 2 && is_space(get_byte(buf, i_next))
             # Parse HIERARCH keyword. Errors are deferred until the value

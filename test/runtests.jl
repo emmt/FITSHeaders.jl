@@ -665,9 +665,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === iszero(imag(card.value()))
         end
         # END card.
-        for card in (FITSCard("END                           "),
-                     #FITSCard("xEND"; offset=1),
-                     FITSCard("END"))
+        let card = FITSCard("END                           ")
             @test card.type == FITS_END
             @test card.key == FITS"END"
             @test card.name == "END"
@@ -705,9 +703,22 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test valtype(card) === typeof(card.value())
         end
         # "END", empty string "" or out of range offset yield an END card.
-        @test FITSCard("END").type === FITS_END
-        @test FITSCard("").type === FITS_END
-        @test FITSCard("SOMETHING", offset=250).type === FITS_END
+        let card = FITSCard("END")
+            @test card.type === FITS_END
+            @test card.key === FITS"END"
+        end
+        let card = FITSCard("")
+            @test card.type === FITS_END
+            @test card.key === FITS"END"
+        end
+        let card = FITSCard("xEND"; offset=1)
+            @test card.type === FITS_END
+            @test card.key === FITS"END"
+        end
+        let card = FITSCard("SOMETHING"; offset=250)
+            @test card.type === FITS_END
+            @test card.key === FITS"END"
+        end
     end
     @testset "Cards from pairs" begin
         # Logical FITS cards.
