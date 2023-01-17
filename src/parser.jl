@@ -170,7 +170,7 @@ end
 end
 
 """
-    FITSKey(buf, off=0, n=last_byte_index(buf))
+    FITSKey(buf, off=0, i_last=last_byte_index(buf))
 
 encodes the, at most, first $FITS_SHORT_KEYWORD_SIZE bytes (or ASCII
 characters) of `buf`, starting at offset `off`, in a 64-bit integer value which
@@ -178,21 +178,21 @@ is exactly equal to the first $FITS_SHORT_KEYWORD_SIZE bytes of a FITS keyword
 as stored in a FITS header. Argument `buf` may be a string or a vector of
 bytes.
 
-Optional argument `n` is the index of the last byte available in `buf`. If
+Optional argument `i_last` is the index of the last byte available in `buf`. If
 fewer than $FITS_SHORT_KEYWORD_SIZE bytes are available (that is, if `off +
-$FITS_SHORT_KEYWORD_SIZE > n`), the result is as if `buf` has been padded with
-ASCII spaces (hexadecimal code 0x20).
+$FITS_SHORT_KEYWORD_SIZE > i_last`), the result is as if `buf` has been padded
+with ASCII spaces (hexadecimal code 0x20).
 
 The only operation that makes sense with an instance of `FITSKey` is comparison
 for equality for fast searching of keywords in a FITS header.
 
-The caller may use `@inbounds` macro if it certain that bytes in the range
-`off+1:n` are in bounds for `buf`.
+The caller may use `@inbounds` macro if it is certain that bytes in the range
+`off+1:i_last` are in bounds for `buf`.
 
 For the fastest, but unsafe, computations call:
 
     FITSKey(Val(:full), buf, off)
-    FITSKey(Val(:pad), buf, off, n)
+    FITSKey(Val(:pad), buf, off, i_last)
 
 where first argument should be `Val(:full)` if there are at least
 $FITS_SHORT_KEYWORD_SIZE bytes available after `off`, and `Val(:pad)`
@@ -328,14 +328,16 @@ is_restricted_ascii(c::Union{Char,UInt8}) = between(c, ' ', '~')
 is_keyword(c::Union{Char,UInt8}) = is_digit(c) | is_uppercase(c) | is_hyphen(c) | is_underscore(c)
 
 @inline function FITSKey(buf::ByteBuffer, off::Int = 0)
-    n = last_byte_index(buf)
-    @boundscheck check_byte_index(buf, off+1, min(off+FITS_SHORT_KEYWORD_SIZE, n), n)
-    off + FITS_SHORT_KEYWORD_SIZE ≤ n ? FITSKey(Val(:full), buf, off) : FITSKey(Val(:pad), buf, off, n)
+    i_last = last_byte_index(buf)
+    @boundscheck check_byte_index(buf, off+1, min(off+FITS_SHORT_KEYWORD_SIZE, i_last), i_last)
+    off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FITSKey(Val(:full), buf, off) :
+        FITSKey(Val(:pad), buf, off, i_last)
 end
 
-@inline function FITSKey(buf::ByteBuffer, off::Int, n::Int)
-    @boundscheck check_byte_index(buf, off+1, min(off+FITS_SHORT_KEYWORD_SIZE, n))
-    off + FITS_SHORT_KEYWORD_SIZE ≤ n ? FITSKey(Val(:full), buf, off) : FITSKey(Val(:pad), buf, off, n)
+@inline function FITSKey(buf::ByteBuffer, off::Int, i_last::Int)
+    @boundscheck check_byte_index(buf, off+1, min(off+FITS_SHORT_KEYWORD_SIZE, i_last))
+    off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FITSKey(Val(:full), buf, off) :
+        FITSKey(Val(:pad), buf, off, i_last)
 end
 
 @inline FITSKey(val::Val{:full}, buf::ByteBuffer, off::Int) =
@@ -371,28 +373,28 @@ end
     return FITSKey(k)
 end
 
-@inline function FITSKey(::Val{:pad}, buf::ByteBuffer, off::Int, n::Int)
+@inline function FITSKey(::Val{:pad}, buf::ByteBuffer, off::Int, i_last::Int)
     @inbounds begin
         @static if is_little_endian()
             # Little-endian byte order.
-            k = (get_byte(UInt64, buf, off + 1, n) <<  0) |
-                (get_byte(UInt64, buf, off + 2, n) <<  8) |
-                (get_byte(UInt64, buf, off + 3, n) << 16) |
-                (get_byte(UInt64, buf, off + 4, n) << 24) |
-                (get_byte(UInt64, buf, off + 5, n) << 32) |
-                (get_byte(UInt64, buf, off + 6, n) << 40) |
-                (get_byte(UInt64, buf, off + 7, n) << 48) |
-                (get_byte(UInt64, buf, off + 8, n) << 56)
+            k = (get_byte(UInt64, buf, off + 1, i_last) <<  0) |
+                (get_byte(UInt64, buf, off + 2, i_last) <<  8) |
+                (get_byte(UInt64, buf, off + 3, i_last) << 16) |
+                (get_byte(UInt64, buf, off + 4, i_last) << 24) |
+                (get_byte(UInt64, buf, off + 5, i_last) << 32) |
+                (get_byte(UInt64, buf, off + 6, i_last) << 40) |
+                (get_byte(UInt64, buf, off + 7, i_last) << 48) |
+                (get_byte(UInt64, buf, off + 8, i_last) << 56)
         else
             # Big-endian byte order.
-            k = (get_byte(UInt64, buf, off + 1, n) << 56) |
-                (get_byte(UInt64, buf, off + 2, n) << 48) |
-                (get_byte(UInt64, buf, off + 3, n) << 40) |
-                (get_byte(UInt64, buf, off + 4, n) << 32) |
-                (get_byte(UInt64, buf, off + 5, n) << 24) |
-                (get_byte(UInt64, buf, off + 6, n) << 16) |
-                (get_byte(UInt64, buf, off + 7, n) <<  8) |
-                (get_byte(UInt64, buf, off + 8, n) <<  0)
+            k = (get_byte(UInt64, buf, off + 1, i_last) << 56) |
+                (get_byte(UInt64, buf, off + 2, i_last) << 48) |
+                (get_byte(UInt64, buf, off + 3, i_last) << 40) |
+                (get_byte(UInt64, buf, off + 4, i_last) << 32) |
+                (get_byte(UInt64, buf, off + 5, i_last) << 24) |
+                (get_byte(UInt64, buf, off + 6, i_last) << 16) |
+                (get_byte(UInt64, buf, off + 7, i_last) <<  8) |
+                (get_byte(UInt64, buf, off + 8, i_last) <<  0)
         end
     end
     return FITSKey(k)
