@@ -224,6 +224,52 @@ Base.:(==)(a::FITSKey, b::FITSKey) = a.val === b.val
 Base.convert(::Type{T}, key::FITSKey) where {T<:Integer} = convert(T, key.val)
 Base.UInt64(key::FITSKey) = key.val
 
+function Base.String(key::FITSKey)
+    buf = Vector{UInt8}(undef, FITS_SHORT_KEYWORD_SIZE)
+    len = @inbounds decode!(buf, key; offset = 0)
+    ptr = pointer(buf)
+    return GC.@preserve buf unsafe_string(ptr, len)
+end
+
+Base.show(io::IO, mime::MIME"text/plain", key::FITSKey) = show(io, key)
+function Base.show(io::IO, key::FITSKey)
+    buf = Vector{UInt8}(undef, FITS_SHORT_KEYWORD_SIZE + 6)
+    buf[1] = 'F'
+    buf[2] = 'I'
+    buf[3] = 'T'
+    buf[4] = 'S'
+    buf[5] = '"'
+    len = @inbounds decode!(buf, key; offset = 5) + 1
+    buf[len] = '"'
+    if len < length(buf)
+        write(io, view(buf, Base.OneTo(len)))
+    else
+        write(io, buf)
+    end
+end
+
+@inline function decode!(buf::AbstractVector{UInt8},
+                         key::FITSKey;
+                         offset::Int = 0)
+    i_first = (offset + firstindex(buf))::Int
+    i_last = (i_first + (FITS_SHORT_KEYWORD_SIZE - 1))::Int
+    I = i_first:i_last
+    @boundscheck ((offset ≥ 0) & (i_last ≤ lastindex(buf))) || throw(BoundsError(buf, I))
+    val = key.val
+    shft = is_little_endian() ? 0 : 8*(FITS_SHORT_KEYWORD_SIZE-1)
+    incr = is_little_endian() ? +8 : -8
+    i_last = offset
+    @inbounds for i in I
+        byte = (val >> shft) % UInt8
+        shft += incr
+        if byte != 0x20
+            i_last = i
+        end
+        buf[i] = byte
+    end
+    return i_last
+end
+
 """
     @FITS_str
 

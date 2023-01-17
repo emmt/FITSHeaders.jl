@@ -89,6 +89,15 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS"HIERARCH" === make_FITSKey("HIERARCH")
         @test FITS""         === make_FITSKey("        ")
         @test FITS"END"      === make_FITSKey("END     ")
+        @test String(FITS"") == ""
+        @test String(FITS"SIMPLE") == "SIMPLE"
+        @test String(FITS"HIERARCH") == "HIERARCH"
+        @test repr(FITS"") == "FITS\"\""
+        @test repr(FITS"SIMPLE") == "FITS\"SIMPLE\""
+        @test repr(FITS"HIERARCH") == "FITS\"HIERARCH\""
+        @test repr("text/plain", FITS"") == "FITS\"\""
+        @test repr("text/plain", FITS"SIMPLE") == "FITS\"SIMPLE\""
+        @test repr("text/plain", FITS"HIERARCH") == "FITS\"HIERARCH\""
         @test_throws Exception FITSCards.keyword("SIMPLE#")
         @test_throws Exception FITSCards.keyword(" SIMPLE")
         @test_throws Exception FITSCards.keyword("SIMPLE ")
