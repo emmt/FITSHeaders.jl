@@ -1,6 +1,20 @@
 # FITSCards [![Build Status](https://github.com/emmt/FITSCards.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/FITSCards.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/FITSCards.jl?svg=true)](https://ci.appveyor.com/project/emmt/FITSCards-jl) [![Coverage](https://codecov.io/gh/emmt/FITSCards.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/FITSCards.jl)
 
-`FITSCards` is a Julia package for storing and parsing FITS header cards.
+`FITSCards` is a pure [Julia](https://julialang.org/) package for storing and
+parsing FITS header cards. [FITS (for *Flexible Image Transport
+System*)](https://fits.gsfc.nasa.gov/fits_standard.html) is a data file format
+widely used in astronomy. A FITS file is a concatenation of *Header Data Units*
+(HDUs) that consist in a header part and a data part. The header of a HDU is a
+collection of so-called *FITS cards*. Each such card is stored in textual form
+and associates a keyword with a value and/or a comment.
+
+The `FITSCards` package is intended to provide:
+
+- methods for fast parsing of a FITS header or of a piece of a FITS header that
+  is a single FITS header card;
+
+- an expressive API for creating FITS cards and accessing their components
+  (keyword, value, and comment), possibly, in a *type-stable* way.
 
 
 ## Building FITS cards
@@ -39,7 +53,7 @@ string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 Conversely, `Pair(card)` yields the pair `key => (val, com)`. The `convert` method
 is extended by the `FITSCards` package to perform these conversions.
 
-If the string value is too long of a FITS card, it shall be split across
+If the string value of a FITS card is too long, it shall be split across
 several consecutive `CONTINUE` cards when writing a FITS file. Likewise, if the
 comment of a commentary keyword is too long, it shall be split across several
 consecutive cards with the same keyword when writing a FITS file.
@@ -65,7 +79,7 @@ object yields the actual card value:
 card.value() -> val::Union{Bool,Int64,Float64,ComplexF64,String,Nothing,Missing}
 ```
 
-but such a call is not *type-stable* as indicated by the type assertion to an
+but such a call is not *type-stable* as indicated by the type assertion with an
 `Union{...}` above. For a type-stable result, the card value can be converted
 to a given data type `T`:
 

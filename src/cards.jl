@@ -77,7 +77,7 @@ object yields the actual card value:
 
     card.value() -> val::Union{Bool,$FITSInteger,$FITSFloat,$FITSComplex,String,Nothing,Missing}
 
-but such a call is not *type-stable* as indicated by the type assertion to an
+but such a call is not *type-stable* as indicated by the type assertion with an
 `Union{...}` above. For a type-stable result, the card value can be converted
 to a given data type `T`:
 
