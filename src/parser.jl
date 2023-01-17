@@ -18,6 +18,10 @@ using Base: @propagate_inbounds
 
 const EMPTY_STRING = ""
 
+@inline is_little_endian() = (ENDIAN_BOM === 0x04030201)
+@inline is_big_endian()    = (ENDIAN_BOM === 0x01020304)
+is_little_endian() || is_big_endian() || error("unsupported byte order")
+
 """
     FITS_CARD_SIZE
 
@@ -296,7 +300,7 @@ end
 
 @inline function FITSKey(::PointerCapability, ::Val{:full}, buf::ByteBuffer, off::Int)
     @inbounds begin
-        @static if ENDIAN_BOM == 0x04030201
+        @static if is_little_endian()
             # Little-endian byte order.
             k = (get_byte(UInt64, buf, off + 1) <<  0) |
                 (get_byte(UInt64, buf, off + 2) <<  8) |
@@ -306,7 +310,7 @@ end
                 (get_byte(UInt64, buf, off + 6) << 40) |
                 (get_byte(UInt64, buf, off + 7) << 48) |
                 (get_byte(UInt64, buf, off + 8) << 56)
-        elseif ENDIAN_BOM == 0x01020304
+        else
             # Big-endian byte order.
             k = (get_byte(UInt64, buf, off + 1) << 56) |
                 (get_byte(UInt64, buf, off + 2) << 48) |
@@ -316,8 +320,6 @@ end
                 (get_byte(UInt64, buf, off + 6) << 16) |
                 (get_byte(UInt64, buf, off + 7) <<  8) |
                 (get_byte(UInt64, buf, off + 8) <<  0)
-        else
-            error("unsupported byte order")
         end
     end
     return FITSKey(k)
@@ -325,7 +327,7 @@ end
 
 @inline function FITSKey(::Val{:pad}, buf::ByteBuffer, off::Int, n::Int)
     @inbounds begin
-        @static if ENDIAN_BOM == 0x04030201
+        @static if is_little_endian()
             # Little-endian byte order.
             k = (get_byte(UInt64, buf, off + 1, n) <<  0) |
                 (get_byte(UInt64, buf, off + 2, n) <<  8) |
@@ -335,7 +337,7 @@ end
                 (get_byte(UInt64, buf, off + 6, n) << 40) |
                 (get_byte(UInt64, buf, off + 7, n) << 48) |
                 (get_byte(UInt64, buf, off + 8, n) << 56)
-        elseif ENDIAN_BOM == 0x01020304
+        else
             # Big-endian byte order.
             k = (get_byte(UInt64, buf, off + 1, n) << 56) |
                 (get_byte(UInt64, buf, off + 2, n) << 48) |
@@ -345,8 +347,6 @@ end
                 (get_byte(UInt64, buf, off + 6, n) << 16) |
                 (get_byte(UInt64, buf, off + 7, n) <<  8) |
                 (get_byte(UInt64, buf, off + 8, n) <<  0)
-        else
-            error("unsupported byte order")
         end
     end
     return FITSKey(k)
