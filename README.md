@@ -53,28 +53,51 @@ FITS cards have properties:
 card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
 card.key     # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
 card.name    # name of card
-card.value   # value of card
+card.value   # callable object representing the card value
 card.comment # comment of card
 ```
 
-Beware that `card.value` does not yield a *type-stable* result. To retrieve the
-card value with a known type, use one of:
+As the values of FITS keywords have different types, `card.value` does not
+yield a Julia value but a callable object. Called without any argument, this
+object yields the actual card value:
 
 ``` julia
-card.logical   # value of card as a Bool
-card.integer   # value of card as an Int64
-card.float     # value of card as a Float64
-card.complex   # value of card as a Complex{Float64}
-card.string    # value of card as a String
+card.value() -> val::Union{Bool,Int64,Float64,ComplexF64,String,Nothing,Missing}
 ```
 
-With these properties, conversion is automatically attempted if the actual card
-value is of a different type, throwing an error if the conversion is not
-possible or inexact.
+but such a call is not *type-stable* as indicated by the type assertion to an
+`Union{...}` above. For a type-stable result, the card value can be converted
+to a given data type `T`:
 
-`valtype(card)` yields the type of the value of `card`. `isassigned(card)`
-yields whether `card` has a value (that is whether it is neither a commentary
-card nor a card with an undefined value).
+``` julia
+card.value(T)
+convert(T, card.value)
+```
+
+both yield the value of `card` converted to type `T`. For readability, `T` may
+be an abstract type: `card.value(Integer)` yields the same result as
+`card.value(Int64)`, `card.value(Real)` or `card.value(AbstractFloat)` yield
+the same result as `card.value(Float64)`, `card.value(Complex)` yields the same
+result as `card.value(ComplexF64)`, and `card.value(AbstractString)` yields the
+same result as `card.value(String)`.
+
+To make things easier, a few properties are aliases that yield the card value
+converted to a specific type:
+
+``` julia
+card.logical :: Bool       # is an alias for card.value(Bool)
+card.integer :: Int64      # is an alias for card.value(Integer)
+card.float   :: Float64    # is an alias for card.value(Real)
+card.complex :: ComplexF64 # is an alias for card.value(Complex)
+card.string  :: string     # is an alias for card.value(String)
+```
+
+Conversion is automatically attempted if the actual card value is of a
+different type, throwing an error if the conversion is not possible or inexact.
+
+`valtype(card)` yields the Julia type of the value of `card`.
+`isassigned(card)` yields whether `card` has a value (that is whether it is
+neither a commentary card nor a card with an undefined value).
 
 
 ## FITS keywords

@@ -1,6 +1,8 @@
 module TestingFITSCards
 
 using FITSCards
+using FITSCards: FITSInteger, FITSFloat, FITSComplex
+
 using Test
 
 @static if ENDIAN_BOM == 0x04030201
@@ -209,255 +211,489 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSCard("VALUE   = 'hello / unclosed string")
         @test_throws Exception FITSCard("VALUE   = 'Joe's taxi' / unescaped quote")
         # Logical FITS cards.
-        str = "SIMPLE  =                    T / this is a FITS file                            "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_LOGICAL, FITS"SIMPLE", "SIMPLE", "this is a FITS file")
-        @test card.value isa Bool
-        @test card.value == true
-        @test card.value === card.logical
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === true
-        @test isreal(card) === true
+        let card = FITSCard("SIMPLE  =                    T / this is a FITS file                     ")
+            @test card.type == FITS_LOGICAL
+            @test card.key == FITS"SIMPLE"
+            @test card.name == "SIMPLE"
+            @test card.comment == "this is a FITS file"
+            @test card.value() isa Bool
+            @test card.value() == true
+            @test card.value() === card.logical
+            @test valtype(card) === typeof(card.value())
+            @test isassigned(card) === true
+            @test isinteger(card) === true
+            @test isreal(card) === true
+            # Convert callable value object by calling the object itself.
+            @test card.value(valtype(card)) === card.value()
+            @test card.value(Bool)          === convert(Bool,        card.value())
+            @test card.value(Int16)         === convert(Int16,       card.value())
+            @test card.value(Integer)       === convert(FITSInteger, card.value())
+            @test card.value(Real)          === convert(FITSFloat,   card.value())
+            @test card.value(AbstractFloat) === convert(FITSFloat,   card.value())
+            @test card.value(Complex)       === convert(FITSComplex, card.value())
+            @test_throws Exception card.value(String)
+            @test_throws Exception card.value(AbstractString)
+            # Convert callable value object by calling `convert`.
+            @test convert(valtype(card), card.value) === card.value()
+            @test convert(Bool,          card.value) === card.value(Bool)
+            @test convert(Int16,         card.value) === card.value(Int16)
+            @test convert(Integer,       card.value) === card.value(Integer)
+            @test convert(Real,          card.value) === card.value(Real)
+            @test convert(AbstractFloat, card.value) === card.value(AbstractFloat)
+            @test convert(Complex,       card.value) === card.value(Complex)
+            @test_throws Exception convert(String,         card.value)
+            @test_throws Exception convert(AbstractString, card.value)
+            # Various string representations.
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+        end
         # Integer valued cards.
-        str = "BITPIX  =                  -32 / number of bits per data pixel                  "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_INTEGER, FITS"BITPIX", "BITPIX", "number of bits per data pixel")
-        @test card.value isa Integer
-        @test card.value == -32
-        @test card.value === card.integer
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === true
-        @test isreal(card) === true
-       str = "NAXIS   =                    3 /      number of axes                            "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_INTEGER, FITS"NAXIS", "NAXIS", "number of axes")
-        @test card.value isa Integer
-        @test card.value == 3
-        @test card.value === card.integer
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === true
-        @test isreal(card) === true
+        let card = FITSCard("BITPIX  =                  -32 / number of bits per data pixel           ")
+            @test card.type == FITS_INTEGER
+            @test card.key == FITS"BITPIX"
+            @test card.name == "BITPIX"
+            @test card.comment == "number of bits per data pixel"
+            @test card.value() isa FITSInteger
+            @test card.value() == -32
+            @test card.value() === card.integer
+            @test valtype(card) === typeof(card.value())
+            @test isassigned(card) === true
+            @test isinteger(card) === true
+            @test isreal(card) === true
+            # Convert callable value object by calling the object itself.
+            @test card.value(valtype(card)) === card.value()
+            @test card.value(Int16)         === convert(Int16,       card.value())
+            @test card.value(Integer)       === convert(FITSInteger, card.value())
+            @test card.value(Real)          === convert(FITSFloat,   card.value())
+            @test card.value(AbstractFloat) === convert(FITSFloat,   card.value())
+            @test card.value(Complex)       === convert(FITSComplex, card.value())
+            @test_throws InexactError card.value(Bool)
+            @test_throws Exception    card.value(String)
+            @test_throws Exception    card.value(AbstractString)
+            # Convert callable value object by calling `convert`.
+            @test convert(valtype(card), card.value) === card.value()
+            @test convert(Int16,         card.value) === card.value(Int16)
+            @test convert(Integer,       card.value) === card.value(Integer)
+            @test convert(Real,          card.value) === card.value(Real)
+            @test convert(AbstractFloat, card.value) === card.value(AbstractFloat)
+            @test convert(Complex,       card.value) === card.value(Complex)
+            @test_throws InexactError convert(Bool,           card.value)
+            @test_throws Exception    convert(String,         card.value)
+            @test_throws Exception    convert(AbstractString, card.value)
+             # Various string representations.
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+        end
+        let card = FITSCard("NAXIS   =                    3 /      number of axes                      ")
+            @test card.type == FITS_INTEGER
+            @test card.key == FITS"NAXIS"
+            @test card.name == "NAXIS"
+            @test card.comment == "number of axes"
+            @test card.value() isa FITSInteger
+            @test card.value() == 3
+            @test card.value() === card.integer
+            @test valtype(card) === typeof(card.value())
+            @test isassigned(card) === true
+            @test isinteger(card) === true
+            @test isreal(card) === true
+            # Convert callable value object by calling the object itself.
+            @test card.value(valtype(card)) === card.value()
+            @test card.value(Int16)         === convert(Int16,       card.value())
+            @test card.value(Integer)       === convert(FITSInteger, card.value())
+            @test card.value(Real)          === convert(FITSFloat,   card.value())
+            @test card.value(AbstractFloat) === convert(FITSFloat,   card.value())
+            @test card.value(Complex)       === convert(FITSComplex, card.value())
+            @test_throws InexactError card.value(Bool)
+            @test_throws Exception    card.value(String)
+            @test_throws Exception    card.value(AbstractString)
+            # Convert callable value object by calling `convert`.
+            @test convert(valtype(card), card.value) === card.value()
+            @test convert(Int16,         card.value) === card.value(Int16)
+            @test convert(Integer,       card.value) === card.value(Integer)
+            @test convert(Real,          card.value) === card.value(Real)
+            @test convert(AbstractFloat, card.value) === card.value(AbstractFloat)
+            @test convert(Complex,       card.value) === card.value(Complex)
+            @test_throws InexactError convert(Bool,           card.value)
+            @test_throws Exception    convert(String,         card.value)
+            @test_throws Exception    convert(AbstractString, card.value)
+            # Various string representations.
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+        end
         # COMMENT and HISTORY.
-        str = "COMMENT   Some comments (with leading spaces that should not be removed)        "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_COMMENT, FITS"COMMENT", "COMMENT",
-             "  Some comments (with leading spaces that should not be removed)")
-        @test card.value isa Nothing
-        @test card.value === nothing
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === false
-        @test isinteger(card) === false
-        @test isreal(card) === false
-        str = "HISTORY A new history starts here...                                            "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_COMMENT, FITS"HISTORY", "HISTORY", "A new history starts here...")
-        @test card.value isa Nothing
-        @test card.value === nothing
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === false
-        @test isinteger(card) === false
-        @test isreal(card) === false
-        @test FITSCards.is_comment(card) == true
-        @test FITSCards.is_comment(card.type) == true
-        @test FITSCards.is_comment(card.key) == true
-        @test FITSCards.is_end(card) == false
-        @test FITSCards.is_end(card.type) == false
-        @test FITSCards.is_end(card.key) == false
+        let card = FITSCard("COMMENT   Some comments (with leading spaces that should not be removed) ")
+            @test card.type == FITS_COMMENT
+            @test card.key == FITS"COMMENT"
+            @test card.name == "COMMENT"
+            @test card.comment == "  Some comments (with leading spaces that should not be removed)"
+            @test card.value() isa Nothing
+            @test card.value() === nothing
+            @test valtype(card) === typeof(card.value())
+            @test isassigned(card) === false
+            @test isinteger(card) === false
+            @test isreal(card) === false
+            # Convert callable value object by calling the object itself.
+            @test card.value(valtype(card)) === card.value()
+            @test_throws Exception card.value(Bool)
+            @test_throws Exception card.value(Int16)
+            @test_throws Exception card.value(Integer)
+            @test_throws Exception card.value(Real)
+            @test_throws Exception card.value(AbstractFloat)
+            @test_throws Exception card.value(Complex)
+            @test_throws Exception card.value(String)
+            @test_throws Exception card.value(AbstractString)
+            # Convert callable value object by calling `convert`.
+            @test convert(valtype(card), card.value) === card.value()
+            @test_throws Exception convert(Bool,           card.value)
+            @test_throws Exception convert(Int16,          card.value)
+            @test_throws Exception convert(Integer,        card.value)
+            @test_throws Exception convert(Real,           card.value)
+            @test_throws Exception convert(AbstractFloat,  card.value)
+            @test_throws Exception convert(Complex,        card.value)
+            @test_throws Exception convert(String,         card.value)
+            @test_throws Exception convert(AbstractString, card.value)
+            # Various string representations.
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            # is_comment(), is_end(), ...
+            @test FITSCards.is_comment(card) === true
+            @test FITSCards.is_comment(card.type) === true
+            @test FITSCards.is_comment(card.key) === true # standard comment
+            @test FITSCards.is_end(card) === false
+            @test FITSCards.is_end(card.type) === false
+            @test FITSCards.is_end(card.key) === false
+        end
+        let card = FITSCard("HISTORY A new history starts here...                                     ")
+            @test card.type == FITS_COMMENT
+            @test card.key == FITS"HISTORY"
+            @test card.name == "HISTORY"
+            @test card.comment == "A new history starts here..."
+            @test card.value() isa Nothing
+            @test card.value() === nothing
+            @test valtype(card) === typeof(card.value())
+            @test isassigned(card) === false
+            @test isinteger(card) === false
+            @test isreal(card) === false
+            # Convert callable value object by calling the object itself.
+            @test card.value(valtype(card)) === card.value()
+            @test_throws Exception card.value(Bool)
+            @test_throws Exception card.value(Int16)
+            @test_throws Exception card.value(Integer)
+            @test_throws Exception card.value(Real)
+            @test_throws Exception card.value(AbstractFloat)
+            @test_throws Exception card.value(Complex)
+            @test_throws Exception card.value(String)
+            @test_throws Exception card.value(AbstractString)
+            # Convert callable value object by calling `convert`.
+            @test convert(valtype(card), card.value) === card.value()
+            @test_throws Exception convert(Bool,           card.value)
+            @test_throws Exception convert(Int16,          card.value)
+            @test_throws Exception convert(Integer,        card.value)
+            @test_throws Exception convert(Real,           card.value)
+            @test_throws Exception convert(AbstractFloat,  card.value)
+            @test_throws Exception convert(Complex,        card.value)
+            @test_throws Exception convert(String,         card.value)
+            @test_throws Exception convert(AbstractString, card.value)
+            # Various string representations.
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            # is_comment(), is_end(), ...
+            @test FITSCards.is_comment(card) === true
+            @test FITSCards.is_comment(card.type) === true
+            @test FITSCards.is_comment(card.key) === true # standard comment
+            @test FITSCards.is_end(card) === false
+            @test FITSCards.is_end(card.type) === false
+            @test FITSCards.is_end(card.key) === false
+        end
         # Non standard commentary card.
-        card = FITSCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_COMMENT, FITS"HIERARCH", "HIERARCH NON-STANDARD COMMENT", "some comment")
-        @test card.value isa Nothing
-        @test card.value === nothing
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === false
-        @test isinteger(card) === false
-        @test isreal(card) === false
-        @test FITSCards.is_comment(card) == true
-        @test FITSCards.is_comment(card.type) == true
-        @test FITSCards.is_comment(card.key) == false # non-standard comment
-        @test FITSCards.is_end(card) == false
-        @test FITSCards.is_end(card.type) == false
-        @test FITSCards.is_end(card.key) == false
+        let card = FITSCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
+            @test card.type == FITS_COMMENT
+            @test card.key == FITS"HIERARCH"
+            @test card.name == "HIERARCH NON-STANDARD COMMENT"
+            @test card.comment == "some comment"
+            @test card.value() isa Nothing
+            @test card.value() === nothing
+            @test valtype(card) === typeof(card.value())
+            @test isassigned(card) === false
+            @test isinteger(card) === false
+            @test isreal(card) === false
+            # Convert callable value object by calling the object itself.
+            @test card.value(valtype(card)) === card.value()
+            @test_throws Exception card.value(Bool)
+            @test_throws Exception card.value(Int16)
+            @test_throws Exception card.value(Integer)
+            @test_throws Exception card.value(Real)
+            @test_throws Exception card.value(AbstractFloat)
+            @test_throws Exception card.value(Complex)
+            @test_throws Exception card.value(String)
+            @test_throws Exception card.value(AbstractString)
+            # Convert callable value object by calling `convert`.
+            @test convert(valtype(card), card.value) === card.value()
+            @test_throws Exception convert(Bool,           card.value)
+            @test_throws Exception convert(Int16,          card.value)
+            @test_throws Exception convert(Integer,        card.value)
+            @test_throws Exception convert(Real,           card.value)
+            @test_throws Exception convert(AbstractFloat,  card.value)
+            @test_throws Exception convert(Complex,        card.value)
+            @test_throws Exception convert(String,         card.value)
+            @test_throws Exception convert(AbstractString, card.value)
+            # Various string representations.
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            # is_comment(), is_end(), ...
+            @test FITSCards.is_comment(card) === true
+            @test FITSCards.is_comment(card.type) === true
+            @test FITSCards.is_comment(card.key) === false # non-standard comment
+            @test FITSCards.is_end(card) === false
+            @test FITSCards.is_end(card.type) === false
+            @test FITSCards.is_end(card.key) === false
+        end
         # String valued card.
-        str = "REMARK  = 'Joe''s taxi'        / a string with an embedded quote"
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_STRING, FITS"REMARK", "REMARK", "a string with an embedded quote")
-        @test card.value isa AbstractString
-        @test card.value == "Joe's taxi"
-        @test card.value === card.string
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === false
-        @test isreal(card) === false
-        @test FITSCards.is_comment(card) == false
-        @test FITSCards.is_comment(card.type) == false
-        @test FITSCards.is_comment(card.key) == false
-        @test FITSCards.is_end(card) == false
-        @test FITSCards.is_end(card.type) == false
-        @test FITSCards.is_end(card.key) == false
+        let card = FITSCard("REMARK  = 'Joe''s taxi'        / a string with an embedded quote         ")
+            @test card.type == FITS_STRING
+            @test card.key == FITS"REMARK"
+            @test card.name == "REMARK"
+            @test card.comment == "a string with an embedded quote"
+            @test card.value() isa String
+            @test card.value() == "Joe's taxi"
+            @test card.value() === card.string
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === true
+            @test isinteger(card) === false
+            @test isreal(card) === false
+
+            # Convert callable value object by calling the object itself.
+            @test card.value(valtype(card)) === card.value()
+            @test_throws Exception card.value(Bool)
+            @test_throws Exception card.value(Int16)
+            @test_throws Exception card.value(Integer)
+            @test_throws Exception card.value(Real)
+            @test_throws Exception card.value(AbstractFloat)
+            @test_throws Exception card.value(Complex)
+            @test card.value(String)         === convert(String,         card.value())
+            @test card.value(AbstractString) === convert(AbstractString, card.value())
+            # Convert callable value object by calling `convert`.
+            @test convert(valtype(card), card.value) === card.value()
+            @test_throws Exception convert(Bool,           card.value)
+            @test_throws Exception convert(Int16,          card.value)
+            @test_throws Exception convert(Integer,        card.value)
+            @test_throws Exception convert(Real,           card.value)
+            @test_throws Exception convert(AbstractFloat,  card.value)
+            @test_throws Exception convert(Complex,        card.value)
+            @test convert(String,         card.value) === card.value(String)
+            @test convert(AbstractString, card.value) === card.value(AbstractString)
+            # Various string representations.
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+             # is_comment(), is_end(), ...
+            @test FITSCards.is_comment(card) == false
+            @test FITSCards.is_comment(card.type) == false
+            @test FITSCards.is_comment(card.key) == false
+            @test FITSCards.is_end(card) == false
+            @test FITSCards.is_end(card.type) == false
+            @test FITSCards.is_end(card.key) == false
+        end
         #
-        str = "EXTNAME = 'SCIDATA '                                                            "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_STRING, FITS"EXTNAME", "EXTNAME", "")
-        @test isinteger(card) === false
-        @test isassigned(card) === true
-        @test card.value isa AbstractString
-        @test card.value == "SCIDATA"
-        @test card.value === card.string
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === false
-        @test isreal(card) === false
+        let card = FITSCard("EXTNAME = 'SCIDATA ' ")
+            @test card.type == FITS_STRING
+            @test card.key == FITS"EXTNAME"
+            @test card.name == "EXTNAME"
+            @test card.comment == ""
+            @test isinteger(card) === false
+            @test isassigned(card) === true
+            @test card.value() isa String
+            @test card.value() == "SCIDATA"
+            @test card.value() === card.string
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === true
+            @test isinteger(card) === false
+            @test isreal(card) === false
+        end
         #
-        str = "CRPIX1  =                   1.                                                  "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_FLOAT, FITS"CRPIX1", "CRPIX1", "")
-        @test card.value isa AbstractFloat
-        @test card.value ≈ 1.0
-        @test card.value === card.float
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === false
-        @test isreal(card) === true
+        let card = FITSCard("CRPIX1  =                   1. ")
+            @test card.type == FITS_FLOAT
+            @test card.key == FITS"CRPIX1"
+            @test card.name == "CRPIX1"
+            @test card.comment == ""
+            @test card.value() isa FITSFloat
+            @test card.value() ≈ 1.0
+            @test card.value() === card.float
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === true
+            @test isinteger(card) === false
+            @test isreal(card) === true
+        end
         #
-        str = "CRVAL3  =                 0.96 / CRVAL along 3rd axis                           "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_FLOAT, FITS"CRVAL3", "CRVAL3", "CRVAL along 3rd axis")
-        @test card.value isa AbstractFloat
-        @test card.value ≈ 0.96
-        @test card.value === card.float
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === false
-        @test isreal(card) === true
+        let card = FITSCard("CRVAL3  =                 0.96 / CRVAL along 3rd axis ")
+            @test card.type == FITS_FLOAT
+            @test card.key == FITS"CRVAL3"
+            @test card.name == "CRVAL3"
+            @test card.comment == "CRVAL along 3rd axis"
+            @test card.value() isa FITSFloat
+            @test card.value() ≈ 0.96
+            @test card.value() === card.float
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === true
+            @test isinteger(card) === false
+            @test isreal(card) === true
+        end
         #
-        str = "HIERARCH ESO OBS EXECTIME = +2919 / Expected execution time                     "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_INTEGER, FITS"HIERARCH", "HIERARCH ESO OBS EXECTIME", "Expected execution time")
-        @test card.value isa Integer
-        @test card.value == +2919
-        @test card.value === card.integer
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === true
-        @test isreal(card) === true
+        let card = FITSCard("HIERARCH ESO OBS EXECTIME = +2919 / Expected execution time ")
+            @test card.type == FITS_INTEGER
+            @test card.key == FITS"HIERARCH"
+            @test card.name == "HIERARCH ESO OBS EXECTIME"
+            @test card.comment == "Expected execution time"
+            @test card.value() isa FITSInteger
+            @test card.value() == +2919
+            @test card.value() === card.integer
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === true
+            @test isinteger(card) === true
+            @test isreal(card) === true
+        end
         # FITS cards with undefined value.
-        str = "DUMMY   =                        / no value given                               "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_UNDEFINED, FITS"DUMMY", "DUMMY", "no value given")
-        @test card.value isa Missing
-        @test card.value === missing
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === false
-        @test isinteger(card) === false
-        @test isreal(card) === false
-        str = "HIERARCH DUMMY   =               / no value given                               "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_UNDEFINED, FITS"HIERARCH", "HIERARCH DUMMY", "no value given")
-        @test card.value isa Missing
-        @test card.value === missing
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === false
-        @test isinteger(card) === false
-        @test isreal(card) === false
+        let card = FITSCard("DUMMY   =                        / no value given ")
+            @test card.type == FITS_UNDEFINED
+            @test card.key == FITS"DUMMY"
+            @test card.name == "DUMMY"
+            @test card.comment == "no value given"
+            @test card.value() isa Missing
+            @test card.value() === missing
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === false
+            @test isinteger(card) === false
+            @test isreal(card) === false
+        end
+        let card = FITSCard("HIERARCH DUMMY   =               / no value given ")
+            @test card.type == FITS_UNDEFINED
+            @test card.key == FITS"HIERARCH"
+            @test card.name == "HIERARCH DUMMY"
+            @test card.comment == "no value given"
+            @test card.value() isa Missing
+            @test card.value() === missing
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === false
+            @test isinteger(card) === false
+            @test isreal(card) === false
+        end
         # Complex valued cards.
-        str = "COMPLEX = (1,0)                  / some complex value                           "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_COMPLEX, FITS"COMPLEX", "COMPLEX", "some complex value")
-        @test card.value isa Complex
-        @test card.value ≈ complex(1,0)
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === false
-        @test isreal(card) === iszero(imag(card.value))
-        str = "COMPLEX = (-2.7,+3.1d5)          / some other complex value                           "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_COMPLEX, FITS"COMPLEX", "COMPLEX", "some other complex value")
-        @test card.value isa Complex
-        @test card.value ≈ complex(-2.7,+3.1e5)
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === true
-        @test isinteger(card) === false
-        @test isreal(card) === iszero(imag(card.value))
+        let card = FITSCard("COMPLEX = (1,0)                  / some complex value ")
+            @test card.type == FITS_COMPLEX
+            @test card.key == FITS"COMPLEX"
+            @test card.name == "COMPLEX"
+            @test card.comment == "some complex value"
+            @test card.value() isa FITSComplex
+            @test card.value() ≈ complex(1,0)
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === true
+            @test isinteger(card) === false
+            @test isreal(card) === iszero(imag(card.value()))
+        end
+        let card = FITSCard("COMPLEX = (-2.7,+3.1d5)          / some other complex value ")
+            @test card.type == FITS_COMPLEX
+            @test card.key == FITS"COMPLEX"
+            @test card.name == "COMPLEX"
+            @test card.comment == "some other complex value"
+            @test card.value() isa FITSComplex
+            @test card.value() ≈ complex(-2.7,+3.1e5)
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test card.value(Complex{Float32}) === Complex{Float32}(card.value())
+            @test convert(Complex{Float32}, card.value) === Complex{Float32}(card.value())
+            @test_throws InexactError card.value(Float64)
+            @test_throws InexactError convert(Float32, card.value)
+            @test isassigned(card) === true
+            @test isinteger(card) === false
+            @test isreal(card) === iszero(imag(card.value()))
+        end
         # END card.
-        str = "END                                                                             "
-        card = FITSCard(str)
-        @test (card.type, card.key, card.name, card.comment) ==
-            (FITS_END, FITS"END", "END", "")
-        @test card.value isa Nothing
-        @test card.value === nothing
-        @test valtype(card) === typeof(card.value)
-        @test repr(card) isa String
-        @test repr("text/plain", card) isa String
-        @test isassigned(card) === false
-        @test isinteger(card) === false
-        @test isreal(card) === false
-        @test FITSCards.is_comment(card) == false
-        @test FITSCards.is_comment(card.type) == false
-        @test FITSCards.is_comment(card.key) == false
-        @test FITSCards.is_end(card) == true
-        @test FITSCards.is_end(card.type) == true
-        @test FITSCards.is_end(card.key) == true
+        for card in (FITSCard("END                           "),
+                     #FITSCard("xEND"; offset=1),
+                     FITSCard("END"))
+            @test card.type == FITS_END
+            @test card.key == FITS"END"
+            @test card.name == "END"
+            @test card.comment == ""
+            @test card.value() isa Nothing
+            @test card.value() === nothing
+            @test valtype(card) === typeof(card.value())
+            @test repr(card) isa String
+            @test repr("text/plain", card) isa String
+            @test repr(card.value) isa String
+            @test repr("text/plain", card.value) isa String
+            @test isassigned(card) === false
+            @test isinteger(card) === false
+            @test isreal(card) === false
+            @test FITSCards.is_comment(card) == false
+            @test FITSCards.is_comment(card.type) == false
+            @test FITSCards.is_comment(card.key) == false
+            @test FITSCards.is_end(card) == true
+            @test FITSCards.is_end(card.type) == true
+            @test FITSCards.is_end(card.key) == true
+        end
     end
     @testset "Cards from bytes" begin
         # Logical FITS cards.
         str = "SIMPLE  =                    T / this is a FITS file                            "
         for buf in (make_byte_vector(str), make_discontinuous_byte_vector(str))
             card = FITSCard(buf)
-            @test (card.type, card.key, card.name, card.comment) ==
-                (FITS_LOGICAL, FITS"SIMPLE", "SIMPLE", "this is a FITS file")
-            @test card.value isa Bool
-            @test card.value == true
-            @test card.value === card.logical
-            @test valtype(card) === typeof(card.value)
+                        @test card.type == FITS_LOGICAL
+            @test card.key == FITS"SIMPLE"
+            @test card.name == "SIMPLE"
+            @test card.comment == "this is a FITS file"
+            @test card.value() isa Bool
+            @test card.value() == true
+            @test card.value() === card.logical
+            @test valtype(card) === typeof(card.value())
         end
         # "END", empty string "" or out of range offset yield an END card.
         @test FITSCard("END").type === FITS_END
@@ -471,43 +707,43 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.type === FITS_LOGICAL
         @test card.key === FITS"SIMPLE"
         @test card.name === "SIMPLE"
-        @test card.value === true
+        @test card.value() === true
         @test card.comment == com
         card = FITSCard("TWO KEYS" => (π, com))
         @test card.type === FITS_FLOAT
         @test card.key === FITS"HIERARCH"
         @test card.name == "HIERARCH TWO KEYS"
-        @test card.value ≈ π
+        @test card.value() ≈ π
         @test card.comment == com
         card = convert(FITSCard, "HIERARCH NAME" => ("some name", com))
         @test card.type === FITS_STRING
         @test card.key === FITS"HIERARCH"
         @test card.name == "HIERARCH NAME"
-        @test card.value == "some name"
+        @test card.value() == "some name"
         @test card.comment == com
         card = convert(FITSCard, "HIERARCH COMMENT" => (nothing, com))
         @test card.type === FITS_COMMENT
         @test card.key === FITS"HIERARCH"
         @test card.name == "HIERARCH COMMENT"
-        @test card.value === nothing
+        @test card.value() === nothing
         @test card.comment == com
         card = convert(FITSCard, "COMMENT" => com)
         @test card.type === FITS_COMMENT
         @test card.key === FITS"COMMENT"
         @test card.name == "COMMENT"
-        @test card.value === nothing
+        @test card.value() === nothing
         @test card.comment == com
         card = convert(FITSCard, "REASON" => undef)
         @test card.type === FITS_UNDEFINED
         @test card.key === FITS"REASON"
         @test card.name == "REASON"
-        @test card.value === missing
+        @test card.value() === missing
         @test card.comment == ""
         card = convert(FITSCard, "REASON" => (missing, com))
         @test card.type === FITS_UNDEFINED
         @test card.key === FITS"REASON"
         @test card.name == "REASON"
-        @test card.value === missing
+        @test card.value() === missing
         @test card.comment == com
     end
  end

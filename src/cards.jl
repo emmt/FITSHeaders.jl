@@ -68,21 +68,40 @@ FITS cards have properties:
     card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
     card.key     # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
     card.name    # name of card
-    card.value   # value of card
+    card.value   # callable object representing the card value
     card.comment # comment of card
 
-Beware that `card.value` does not yield a *type-stable* result. To retrieve the
-card value with a known type, use one of:
+As the values of FITS keywords have different types, `card.value` does not
+yield a Julia value but a callable object. Called without any argument, this
+object yields the actual card value:
 
-    card.logical   # value of card as a Bool
-    card.integer   # value of card as an $FITSInteger
-    card.float     # value of card as a $FITSFloat
-    card.complex   # value of card as a $FITSComplex
-    card.string    # value of card as a String
+    card.value() -> val::Union{Bool,$FITSInteger,$FITSFloat,$FITSComplex,String,Nothing,Missing}
 
-With these properties, conversion is automatically attempted if the actual card
-value is of a different type, throwing an error if the conversion is not
-possible or inexact.
+but such a call is not *type-stable* as indicated by the type assertion to an
+`Union{...}` above. For a type-stable result, the card value can be converted
+to a given data type `T`:
+
+    card.value(T)
+    convert(T, card.value)
+
+both yield the value of `card` converted to type `T`. For readability, `T` may
+be an abstract type: `card.value(Integer)` yields the same result as
+`card.value($FITSInteger)`, `card.value(Real)` or `card.value(AbstractFloat)`
+yield the same result as `card.value($FITSFloat)`, `card.value(Complex)` yields
+the same result as `card.value($FITSComplex)`, and `card.value(AbstractString)`
+yields the same result as `card.value(String)`.
+
+To make things easier, a few properties are aliases that yield the card value
+converted to a specific type:
+
+    card.logical :: Bool       # is an alias for card.value(Bool)
+    card.integer :: $FITSInteger      # is an alias for card.value(Integer)
+    card.float   :: $FITSFloat    # is an alias for card.value(Real)
+    card.complex :: $FITSComplex # is an alias for card.value(Complex)
+    card.string  :: String     # is an alias for card.value(String)
+
+Conversion is automatically attempted if the actual card value is of a
+different type, throwing an error if the conversion is not possible or inexact.
 
 `valtype(card)` yields the type of the value of `card`. `isassigned(card)`
 yields whether `card` has a value (that is whether it is neither a commentary
@@ -252,6 +271,26 @@ function Base.show(io::IO, mime::MIME"text/plain", A::FITSCard)
     end
 end
 
+# Callable object representing a FITS card value.
+struct FITSCardValue
+    parent::FITSCard
+end
+Base.parent(A::FITSCardValue) = getfield(A, :parent)
+(A::FITSCardValue)() = get_value(parent(A))
+Base.convert(::Type{T}, A::FITSCardValue) where {T<:FITSCardValue} = A
+for T in (Number, Integer, Real, AbstractFloat, Complex,
+          AbstractString, String, Nothing, Missing)
+    if T === Number
+        @eval (A::FITSCardValue)(::Type{T}) where {T<:$T} = get_value(T, parent(A))
+        @eval Base.convert(::Type{T}, A::FITSCardValue) where {T<:$T} = A(T)
+    else
+        @eval (A::FITSCardValue)(::Type{$T}) = get_value($T, parent(A))
+        @eval Base.convert(::Type{$T}, A::FITSCardValue) = A($T)
+    end
+end
+Base.show(io::IO, A::FITSCardValue) = show(io, A())
+Base.show(io::IO, mime::MIME"text/plain", A::FITSCardValue) = show(io, mime, A())
+
 # If the FITSCard structure changes, it should be almost sufficient to change
 # the following simple accessors.
 get_type(         A::FITSCard) = getfield(A, :type)
@@ -289,7 +328,7 @@ get_value(::Type{Bool}, A::FITSCard) = begin
 end
 get_value(::Type{FITSInteger}, A::FITSCard) = begin
     type = get_type(A)
-    type == FITS_INTEGER  ?              get_value_integer(A)  :
+    type == FITS_INTEGER  ?                      get_value_integer(A)  :
     type == FITS_LOGICAL  ? convert(FITSInteger, get_value_logical(A)) :
     type == FITS_FLOAT    ? convert(FITSInteger, get_value_float(  A)) :
     type == FITS_COMPLEX  ? convert(FITSInteger, get_value_complex(A)) :
@@ -311,6 +350,11 @@ get_value(::Type{FITSComplex}, A::FITSCard) = begin
     type == FITS_INTEGER  ? convert(FITSComplex, get_value_integer(A)) :
     conversion_error(FITSComplex, A)
 end
+get_value(::Type{Integer},        A::FITSCard) = get_value(FITSInteger, A)
+get_value(::Type{Real},           A::FITSCard) = get_value(FITSFloat,   A)
+get_value(::Type{AbstractFloat},  A::FITSCard) = get_value(FITSFloat,   A)
+get_value(::Type{Complex},        A::FITSCard) = get_value(FITSComplex, A)
+get_value(::Type{AbstractString}, A::FITSCard) = get_value(String,      A)
 get_value(::Type{T}, A::FITSCard) where {T<:Number} = begin
     type = get_type(A)
     type == FITS_LOGICAL  ? convert(T, get_value_logical(A)) :
@@ -321,7 +365,7 @@ get_value(::Type{T}, A::FITSCard) where {T<:Number} = begin
 end
 get_value(T::Type, A::FITSCard) = conversion_error(T, A) # catch errors
 @noinline conversion_error(T::Type, A::FITSCard) =
-    error("value of FITS keyword $(get_name(A)) cannot be converted to $T")
+    error("value of FITS keyword \"$(get_name(A))\" cannot be converted to `$T`")
 
 # Properties.
 Base.propertynames(A::FITSCard) =
@@ -330,7 +374,7 @@ Base.getproperty(A::FITSCard, sym::Symbol) = getproperty(A, Val(sym))
 Base.getproperty(A::FITSCard, ::Val{:type   }) = get_type(A)
 Base.getproperty(A::FITSCard, ::Val{:key    }) = get_key(A)
 Base.getproperty(A::FITSCard, ::Val{:name   }) = get_name(A)
-Base.getproperty(A::FITSCard, ::Val{:value  }) = get_value(A)
+Base.getproperty(A::FITSCard, ::Val{:value  }) = FITSCardValue(A)
 Base.getproperty(A::FITSCard, ::Val{:comment}) = get_comment(A)
 Base.getproperty(A::FITSCard, ::Val{:logical}) = get_value(Bool, A)
 Base.getproperty(A::FITSCard, ::Val{:integer}) = get_value(FITSInteger, A)
@@ -352,7 +396,7 @@ Base.isreal(A::FITSCard) =
     (A.type == FITS_FLOAT) |
     (A.type == FITS_INTEGER) |
     (A.type == FITS_LOGICAL) |
-    (A.type == FITS_COMPLEX && iszero(imag(getfield(A, :value_complex))))
+    (A.type == FITS_COMPLEX && iszero(imag(get_value_complex(A))))
 
 Base.valtype(A::FITSCard) = valtype(A.type)
 Base.valtype(type::FITSCardType) =
@@ -368,9 +412,9 @@ Base.valtype(type::FITSCardType) =
 Base.convert(::Type{T}, A::FITSCard) where {T<:FITSCard} = A
 Base.convert(::Type{T}, A::FITSCard) where {T<:Pair} = T(A)
 Base.convert(::Type{T}, pair::Pair) where {T<:FITSCard} = T(pair)
-Base.Pair(A::FITSCard) = Pair(A.name, (A.value, A.comment))
-Base.Pair{K}(A::FITSCard) where {K} = Pair{K}(A.name, (A.value, A.comment))
-Base.Pair{K,V}(A::FITSCard) where {K,V} = Pair{K,V}(A.name, (A.value, A.comment))
+Base.Pair(A::FITSCard) = Pair(A.name, (A.value(), A.comment))
+Base.Pair{K}(A::FITSCard) where {K} = Pair{K}(A.name, (A.value(), A.comment))
+Base.Pair{K,V}(A::FITSCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
 function FITSCard(pair::Pair{<:AbstractString,
                              <:Tuple{Union{AbstractString,Number,Undefined,Nothing},
                                      AbstractString}})
