@@ -207,6 +207,35 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.Parser.try_parse_string_value("'Joe''s taxi'") == "Joe's taxi"
         @test FITSCards.Parser.try_parse_string_value("'Joe's taxi'") === nothing
         @test FITSCards.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
+        # Units.
+        let com = ""
+            @test FITSCards.Parser.get_units_part(com) == ""
+            @test FITSCards.Parser.get_unitless_part(com) == ""
+        end
+        let com = "some comment"
+            @test FITSCards.Parser.get_units_part(com) == ""
+            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+        end
+        let com = "[]some comment"
+            @test FITSCards.Parser.get_units_part(com) == ""
+            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+        end
+        let com = "[] some comment"
+            @test FITSCards.Parser.get_units_part(com) == ""
+            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+        end
+        let com = "[some units]some comment"
+            @test FITSCards.Parser.get_units_part(com) == "some units"
+            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+        end
+        let com = "[  some units   ]  some comment"
+            @test FITSCards.Parser.get_units_part(com) == "some units"
+            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+        end
+        let com = "[some comment"
+            @test FITSCards.Parser.get_units_part(com) == ""
+            @test FITSCards.Parser.get_unitless_part(com) == "[some comment"
+        end
     end
     @testset "Cards from strings" begin
         # Errors...
@@ -302,6 +331,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.key == FITS"NAXIS"
             @test card.name == "NAXIS"
             @test card.comment == "number of axes"
+            @test card.units == ""
+            @test card.unitless == "number of axes"
             @test card.value() isa FITSInteger
             @test card.value() == 3
             @test card.value() === card.integer
@@ -628,11 +659,13 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === false
         end
         # Complex valued cards.
-        let card = FITSCard("COMPLEX = (1,0)                  / some complex value ")
+        let card = FITSCard("COMPLEX = (1,0)                  / [km/s] some complex value ")
             @test card.type == FITS_COMPLEX
             @test card.key == FITS"COMPLEX"
             @test card.name == "COMPLEX"
-            @test card.comment == "some complex value"
+            @test card.comment == "[km/s] some complex value"
+            @test card.units == "km/s"
+            @test card.unitless == "some complex value"
             @test card.value() isa FITSComplex
             @test card.value() ≈ complex(1,0)
             @test valtype(card) === typeof(card.value())

@@ -1086,6 +1086,78 @@ This method honors the bound-checking state.
     end
 end
 
+# Units in comments.
+function scan_units_marks(str::Union{String,SubString{String}})
+    @inbounds begin
+        # It is assumed that leading spaces have been trimmed.
+        i_first, i_last = first_byte_index(str), last_byte_index(str)
+        if i_first ≤ i_last && get_byte(str, i_first) == UInt8('[')
+            i = i_first
+            while i < i_last
+                i += 1
+                if get_byte(str, i) == UInt8(']')
+                    return i_first:i
+                end
+            end
+        end
+        return empty_range(i_first) # yields i_first:i_first-1
+    end
+end
+
+# Yields the units part of a parsed comment.
+function get_units_part(str::Union{String,SubString{String}})
+    @inbounds begin
+        rng = scan_units_marks(str)
+        i_first, i_last = first(rng), last(rng)
+        if i_first < i_last # is there at least 2 bytes (ASCII characters)?
+            i_first += 1 # skip opening [
+            i_last  -= 1 # skip closing ]
+            # Trim leading spaces.
+            while i_first ≤ i_last && is_space(get_byte(str, i_first))
+                i_first += 1
+            end
+            # Trim trailing spaces.
+            while i_first ≤ i_last && is_space(get_byte(str, i_last))
+                i_last -= 1
+            end
+            if i_first ≤ i_last
+                return SubString(str, i_first, i_last)
+            end
+        end
+        return SubString(str, empty_range(first(rng)))
+    end
+end
+
+# Yields the unitless part of a parsed comment.
+function get_unitless_part(str::Union{String,SubString{String}})
+    @inbounds begin
+        rng = scan_units_marks(str)
+        i_first, i_last = first(rng), last(rng)
+        if i_first > i_last
+            # No units.
+            return SubString(str, first_byte_index(str), last_byte_index(str))
+        else
+            # There are units.
+            #
+            # NOTE: In fact, scan_units_marks() warrants that last(rng)+1 is
+            #       always the first byte of the unitless part whether there
+            #       are units or not, so the code could be simplified.
+            i_first = i_last + 1
+            i_last = last_byte_index(str)
+            # Trim leading spaces.
+            while i_first ≤ i_last && is_space(get_byte(str, i_first))
+                i_first += 1
+            end
+            if i_first > i_last
+                # Empty unitless part.
+                i_first = first_byte_index(str)
+                i_last = i_first - 1
+            end
+            return SubString(str, i_first, i_last)
+        end
+    end
+end
+
 """
     FITSCards.Parser.trim_leading_spaces(buf[, rng]) -> sub_rng
 

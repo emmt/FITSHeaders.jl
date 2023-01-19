@@ -64,11 +64,13 @@ consecutive cards with the same keyword when writing a FITS file.
 FITS cards have properties:
 
 ``` julia
-card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
-card.key     # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
-card.name    # name of card
-card.value   # callable object representing the card value
-card.comment # comment of card
+card.type     # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
+card.key      # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
+card.name     # name of card
+card.value    # callable object representing the card value
+card.comment  # comment of card
+card.units    # units of card value
+card.unitless # comment of card without the units part if any
 ```
 
 As the values of FITS keywords have different types, `card.value` does not

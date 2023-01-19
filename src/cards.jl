@@ -20,6 +20,8 @@ using ..FITSCards.Parser:
     EMPTY_STRING,
     ByteBuffer,
     check_keyword,
+    get_units_part,
+    get_unitless_part,
     make_string,
     parse_complex_value,
     parse_float_value,
@@ -369,18 +371,21 @@ get_value(T::Type, A::FITSCard) = conversion_error(T, A) # catch errors
 
 # Properties.
 Base.propertynames(A::FITSCard) =
-    (:type, :key, :name, :value, :comment, :logical, :integer, :float, :string, :complex)
+    (:type, :key, :name, :value, :comment, :logical, :integer, :float, :complex,
+     :string, :units, :unitless)
 Base.getproperty(A::FITSCard, sym::Symbol) = getproperty(A, Val(sym))
-Base.getproperty(A::FITSCard, ::Val{:type   }) = get_type(A)
-Base.getproperty(A::FITSCard, ::Val{:key    }) = get_key(A)
-Base.getproperty(A::FITSCard, ::Val{:name   }) = get_name(A)
-Base.getproperty(A::FITSCard, ::Val{:value  }) = FITSCardValue(A)
-Base.getproperty(A::FITSCard, ::Val{:comment}) = get_comment(A)
-Base.getproperty(A::FITSCard, ::Val{:logical}) = get_value(Bool, A)
-Base.getproperty(A::FITSCard, ::Val{:integer}) = get_value(FITSInteger, A)
-Base.getproperty(A::FITSCard, ::Val{:float  }) = get_value(FITSFloat, A)
-Base.getproperty(A::FITSCard, ::Val{:string }) = get_value(String, A)
-Base.getproperty(A::FITSCard, ::Val{:complex}) = get_value(FITSComplex, A)
+Base.getproperty(A::FITSCard, ::Val{:type    }) = get_type(A)
+Base.getproperty(A::FITSCard, ::Val{:key     }) = get_key(A)
+Base.getproperty(A::FITSCard, ::Val{:name    }) = get_name(A)
+Base.getproperty(A::FITSCard, ::Val{:value   }) = FITSCardValue(A)
+Base.getproperty(A::FITSCard, ::Val{:comment }) = get_comment(A)
+Base.getproperty(A::FITSCard, ::Val{:logical }) = get_value(Bool, A)
+Base.getproperty(A::FITSCard, ::Val{:integer }) = get_value(FITSInteger, A)
+Base.getproperty(A::FITSCard, ::Val{:float   }) = get_value(FITSFloat, A)
+Base.getproperty(A::FITSCard, ::Val{:string  }) = get_value(String, A)
+Base.getproperty(A::FITSCard, ::Val{:complex }) = get_value(FITSComplex, A)
+Base.getproperty(A::FITSCard, ::Val{:units   }) = get_units_part(get_comment(A))
+Base.getproperty(A::FITSCard, ::Val{:unitless}) = get_unitless_part(get_comment(A))
 @noinline Base.setproperty!(A::FITSCard, sym::Symbol, x) =
     error("attempt to set read-only property of FITS card")
 
