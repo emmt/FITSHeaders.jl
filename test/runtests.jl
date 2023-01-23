@@ -74,6 +74,16 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITS_CARD_SIZE == 80
         @test FITS_BLOCK_SIZE == 2880
     end
+    @testset "FITSCardType" begin
+        @test FITSCardType(Bool) === FITS_LOGICAL
+        @test FITSCardType(Int16) === FITS_INTEGER
+        @test FITSCardType(Float32) === FITS_FLOAT
+        @test FITSCardType(ComplexF64) === FITS_COMPLEX
+        @test FITSCardType(String) === FITS_STRING
+        @test FITSCardType(Nothing) === FITS_COMMENT
+        @test FITSCardType(UndefInitializer) === FITS_UNDEFINED
+        @test FITSCardType(Missing) === FITS_UNDEFINED
+    end
     @testset "Keywords" begin
         @test iszero(FITSKey())
         @test zero(FITSKey()) === FITSKey()
@@ -250,7 +260,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSCard("VALUE   = 'Joe's taxi' / unescaped quote")
         # Logical FITS cards.
         let card = FITSCard("SIMPLE  =                    T / this is a FITS file                     ")
-            @test card.type == FITS_LOGICAL
+            @test card.type === FITS_LOGICAL
+            @test FITSCardType(card) === FITS_LOGICAL
             @test card.key == FITS"SIMPLE"
             @test card.name == "SIMPLE"
             @test card.comment == "this is a FITS file"

@@ -391,6 +391,31 @@ Base.getproperty(A::FITSCard, ::Val{:unitless}) = get_unitless_part(get_comment(
 @noinline Base.setproperty!(A::FITSCard, sym::Symbol, x) =
     error("attempt to set read-only property of FITS card")
 
+"""
+    FITSCardType(T)
+
+yields the FITS header card type code corresponding to Julia type `T`, one of:
+`FITS_LOGICAL`, `FITS_INTEGER`, `FITS_FLOAT`, `FITS_COMPLEX`, `FITS_STRING`,
+`FITS_COMMENT`, or `FITS_UNDEFINED`.
+
+"""
+FITSCardType(::Type{<:Bool})           = FITS_LOGICAL
+FITSCardType(::Type{<:Integer})        = FITS_INTEGER
+FITSCardType(::Type{<:AbstractFloat})  = FITS_FLOAT
+FITSCardType(::Type{<:Complex})        = FITS_COMPLEX
+FITSCardType(::Type{<:AbstractString}) = FITS_STRING
+FITSCardType(::Type{<:Nothing})        = FITS_COMMENT
+FITSCardType(::Type{<:Undefined})      = FITS_UNDEFINED
+
+"""
+    FITSCardType(card::FITSCard)
+    card.type
+
+yield the type code of the FITS header card `card`, one of: `FITS_LOGICAL`,
+`FITS_INTEGER`, `FITS_FLOAT`, `FITS_COMPLEX`, `FITS_STRING`, `FITS_COMMENT`, or
+`FITS_UNDEFINED`.
+
+"""
 FITSCardType(A::FITSCard) = get_type(A)
 
 Base.isassigned(A::FITSCard) =
