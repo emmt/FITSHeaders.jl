@@ -49,6 +49,23 @@ to pad it with ASCII spaces (hexadecimal code 0x20).
 const FITS_SHORT_KEYWORD_SIZE = 8
 
 """
+    FITSCards.Parser.get_workspace(len) -> wrk
+
+yields a per-thread small workspace buffer with at least `len` bytes.
+
+""" get_workspace
+const WORKSPACES = Vector{UInt8}[]
+function get_workspace(len::Int)
+    i = Threads.threadid()
+    while length(WORKSPACES) < i
+        push!(WORKSPACES, Vector{UInt8}(undef, FITS_CARD_SIZE+1))
+    end
+    wrk = @inbounds WORKSPACES[i]
+    length(wrk) < len && resize!(wrk, len)
+    return wrk
+end
+
+"""
     FITSCards.Parser.PointerCapability(T) -> Union{PointerNone,PointerFull}
 
 yields whether `Base.unsafe_convert(Ptr{UInt8},obj)` and
@@ -498,7 +515,7 @@ function try_parse_float_value(buf::ByteBuffer,
     len > 0 || return nothing
     @boundscheck check_byte_index(buf, rng)
     # Use a temporary array to copy the range of bytes replacing 'd' and 'D' by 'e'.
-    wrk = Array{UInt8}(undef, len)
+    wrk = get_workspace(len)
     off = first(rng) - firstindex(wrk)
     @inbounds for i in eachindex(wrk)
         wrk[i] = filter_character_in_float_value(get_byte(buf, off + i))
