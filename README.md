@@ -227,3 +227,29 @@ The considered card may be shorter than 80 bytes, the result being exactly the
 same as if the missing bytes were spaces. If there are no bytes left, a
 `FITSCard` object equivalent to the final `END` card of a FITS header is
 returned.
+
+
+## Timings
+
+`FITSCards` is ought to be fast. Below are times and memory allocations for
+parsing 80-byte FITS cards measured with Julia 1.8.5 on a Linux laptop with an
+Intel Core i7-5500U CPU:
+
+- parsing logical FITS card:  122.777 ns (2 allocations:  64 bytes)
+- parsing integer FITS card:  133.269 ns (2 allocations:  72 bytes)
+- parsing HIERARCH FITS card: 163.408 ns (2 allocations:  88 bytes)
+- parsing float FITS card:    308.244 ns (4 allocations: 152 bytes)
+- parsing complex FITS card:  422.613 ns (5 allocations: 184 bytes)
+- parsing string FITS card:   199.827 ns (4 allocations: 144 bytes)
+- parsing string with quotes: 187.920 ns (4 allocations: 168 bytes)
+- parsing COMMENT FITS card:   90.615 ns (2 allocations: 112 bytes)
+- parsing HISTORY FITS card:  100.591 ns (2 allocations:  72 bytes)
+- parsing blank FITS card:     78.261 ns (0 allocations:   0 bytes)
+- parsing END FITS card:       82.286 ns (0 allocations:   0 bytes)
+
+The benchmark code is in file [`test/benchmarks.jl`](test/benchmarks.jl). The
+HIERARCH card has an integer value. The float and complex valued cards take
+more time to parse because parsing a floating-point value is more complex than
+parsing, say, an integer and because the string storing the floating-point
+value must be copied to replace letters `d` and `D`, allowed in FITS standard
+to indicate the exponent, by an `e`.
