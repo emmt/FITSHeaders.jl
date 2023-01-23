@@ -81,9 +81,9 @@ object yields the actual card value:
 card.value() -> val::Union{Bool,Int64,Float64,ComplexF64,String,Nothing,Missing}
 ```
 
-but such a call is not *type-stable* as indicated by the type assertion with an
-`Union{...}` above. For a type-stable result, the card value can be converted
-to a given data type `T`:
+but such a call is not *type-stable* as indicated by the union `Union{...}` in
+the above type assertion. For a type-stable result, the card value can be
+converted to a given data type `T`:
 
 ``` julia
 card.value(T)
@@ -101,17 +101,17 @@ To make things easier, a few properties are aliases that yield the card value
 converted to a specific type:
 
 ``` julia
-card.logical :: Bool       # is an alias for card.value(Bool)
-card.integer :: Int64      # is an alias for card.value(Integer)
-card.float   :: Float64    # is an alias for card.value(Real)
-card.complex :: ComplexF64 # is an alias for card.value(Complex)
-card.string  :: string     # is an alias for card.value(String)
+card.logical :: Bool       # alias for card.value(Bool)
+card.integer :: Int64      # alias for card.value(Integer)
+card.float   :: Float64    # alias for card.value(Real)
+card.complex :: ComplexF64 # alias for card.value(Complex)
+card.string  :: String     # alias for card.value(String)
 ```
 
-Conversion is automatically attempted if the actual card value is of a
-different type, throwing an error if the conversion is not possible or inexact.
+When the actual card value is of a different type than the one requested, an
+error is thrown if the conversion is not possible or inexact.
 
-`valtype(card)` yields the Julia type of the value of `card`.
+`valtype(card)` yields the Julia type of the value of `card` while
 `isassigned(card)` yields whether `card` has a value (that is whether it is
 neither a commentary card nor a card with an undefined value).
 

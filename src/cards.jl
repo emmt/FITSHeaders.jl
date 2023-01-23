@@ -67,11 +67,13 @@ string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 
 FITS cards have properties:
 
-    card.type    # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
-    card.key     # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
-    card.name    # name of card
-    card.value   # callable object representing the card value
-    card.comment # comment of card
+    card.type     # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
+    card.key      # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
+    card.name     # name of card
+    card.value    # callable object representing the card value
+    card.comment  # comment of card
+    card.units    # units of card value
+    card.unitless # comment of card without the units part if any
 
 As the values of FITS keywords have different types, `card.value` does not
 yield a Julia value but a callable object. Called without any argument, this
@@ -96,11 +98,11 @@ yields the same result as `card.value(String)`.
 To make things easier, a few properties are aliases that yield the card value
 converted to a specific type:
 
-    card.logical :: Bool       # is an alias for card.value(Bool)
-    card.integer :: $FITSInteger      # is an alias for card.value(Integer)
-    card.float   :: $FITSFloat    # is an alias for card.value(Real)
-    card.complex :: $FITSComplex # is an alias for card.value(Complex)
-    card.string  :: String     # is an alias for card.value(String)
+    card.logical :: Bool       # alias for card.value(Bool)
+    card.integer :: $FITSInteger      # alias for card.value(Integer)
+    card.float   :: $FITSFloat    # alias for card.value(Real)
+    card.complex :: $FITSComplex # alias for card.value(Complex)
+    card.string  :: String     # alias for card.value(String)
 
 Conversion is automatically attempted if the actual card value is of a
 different type, throwing an error if the conversion is not possible or inexact.
