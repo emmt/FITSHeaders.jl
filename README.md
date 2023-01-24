@@ -253,3 +253,10 @@ more time to parse because parsing a floating-point value is more complex than
 parsing, say, an integer and because the string storing the floating-point
 value must be copied to replace letters `d` and `D`, allowed in FITS standard
 to indicate the exponent, by an `e`.
+
+For comparison, just extracting the keyword, value, and comment parts from a
+80-characters FITS card by calling the functions `fits_get_keyname` and
+`fits_parse_value` of CFITSIO library takes about 150 ns on the same machine.
+This does not includes the allocation of the buffers to store these 3 parts
+(about 120 ns for this) and the parsing of the value which are all included in
+the timings of the `FISCard` constructor above.
