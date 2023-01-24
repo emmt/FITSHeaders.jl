@@ -138,6 +138,10 @@ struct FITSCard
             UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
+# Constructor for imutable type does not need to return a new object.
+FITSCard(A::FITSCard) = A
+Base.convert(::Type{T}, A::FITSCard) where {T<:FITSCard} = A
+
 """
     FITSCard(buf; offset=0)
 
@@ -319,7 +323,7 @@ end
 get_value(::Type{Missing}, A::FITSCard) =
     get_type(A) == FITS_UNDEFINED ? missing : conversion_error(Missing, A)
 get_value(::Type{Nothing}, A::FITSCard) =
-    get_type(A) == FITS_COMMENT ? nothing : conversion_error(Missing, A)
+    ((get_type(A) == FITS_COMMENT)|(get_type(A) == FITS_END)) ? nothing : conversion_error(Nothing, A)
 get_value(::Type{String}, A::FITSCard) =
     get_type(A) == FITS_STRING ? get_value_string(A) : conversion_error(String, A)
 get_value(::Type{Bool}, A::FITSCard) = begin
@@ -441,12 +445,12 @@ Base.valtype(type::FITSCardType) =
     Nothing # FITS_COMMENT or FITS_END
 
 # FITS cards can be specified as pairs and conversely.
-Base.convert(::Type{T}, A::FITSCard) where {T<:FITSCard} = A
 Base.convert(::Type{T}, A::FITSCard) where {T<:Pair} = T(A)
 Base.convert(::Type{T}, pair::Pair) where {T<:FITSCard} = T(pair)
 Base.Pair(A::FITSCard) = Pair(A.name, (A.value(), A.comment))
-Base.Pair{K}(A::FITSCard) where {K} = Pair{K}(A.name, (A.value(), A.comment))
+#Base.Pair{K}(A::FITSCard) where {K} = Pair{K,<:Any}(A.name, (A.value(), A.comment))
 Base.Pair{K,V}(A::FITSCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
+Base.Pair{K,V}(A::FITSCard) where {K,T,S,V<:Tuple{T,S}} = Pair{K,V}(A.name, (A.value(T), A.comment))
 function FITSCard(pair::Pair{<:AbstractString,
                              <:Tuple{Union{AbstractString,Number,Undefined,Nothing},
                                      AbstractString}})

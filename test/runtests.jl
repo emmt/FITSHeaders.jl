@@ -141,6 +141,9 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test FITSCards.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
     end
     @testset "Parser" begin
+        # Byte order.
+        @test FITSCards.Parser.is_big_endian() === (BYTE_ORDER === :big_endian)
+        @test FITSCards.Parser.is_little_endian() === (BYTE_ORDER === :little_endian)
         # Character classes according to FITS standard.
         for b in 0x00:0xFF
             c = Char(b)
@@ -260,6 +263,18 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSCard("VALUE   = 'Joe's taxi' / unescaped quote")
         # Logical FITS cards.
         let card = FITSCard("SIMPLE  =                    T / this is a FITS file                     ")
+            @test :type ∈ propertynames(card)
+            @test :name ∈ propertynames(card)
+            @test :key ∈ propertynames(card)
+            @test :value ∈ propertynames(card)
+            @test :comment ∈ propertynames(card)
+            @test :units ∈ propertynames(card)
+            @test :unitless ∈ propertynames(card)
+            @test :logical ∈ propertynames(card)
+            @test :integer ∈ propertynames(card)
+            @test :float ∈ propertynames(card)
+            @test :complex ∈ propertynames(card)
+            @test :string ∈ propertynames(card)
             @test card.type === FITS_LOGICAL
             @test FITSCardType(card) === FITS_LOGICAL
             @test card.key == FITS"SIMPLE"
@@ -269,9 +284,11 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() == true
             @test card.value() === card.logical
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test isassigned(card) === true
             @test isinteger(card) === true
             @test isreal(card) === true
+            @test_throws Exception card.key = FITS"HISTORY"
             # Convert callable value object by calling the object itself.
             @test card.value(valtype(card)) === card.value()
             @test card.value(Bool)          === convert(Bool,        card.value())
@@ -283,6 +300,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test_throws Exception card.value(String)
             @test_throws Exception card.value(AbstractString)
             # Convert callable value object by calling `convert`.
+            @test convert(typeof(card.value), card.value) === card.value
             @test convert(valtype(card), card.value) === card.value()
             @test convert(Bool,          card.value) === card.value(Bool)
             @test convert(Int16,         card.value) === card.value(Int16)
@@ -308,6 +326,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() == -32
             @test card.value() === card.integer
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test isassigned(card) === true
             @test isinteger(card) === true
             @test isreal(card) === true
@@ -348,6 +367,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() == 3
             @test card.value() === card.integer
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test isassigned(card) === true
             @test isinteger(card) === true
             @test isreal(card) === true
@@ -386,6 +406,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa Nothing
             @test card.value() === nothing
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test isassigned(card) === false
             @test isinteger(card) === false
             @test isreal(card) === false
@@ -430,6 +451,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa Nothing
             @test card.value() === nothing
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test isassigned(card) === false
             @test isinteger(card) === false
             @test isreal(card) === false
@@ -475,6 +497,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa Nothing
             @test card.value() === nothing
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test isassigned(card) === false
             @test isinteger(card) === false
             @test isreal(card) === false
@@ -521,6 +544,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() == "Joe's taxi"
             @test card.value() === card.string
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -574,6 +598,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() == "SCIDATA"
             @test card.value() === card.string
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -592,6 +617,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() ≈ 1.0
             @test card.value() === card.float
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -610,6 +636,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() ≈ 0.96
             @test card.value() === card.float
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -628,6 +655,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() == +2919
             @test card.value() === card.integer
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -645,6 +673,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa Missing
             @test card.value() === missing
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -661,6 +690,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa Missing
             @test card.value() === missing
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -680,6 +710,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa FITSComplex
             @test card.value() ≈ complex(1,0)
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -696,6 +727,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa FITSComplex
             @test card.value() ≈ complex(-2.7,+3.1e5)
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -717,6 +749,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value() isa Nothing
             @test card.value() === nothing
             @test valtype(card) === typeof(card.value())
+            @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
             @test repr("text/plain", card) isa String
             @test repr(card.value) isa String
@@ -767,7 +800,16 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     @testset "Cards from pairs" begin
         # Logical FITS cards.
         com = "some comment"
-        card = FITSCard("SIMPLE" => (true, com))
+        pair = "SIMPLE" => (true, com)
+        card = FITSCard(pair)
+        @test FITSCard(card) === card
+        @test convert(FITSCard, card) === card
+        @test convert(FITSCard, pair) == card
+        @test convert(Pair, card) == pair
+        @test Pair(card) == pair
+        #@test Pair{String}(card) == pair
+        @test Pair{String,Tuple{Bool,String}}(card) === pair
+        @test Pair{String,Tuple{Int,String}}(card) === (card.name => (card.value(Int), card.comment))
         @test card.type === FITS_LOGICAL
         @test card.key === FITS"SIMPLE"
         @test card.name === "SIMPLE"
