@@ -235,13 +235,13 @@ returned.
 parsing 80-byte FITS cards measured with Julia 1.8.5 on a Linux laptop with an
 Intel Core i7-5500U CPU:
 
-- parsing logical FITS card:  122.777 ns (2 allocations:  64 bytes)
-- parsing integer FITS card:  133.269 ns (2 allocations:  72 bytes)
-- parsing HIERARCH FITS card: 163.408 ns (2 allocations:  88 bytes)
-- parsing float FITS card:    308.244 ns (4 allocations: 152 bytes)
-- parsing complex FITS card:  422.613 ns (5 allocations: 184 bytes)
-- parsing string FITS card:   199.827 ns (4 allocations: 144 bytes)
-- parsing string with quotes: 187.920 ns (4 allocations: 168 bytes)
+- parsing logical FITS card:  114.588 ns (2 allocations:  64 bytes)
+- parsing integer FITS card:  118.519 ns (2 allocations:  72 bytes)
+- parsing HIERARCH FITS card: 142.462 ns (2 allocations:  88 bytes)
+- parsing float FITS card:    274.119 ns (4 allocations: 152 bytes)
+- parsing complex FITS card:  424.060 ns (6 allocations: 248 bytes)
+- parsing string FITS card:   155.694 ns (4 allocations: 144 bytes)
+- parsing string with quotes: 169.223 ns (4 allocations: 168 bytes)
 - parsing COMMENT FITS card:   90.615 ns (2 allocations: 112 bytes)
 - parsing HISTORY FITS card:  100.591 ns (2 allocations:  72 bytes)
 - parsing blank FITS card:     78.261 ns (0 allocations:   0 bytes)

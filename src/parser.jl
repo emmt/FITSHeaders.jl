@@ -16,6 +16,10 @@ using ..FITSCards:
 using Compat
 using Base: @propagate_inbounds
 
+# To create a byte buffer to be converted to a string, it is faster to call
+# StringVector(n) rather than Vector{UInt8}(undef,n).
+using Base: StringVector
+
 const EMPTY_STRING = ""
 
 @inline is_little_endian() = (ENDIAN_BOM === 0x04030201)
@@ -47,23 +51,6 @@ to pad it with ASCII spaces (hexadecimal code 0x20).
 
 """
 const FITS_SHORT_KEYWORD_SIZE = 8
-
-"""
-    FITSCards.Parser.get_workspace(len) -> wrk
-
-yields a per-thread small workspace buffer with at least `len` bytes.
-
-""" get_workspace
-const WORKSPACES = Vector{UInt8}[]
-function get_workspace(len::Int)
-    i = Threads.threadid()
-    while length(WORKSPACES) < i
-        push!(WORKSPACES, Vector{UInt8}(undef, FITS_CARD_SIZE+1))
-    end
-    wrk = @inbounds WORKSPACES[i]
-    length(wrk) < len && resize!(wrk, len)
-    return wrk
-end
 
 """
     FITSCards.Parser.PointerCapability(T) -> Union{PointerNone,PointerFull}
@@ -242,10 +229,9 @@ Base.convert(::Type{T}, key::FITSKey) where {T<:Integer} = convert(T, key.val)
 Base.UInt64(key::FITSKey) = key.val
 
 function Base.String(key::FITSKey)
-    buf = Vector{UInt8}(undef, FITS_SHORT_KEYWORD_SIZE)
+    buf = StringVector(FITS_SHORT_KEYWORD_SIZE)
     len = @inbounds decode!(buf, key; offset = 0)
-    ptr = pointer(buf)
-    return GC.@preserve buf unsafe_string(ptr, len)
+    return String(resize!(buf, len))
 end
 
 Base.show(io::IO, mime::MIME"text/plain", key::FITSKey) = show(io, key)
@@ -265,6 +251,8 @@ function Base.show(io::IO, key::FITSKey)
     end
 end
 
+# Decode FITS quick key. Returns index of last non-space character which is
+# also the length if the buffer has 1-based indices.
 @inline function decode!(buf::AbstractVector{UInt8},
                          key::FITSKey;
                          offset::Int = 0)
@@ -499,28 +487,18 @@ end
 filter_character_in_float_value(c::Union{UInt8,Char}) =
     ifelse(equal(c, 'D')|equal(c, 'd'), oftype(c, 'e'), c)
 
-# Similar to try_parse_float_value but characters have been filtered
-# and `len` is the number of bytes to process.
-function try_parse_float(wrk::Vector{UInt8}, len::Int = length(wrk))
-    len > 0 || return nothing
-    obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
-    ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
-    str = GC.@preserve obj unsafe_string(ptr, len)
-    return tryparse(FITSFloat, str)
-end
-
 function try_parse_float_value(buf::ByteBuffer,
                                rng::AbstractUnitRange{Int})
     len = length(rng)
     len > 0 || return nothing
     @boundscheck check_byte_index(buf, rng)
     # Use a temporary array to copy the range of bytes replacing 'd' and 'D' by 'e'.
-    wrk = get_workspace(len)
+    wrk = StringVector(len)
     off = first(rng) - firstindex(wrk)
     @inbounds for i in eachindex(wrk)
         wrk[i] = filter_character_in_float_value(get_byte(buf, off + i))
     end
-    return try_parse_float(wrk, len)
+    return tryparse(FITSFloat, String(wrk))
 end
 
 function try_parse_string_value(buf::ByteBuffer,
@@ -547,7 +525,7 @@ function try_parse_string_value(buf::ByteBuffer,
         #
         # NOTE: We cannot use a simple for-loop because indices may have to be
         #       incremented inside the loop.
-        wrk = Array{UInt8}(undef, i_last - i_first + 1)
+        wrk = StringVector(i_last - i_first + 1)
         i = i_first - 1
         j = firstindex(wrk) - 1
         while i < i_last
@@ -562,11 +540,7 @@ function try_parse_string_value(buf::ByteBuffer,
         end
         len = j - firstindex(wrk) + 1
         len > 0 || return EMPTY_STRING
-        # Convert temporary buffer into a string. Cannot use String(wrk)
-        # because string length may be smaller tahn taht of the buffer.
-        obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
-        ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
-        return GC.@preserve obj unsafe_string(ptr, len)
+        return String(resize!(wrk, len))
     end
 end
 
@@ -584,35 +558,15 @@ function try_parse_complex_value(buf::ByteBuffer,
             is_closing_parenthesis(get_byte(buf, i_last))) || return nothing
         i_first += 1 # remove opening parenthesis
         i_last -= 1 # remove closing parenthesis
-        len -= 2
-        # Copy the real and imaginary parts into a temporary buffer taking care
-        # of the exponent.
-        #
-        # NOTE: We cannot use a simple for-loop because indices may have to be
-        #       incremented inside the loop.
-        wrk = Array{UInt8}(undef, len)
-        i = i_first - 1
-        j = firstindex(wrk) - 1
-        re = NaN
-        state = 1
-        while i < i_last
-            b = get_byte(buf, i += 1)
-            if equal(b, ',')
-                # Parse real part.
-                state == 1 || break
-                val = try_parse_float(wrk, j - firstindex(wrk) + 1)
-                isnothing(val) && break
-                re = oftype(re, val)
-                state = 2
-                j = firstindex(wrk) - 1
-            else
-                wrk[j += 1] = filter_character_in_float_value(b)
+        # Search for the ',' separator and parse the real and imaginary parts.
+        for i ∈ i_first:i_last
+            if equal(get_byte(buf, i += 1), ',')
+                re = @inbounds try_parse_float_value(buf, i_first : i - 1)
+                re === nothing && break
+                im = @inbounds try_parse_float_value(buf, i + 1 : i_last)
+                im === nothing && break
+                return FITSComplex(re, im)
             end
-        end
-        if state == 2
-            # Parse imaginary part.
-            im = try_parse_float(wrk, j - firstindex(wrk) + 1)
-            isnothing(im) || return FITSComplex(re, im)
         end
         return nothing
     end
@@ -645,15 +599,12 @@ function unsafe_make_string(::PointerCapability, buf::ByteBuffer,
                             rng::AbstractUnitRange{Int})
     # Use a temporary workspace to copy the range of bytes.
     len = length(rng)
-    wrk = Array{UInt8}(undef, len)
+    wrk = StringVector(len)
     off = first(rng) - firstindex(wrk)
     @inbounds for i in eachindex(wrk)
         wrk[i] = get_byte(buf, off + i)
     end
-    # FIXME: other possibility: String(wrk)
-    obj = Base.cconvert(Ptr{UInt8}, wrk) # object to be preserved
-    ptr = Base.unsafe_convert(Ptr{UInt8}, obj)
-    return GC.@preserve obj unsafe_string(ptr, len)
+    return String(wrk)
 end
 
 """
