@@ -852,6 +852,71 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.value() === missing
         @test card.comment == com
     end
- end
+    @testset "Headers" begin
+        dims = (4,5,6)
+        h = FITSHeader()
+        push!(h, "SIMPLE" => (true, "FITS file"))
+        @test length(h) == 1
+        @test h[1].key === FITS"SIMPLE"
+        @test h["SIMPLE"] === h[1]
+        push!(h, "BITPIX" => (-32, "bits per pixels"))
+        push!(h, "NAXIS" => (length(dims), "number of dimensions"))
+        for i in eachindex(dims)
+            push!(h, "NAXIS$i" => (dims[i], "length of dimension # $i"))
+        end
+        push!(h, "COMMENT" => "Some comment.")
+        push!(h, "CCD GAIN" => 3.2)
+        push!(h, "CCD BIAS" => -15)
+        push!(h, "BSCALE" => 1.0)
+        push!(h, "BZERO" => 0.0)
+        push!(h, "COMMENT" => "Another comment.")
+        push!(h, "COMMENT" => "Yet another comment.")
+        i = findfirst("BITPIX", h)
+        @test i isa Integer && h[i].name == "BITPIX"
+        @test h["BITPIX"] === h[i]
+        @test h["BSCALE"].value(Real) ≈ 1
+        @test h["BSCALE"].comment == ""
+        # Change existing key.
+        n = length(h)
+        h["BSCALE"] = (1.1, "better value")
+        @test length(h) == n
+        @test h["BSCALE"].value(Real) ≈ 1.1
+        @test h["BSCALE"].comment == "better value"
+        # Append non-existing key.
+        n = length(h)
+        h["GIZMO"] = ("Joe's taxi", "what?")
+        @test length(h) == n+1
+        @test h["GIZMO"].value() == "Joe's taxi"
+        @test h["GIZMO"].comment == "what?"
+        # Forward search.
+        i = findfirst("COMMENT", h)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Some comment."
+        i = findnext(h[i], h, i + 1)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Another comment."
+        i = findnext(h[i], h, i + 1)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Yet another comment."
+        @test findnext(h[i], h, i + 1) isa Nothing
+        # Backward search.
+        i = findlast("COMMENT", h)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Yet another comment."
+        i = findprev(h[i], h, i - 1)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Another comment."
+        i = findprev(h[i], h, i - 1)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Some comment."
+        @test findprev(h[i], h, i - 1) isa Nothing
+    end
+end
 
 end # module

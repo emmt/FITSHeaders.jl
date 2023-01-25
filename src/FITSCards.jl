@@ -7,12 +7,13 @@ A package implementing methods to store and parse FITS header cards.
 module FITSCards
 
 export
-    # Fast FITS keyword:
+    # Quick FITS keyword:
     @FITS_str,
     FITSKey,
 
-    # FITS cards:
+    # FITS cards and headers:
     FITSCard,
+    FITSHeader,
 
     # Cards types:
     FITSCardType,
@@ -64,6 +65,10 @@ import .Parser:
 include("cards.jl")
 import .Cards:
     FITSCard
+
+include("headers.jl")
+import .Headers:
+    FITSHeader
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin
