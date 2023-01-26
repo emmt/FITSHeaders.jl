@@ -151,13 +151,10 @@ end
 find the first occurence of a record in FITS header `A` matching the pattern
 `what`.
 
-"""
-function Base.findfirst(what, A::FITSHeader)
-    # Quick return if possible to avoid additional work in unsafe_find.
-    i_first = firstindex(A)
-    i_last = lastindex(A)
-    i_first ≤ i_last || return nothing
-    unsafe_find(what, A, i_first : i_last)
+""" Base.findfirst
+for T in (Any, Function) # needed to avoid ambiguities
+    @eval Base.findfirst(what::$T, A::FITSHeader) =
+        unsafe_find(>, what, A, firstindex(A), lastindex(A))
 end
 
 """
@@ -166,13 +163,10 @@ end
 find the last occurence of a record in FITS header `A` matching the pattern
 `what`.
 
-"""
-function Base.findlast(what, A::FITSHeader)
-    # Quick return if possible to avoid additional work in unsafe_find.
-    i_first = firstindex(A)
-    i_last = lastindex(A)
-    i_first ≤ i_last || return nothing
-    unsafe_find(what, A, i_last : -1 : i_first)
+""" Base.findlast
+for T in (Any, Function) # needed to avoid ambiguities
+    @eval Base.findlast(what::$T, A::FITSHeader) =
+        unsafe_find(<, what, A, firstindex(A), lastindex(A))
 end
 
 """
@@ -181,13 +175,10 @@ end
 find the next occurence of a record in FITS header `A` matching the pattern
 `what` at or after index `start`.
 
-"""
-function Base.findnext(what, A::FITSHeader, start::Integer)
-    # Quick return if possible to avoid additional work in unsafe_find.
-    i_first = max(firstindex(A), convert(Int, start)::Int)
-    i_last = lastindex(A)
-    i_first ≤ i_last || return nothing
-    return unsafe_find(what, A, i_first : i_last)
+""" Base.findnext
+for T in (Any, Function) # needed to avoid ambiguities
+    @eval Base.findnext(what::$T, A::FITSHeader, start::Integer) =
+        unsafe_find(>, what, A, max(firstindex(A), convert(Int, start)::Int), lastindex(A))
 end
 
 """
@@ -196,14 +187,17 @@ end
 find the previous occurence of a record in FITS header `A` matching the pattern
 `what` at or before index `start`.
 
-"""
-function Base.findprev(what, A::FITSHeader, start::Integer)
-    # Quick return if possible to avoid additional work in unsafe_find.
-    i_first = firstindex(A)
-    i_last = min(lastindex(A), convert(Int, start)::Int)
-    i_first ≤ i_last || return nothing
-    return unsafe_find(what, A,  i_last : -1 : i_first)
+""" Base.findprev
+for T in (Any, Function) # needed to avoid ambiguities
+    @eval Base.findprev(what::$T, A::FITSHeader, start::Integer) =
+        unsafe_find(<, what, A, firstindex(A), min(lastindex(A), convert(Int, start)::Int))
 end
+
+# Quick return if possible to avoid additional work in unsafe_find.
+unsafe_find(::typeof(>), what, A::FITSHeader, i_first::Int, i_last::Int) =
+    i_first ≤ i_last ? unsafe_find(what, A, i_first : i_last) : nothing
+unsafe_find(::typeof(<), what, A::FITSHeader, i_first::Int, i_last::Int) =
+    i_first ≤ i_last ? unsafe_find(what, A, i_last : -1 : i_first) : nothing
 
 # Searching for any unsupported pattern yields nothing.
 unsafe_find(what::Any, A::FITSHeader, I::OrdinalRange{<:Int}) = nothing

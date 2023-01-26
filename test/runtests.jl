@@ -854,40 +854,76 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     end
     @testset "Headers" begin
         dims = (4,5,6)
-        h = FITSHeader()
-        push!(h, "SIMPLE" => (true, "FITS file"))
-        @test length(h) == 1
-        @test h[1].key === FITS"SIMPLE"
+        h = FITSHeader("SIMPLE" => (true, "FITS file"),
+                       "BITPIX" => (-32, "bits per pixels"),
+                       "NAXIS" => (length(dims), "number of dimensions"))
+        @test length(h) == 3
+        @test keys(h) == firstindex(h):lastindex(h)
+        @test convert(FITSHeader, h) === h
+        @test convert(FITSHeader, FITSCards.Headers.contents(h)) === h
         @test h["SIMPLE"] === h[1]
-        push!(h, "BITPIX" => (-32, "bits per pixels"))
-        push!(h, "NAXIS" => (length(dims), "number of dimensions"))
+        @test h[1].key === FITS"SIMPLE"
+        @test h[1].value() == true
+        @test h["BITPIX"] === h[2]
+        @test h[2].key === FITS"BITPIX"
+        @test h[2].value() == -32
+        @test h["NAXIS"] === h[3]
+        @test h[3].key === FITS"NAXIS"
+        @test h[3].value() == length(dims)
         for i in eachindex(dims)
             push!(h, "NAXIS$i" => (dims[i], "length of dimension # $i"))
         end
         push!(h, "COMMENT" => "Some comment.")
-        push!(h, "CCD GAIN" => 3.2)
-        push!(h, "CCD BIAS" => -15)
-        push!(h, "BSCALE" => 1.0)
-        push!(h, "BZERO" => 0.0)
-        push!(h, "COMMENT" => "Another comment.")
-        push!(h, "COMMENT" => "Yet another comment.")
+        h["CCD GAIN"] = (3.2, "[ADU/e-] detector gain")
+        h["HIERARCH CCD BIAS"] = -15
+        h["BSCALE"] = 1.0
+        h["BZERO"] = 0.0
+        h["COMMENT"] = "Another comment."
+        h["COMMENT"] = "Yet another comment."
+        # Test indexing by integer/name.
         i = findfirst("BITPIX", h)
         @test i isa Integer && h[i].name == "BITPIX"
         @test h["BITPIX"] === h[i]
         @test h["BSCALE"].value(Real) ≈ 1
         @test h["BSCALE"].comment == ""
-        # Change existing key.
+        # Test HIERARCH records.
+        card = get(h, "HIERARCH CCD GAIN", nothing)
+        @test card isa FITSCard
+        if card !== Nothing
+            @test card.key === FITS"HIERARCH"
+            @test card.name == "HIERARCH CCD GAIN"
+            @test card.value() ≈ 3.2
+            @test card.units == "ADU/e-"
+            @test card.unitless == "detector gain"
+        end
+        card = get(h, "CCD BIAS", nothing)
+        @test card isa FITSCard
+        if card !== Nothing
+            @test card.key === FITS"HIERARCH"
+            @test card.name == "HIERARCH CCD BIAS"
+            @test card.value() == -15
+        end
+        # Change existing record, by name and by index.
         n = length(h)
         h["BSCALE"] = (1.1, "better value")
         @test length(h) == n
         @test h["BSCALE"].value(Real) ≈ 1.1
         @test h["BSCALE"].comment == "better value"
-        # Append non-existing key.
+        i = findfirst("BITPIX", h)
+        @test i isa Integer
+        h[i] = (h[i].name => (-64, h[i].comment))
+        @test h["BITPIX"].value() == -64
+        # Append non-existing record.
         n = length(h)
         h["GIZMO"] = ("Joe's taxi", "what?")
         @test length(h) == n+1
         @test h["GIZMO"].value() == "Joe's taxi"
         @test h["GIZMO"].comment == "what?"
+        # Test search failure when: (i) keyword is valid but does not exists,
+        # (ii) keyword is invalid, and (iii) pattern is unsupported.
+        @test findfirst("NON-EXISTING KEYWORD", h) === nothing
+        @test findfirst("Invalid keyword", h) === nothing
+        @test findfirst(π, h) === nothing
         # Forward search.
         i = findfirst("COMMENT", h)
         @test i isa Integer
@@ -916,6 +952,15 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test h[i].type === FITS_COMMENT
         @test h[i].comment == "Some comment."
         @test findprev(h[i], h, i - 1) isa Nothing
+        # Check that non-commentary records are unique.
+        for i in eachindex(h)
+            card = h[i]
+            card.type === FITS_COMMENT && continue
+            @test findnext(card, h, i + 1) isa Nothing
+        end
+        # Search with a predicate.
+        @test findfirst(card -> card.type === FITS_END, h) === nothing
+        @test findlast(card -> card.name == "BITPIX", h) === 2
     end
 end
 
