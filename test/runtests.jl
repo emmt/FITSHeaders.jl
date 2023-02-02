@@ -858,9 +858,13 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
                        "BITPIX" => (-32, "bits per pixels"),
                        "NAXIS" => (length(dims), "number of dimensions"))
         @test length(h) == 3
-        @test keys(h) == firstindex(h):lastindex(h)
+        @test sort(collect(keys(h))) == sort(["SIMPLE", "BITPIX", "NAXIS"])
+        # Same object:
         @test convert(FITSHeader, h) === h
-        @test convert(FITSHeader, FITSCards.Headers.contents(h)) === h
+        # Same contents but different objects:
+        hp = convert(FITSHeader, h.cards); @test hp !== h && hp == h
+        hp = FITSHeader(h); @test  hp !== h && hp == h
+        hp = copy(h); @test  hp !== h && hp == h
         @test IndexStyle(h) === IndexLinear()
         @test h["SIMPLE"] === h[1]
         @test h[1].key === FITS"SIMPLE"

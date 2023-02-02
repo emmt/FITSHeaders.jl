@@ -229,6 +229,227 @@ same as if the missing bytes were spaces. If there are no bytes left, a
 returned.
 
 
+## FITS headers
+
+The `FITSCards` package provides objects of type `FITSHeader` to store,
+possibly partial, FITS headers.
+
+
+### Building a FITS header
+
+To build a FITS header initialized with records `args..`, call:
+
+``` julia
+hdr = FITSHeader(args...)
+```
+
+where `args...` is a variable number of records in any form allowed by the
+`FITSCard` constructor, it can also be a vector or a tuple of records. For
+example:
+
+``` julia
+dims = (384, 288)
+hdr = FITSHeader("SIMPLE" => true,
+                 "BITPIX" => (-32, "32-bit floats"),
+                 "NAXIS" => (length(dims), "number of dimensions"),
+                 ntuple(i -> "NAXIS$i" => dims[i], length(dims))...,
+                 "COMMENT" => "A comment.",
+                 "COMMENT" => "Another comment.",
+                 "DATE" => ("2023-02-01", "1st of February, 2023"),
+                 "COMMENT" => "Yet another comment.")
+```
+
+Method `keys` can be applied to get the list of keywords in a FITS header:
+
+``` julia
+julia> keys(hdr)
+KeySet for a Dict{String, Int64} with 7 entries. Keys:
+  "COMMENT"
+  "BITPIX"
+  "SIMPLE"
+  "NAXIS2"
+  "NAXIS1"
+  "NAXIS"
+  "DATE"
+```
+
+
+### Retrieving records from a FITS header
+
+A FITS header object behaves as a vector of `FITSCard` elements with integer or
+keyword (string) indices. When indexed by keywords, a FITS header object is
+similar to a dictionary except that the order of records is preserved and that
+commentary and continuation records (with keywords `"COMMENT"`, `"HISTORY"`,
+`""`, or `"CONTINUE"`) may appear more than once.
+
+An integer (linear) index `i` or a string index `key` can be used to retrieve
+a given record:
+
+``` julia
+hdr[i]   # i-th record
+hdr[key] # first record whose name matches `key`
+```
+
+For example (with `hdr` as built above):
+
+``` julia
+julia> hdr[2]
+FITSCard: BITPIX  = -32 / 32-bit floats
+
+julia> hdr["NAXIS"]
+FITSCard: NAXIS   = 2 / number of dimensions
+
+julia> hdr["COMMENT"]
+FITSCard: COMMENT A comment.
+```
+
+Note that, when indexing by name, the first matching record is returned. This
+may be a concern for non-unique keywords as in the last above example. All
+matching records can be `collect`ed into a vector of `FITSCard` elements by:
+
+``` julia
+collect(key, hdr) # all records whose name matches `key`
+```
+
+For example:
+
+``` julia
+julia> collect("COMMENT", hdr)
+3-element Vector{FITSCard}:
+ FITSCard: COMMENT A comment.
+ FITSCard: COMMENT Another comment.
+ FITSCard: COMMENT Yet another comment.
+
+julia> collect(rec -> startswith(rec.name, "NAXIS"), hdr)
+3-element Vector{FITSCard}:
+ FITSCard: NAXIS   = 2 / number of dimensions
+ FITSCard: NAXIS1  = 384
+ FITSCard: NAXIS2  = 288
+```
+
+This behavior is different from that of `filter` which yields another FITS
+header instance:
+
+``` julia
+julia> filter(rec -> startswith(rec.name, "NAXIS"), hdr)
+3-element FITSHeader:
+ FITSCard: NAXIS   = 2 / number of dimensions
+ FITSCard: NAXIS1  = 384
+ FITSCard: NAXIS2  = 288
+```
+
+For more control, searching for the index `i` of an existing record in FITS
+header object `hdr` can be done by the usual methods:
+
+``` julia
+findfirst(what, hdr)
+findlast(what, hdr)
+findnext(what, hdr, start)
+findprev(what, hdr, start)
+```
+
+which all return a valid integer index if a record matching `what` is found and
+`nothing` otherwise. The matching pattern `what` can be a keyword (string), a
+FITS card (an instance of `FITSCard` whose name is used as a matching pattern),
+or a predicate function which takes a FITS card argument and shall return
+whether it matches. The find methods just yield `nothing` for any unsupported
+kind of pattern.
+
+The `eachmatch` method is a simple mean to iterate over matching records:
+
+``` julia
+eachmatch(what, hdr)
+```
+
+yields an iterator over the records of `hdr` matching `what`. For example:
+
+``` julia
+@inbounds for rec in eachmatch(what, hdr)
+    ... # do something
+end
+```
+
+is a shortcut for:
+
+``` julia
+i = findfirst(what, hdr)
+@inbounds while i !== nothing
+    rec = hdr[i]
+    ... # do something
+    i = findnext(what, hdr, i+1)
+end
+```
+
+while:
+
+``` julia
+@inbounds for rec in reverse(eachmatch(what, hdr))
+    ... # do something
+end
+```
+
+is equivalent to:
+
+``` julia
+i = findlast(what, hdr)
+@inbounds while i !== nothing
+    rec = hdr[i]
+    ... # do something
+    i = findprev(what, hdr, i-1)
+end
+```
+
+If it is not certain that a record exists or to avoid throwing a `KeyError`
+exception, use the `get` method. For example:
+
+``` julia
+julia> get(hdr, "BITPIX", nothing)
+FITSCard: BITPIX  = -32 / 32-bit floats
+
+julia> get(hdr, "GIZMO", missing)
+missing
+```
+
+
+## Modifying a FITS header
+
+A record `rec` may be pushed to a FITS header `hdr` to modify the header:
+
+``` julia
+push!(hdr, rec)
+```
+
+where `rec` may have any form allowed by the `FITSCard` constructor. If the
+keyword of `rec` must be unique and a record of the same name exists in `hdr`,
+it is replaced by `rec`; otherwise, `rec` is appended to the end of the list of
+records stored by `hdr`.
+
+The `setindex!` method may also be used with a linear (integer) or a keyword
+(string) index. The above rule for unique / non-unique keywords is always
+applied. For example, the two following statements are equivalent:
+
+``` julia
+hdr[key] = (val, com)
+push!(hdr, key => (val, com))
+```
+
+while, assuming `i` is an integer:
+
+``` julia
+hdr[i] = rec
+```
+
+replaces the `i`-th record in `hdr` by `rec`. The following example illustrates
+how this can be used to change the comment of the BITPIX record:
+
+``` julia
+julia> if (i = findfirst("BITPIX", hdr)) != nothing
+           hdr[i] = ("BITPIX" => (hdr[i].value(), "A better comment."))
+       end
+"BITPIX" => (-32, "A better comment.")
+```
+
+
 ## Timings
 
 `FITSCards` is ought to be fast. Below are times and memory allocations for
