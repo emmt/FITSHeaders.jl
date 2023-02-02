@@ -1,7 +1,7 @@
 module TestingFITSBase
 
 using FITSBase
-using FITSBase: FITSInteger, FITSFloat, FITSComplex
+using FITSBase: FitsInteger, FitsFloat, FitsComplex
 
 using Test
 
@@ -15,8 +15,8 @@ else
     error("unsupported byte order")
 end
 
-make_FITSKey(str::AbstractString) =
-    FITSKey(reinterpret(UInt64,UInt8[c for c in str])[1])
+make_FitsKey(str::AbstractString) =
+    FitsKey(reinterpret(UInt64,UInt8[c for c in str])[1])
 
 function make_byte_vector(str::AbstractString)
     @assert codeunit(str) === UInt8
@@ -69,36 +69,36 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
                 end
             end
         end
-        @test sizeof(FITSKey) == 8
+        @test sizeof(FitsKey) == 8
         @test FITS_SHORT_KEYWORD_SIZE == 8
         @test FITS_CARD_SIZE == 80
         @test FITS_BLOCK_SIZE == 2880
     end
-    @testset "FITSCardType" begin
-        @test FITSCardType(Bool) === FITS_LOGICAL
-        @test FITSCardType(Int16) === FITS_INTEGER
-        @test FITSCardType(Float32) === FITS_FLOAT
-        @test FITSCardType(ComplexF64) === FITS_COMPLEX
-        @test FITSCardType(String) === FITS_STRING
-        @test FITSCardType(Nothing) === FITS_COMMENT
-        @test FITSCardType(UndefInitializer) === FITS_UNDEFINED
-        @test FITSCardType(Missing) === FITS_UNDEFINED
+    @testset "FitsCardType" begin
+        @test FitsCardType(Bool) === FITS_LOGICAL
+        @test FitsCardType(Int16) === FITS_INTEGER
+        @test FitsCardType(Float32) === FITS_FLOAT
+        @test FitsCardType(ComplexF64) === FITS_COMPLEX
+        @test FitsCardType(String) === FITS_STRING
+        @test FitsCardType(Nothing) === FITS_COMMENT
+        @test FitsCardType(UndefInitializer) === FITS_UNDEFINED
+        @test FitsCardType(Missing) === FITS_UNDEFINED
     end
     @testset "Keywords" begin
-        @test iszero(FITSKey())
-        @test zero(FITSKey()) === FITSKey()
-        @test zero(FITSKey) === FITSKey()
-        @test convert(Integer, FITSKey()) === zero(UInt64)
-        @test UInt64(FITSKey()) === zero(UInt64)
-        @test FITS"SIMPLE"   ==  make_FITSKey("SIMPLE  ")
-        @test FITS"SIMPLE"   === make_FITSKey("SIMPLE  ")
-        @test FITS"BITPIX"   === make_FITSKey("BITPIX  ")
-        @test FITS"NAXIS"    === make_FITSKey("NAXIS   ")
-        @test FITS"COMMENT"  === make_FITSKey("COMMENT ")
-        @test FITS"HISTORY"  === make_FITSKey("HISTORY ")
-        @test FITS"HIERARCH" === make_FITSKey("HIERARCH")
-        @test FITS""         === make_FITSKey("        ")
-        @test FITS"END"      === make_FITSKey("END     ")
+        @test iszero(FitsKey())
+        @test zero(FitsKey()) === FitsKey()
+        @test zero(FitsKey) === FitsKey()
+        @test convert(Integer, FitsKey()) === zero(UInt64)
+        @test UInt64(FitsKey()) === zero(UInt64)
+        @test FITS"SIMPLE"   ==  make_FitsKey("SIMPLE  ")
+        @test FITS"SIMPLE"   === make_FitsKey("SIMPLE  ")
+        @test FITS"BITPIX"   === make_FitsKey("BITPIX  ")
+        @test FITS"NAXIS"    === make_FitsKey("NAXIS   ")
+        @test FITS"COMMENT"  === make_FitsKey("COMMENT ")
+        @test FITS"HISTORY"  === make_FitsKey("HISTORY ")
+        @test FITS"HIERARCH" === make_FitsKey("HIERARCH")
+        @test FITS""         === make_FitsKey("        ")
+        @test FITS"END"      === make_FitsKey("END     ")
         @test String(FITS"") == ""
         @test String(FITS"SIMPLE") == "SIMPLE"
         @test String(FITS"HIERARCH") == "HIERARCH"
@@ -252,17 +252,17 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     end
     @testset "Cards from strings" begin
         # Errors...
-        @test_throws Exception FITSCard("END     nothing allowed here")
-        @test_throws Exception FITSCard("VALUE   =     # / invalid character")
-        @test_throws Exception FITSCard("VALUE   =  .-123 / invalid number")
-        @test_throws Exception FITSCard("VALUE   =  -12x3 / invalid number")
-        @test_throws Exception FITSCard("VALUE   = (1,3.0 / unclosed complex")
-        @test_throws Exception FITSCard("VALUE   =   (1,) / bad complex")
-        @test_throws Exception FITSCard("VALUE   =   (,1) / bad complex")
-        @test_throws Exception FITSCard("VALUE   = 'hello / unclosed string")
-        @test_throws Exception FITSCard("VALUE   = 'Joe's taxi' / unescaped quote")
+        @test_throws Exception FitsCard("END     nothing allowed here")
+        @test_throws Exception FitsCard("VALUE   =     # / invalid character")
+        @test_throws Exception FitsCard("VALUE   =  .-123 / invalid number")
+        @test_throws Exception FitsCard("VALUE   =  -12x3 / invalid number")
+        @test_throws Exception FitsCard("VALUE   = (1,3.0 / unclosed complex")
+        @test_throws Exception FitsCard("VALUE   =   (1,) / bad complex")
+        @test_throws Exception FitsCard("VALUE   =   (,1) / bad complex")
+        @test_throws Exception FitsCard("VALUE   = 'hello / unclosed string")
+        @test_throws Exception FitsCard("VALUE   = 'Joe's taxi' / unescaped quote")
         # Logical FITS cards.
-        let card = FITSCard("SIMPLE  =                    T / this is a FITS file                     ")
+        let card = FitsCard("SIMPLE  =                    T / this is a FITS file                     ")
             @test :type ∈ propertynames(card)
             @test :name ∈ propertynames(card)
             @test :key ∈ propertynames(card)
@@ -276,7 +276,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test :complex ∈ propertynames(card)
             @test :string ∈ propertynames(card)
             @test card.type === FITS_LOGICAL
-            @test FITSCardType(card) === FITS_LOGICAL
+            @test FitsCardType(card) === FITS_LOGICAL
             @test card.key == FITS"SIMPLE"
             @test card.name == "SIMPLE"
             @test card.comment == "this is a FITS file"
@@ -293,10 +293,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.value(valtype(card)) === card.value()
             @test card.value(Bool)          === convert(Bool,        card.value())
             @test card.value(Int16)         === convert(Int16,       card.value())
-            @test card.value(Integer)       === convert(FITSInteger, card.value())
-            @test card.value(Real)          === convert(FITSFloat,   card.value())
-            @test card.value(AbstractFloat) === convert(FITSFloat,   card.value())
-            @test card.value(Complex)       === convert(FITSComplex, card.value())
+            @test card.value(Integer)       === convert(FitsInteger, card.value())
+            @test card.value(Real)          === convert(FitsFloat,   card.value())
+            @test card.value(AbstractFloat) === convert(FitsFloat,   card.value())
+            @test card.value(Complex)       === convert(FitsComplex, card.value())
             @test_throws Exception card.value(String)
             @test_throws Exception card.value(AbstractString)
             # Convert callable value object by calling `convert`.
@@ -317,12 +317,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr("text/plain", card.value) isa String
         end
         # Integer valued cards.
-        let card = FITSCard("BITPIX  =                  -32 / number of bits per data pixel           ")
+        let card = FitsCard("BITPIX  =                  -32 / number of bits per data pixel           ")
             @test card.type == FITS_INTEGER
             @test card.key == FITS"BITPIX"
             @test card.name == "BITPIX"
             @test card.comment == "number of bits per data pixel"
-            @test card.value() isa FITSInteger
+            @test card.value() isa FitsInteger
             @test card.value() == -32
             @test card.value() === card.integer
             @test valtype(card) === typeof(card.value())
@@ -333,10 +333,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             # Convert callable value object by calling the object itself.
             @test card.value(valtype(card)) === card.value()
             @test card.value(Int16)         === convert(Int16,       card.value())
-            @test card.value(Integer)       === convert(FITSInteger, card.value())
-            @test card.value(Real)          === convert(FITSFloat,   card.value())
-            @test card.value(AbstractFloat) === convert(FITSFloat,   card.value())
-            @test card.value(Complex)       === convert(FITSComplex, card.value())
+            @test card.value(Integer)       === convert(FitsInteger, card.value())
+            @test card.value(Real)          === convert(FitsFloat,   card.value())
+            @test card.value(AbstractFloat) === convert(FitsFloat,   card.value())
+            @test card.value(Complex)       === convert(FitsComplex, card.value())
             @test_throws InexactError card.value(Bool)
             @test_throws Exception    card.value(String)
             @test_throws Exception    card.value(AbstractString)
@@ -356,14 +356,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
         end
-        let card = FITSCard("NAXIS   =                    3 /      number of axes                      ")
+        let card = FitsCard("NAXIS   =                    3 /      number of axes                      ")
             @test card.type == FITS_INTEGER
             @test card.key == FITS"NAXIS"
             @test card.name == "NAXIS"
             @test card.comment == "number of axes"
             @test card.units == ""
             @test card.unitless == "number of axes"
-            @test card.value() isa FITSInteger
+            @test card.value() isa FitsInteger
             @test card.value() == 3
             @test card.value() === card.integer
             @test valtype(card) === typeof(card.value())
@@ -374,10 +374,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             # Convert callable value object by calling the object itself.
             @test card.value(valtype(card)) === card.value()
             @test card.value(Int16)         === convert(Int16,       card.value())
-            @test card.value(Integer)       === convert(FITSInteger, card.value())
-            @test card.value(Real)          === convert(FITSFloat,   card.value())
-            @test card.value(AbstractFloat) === convert(FITSFloat,   card.value())
-            @test card.value(Complex)       === convert(FITSComplex, card.value())
+            @test card.value(Integer)       === convert(FitsInteger, card.value())
+            @test card.value(Real)          === convert(FitsFloat,   card.value())
+            @test card.value(AbstractFloat) === convert(FitsFloat,   card.value())
+            @test card.value(Complex)       === convert(FitsComplex, card.value())
             @test_throws InexactError card.value(Bool)
             @test_throws Exception    card.value(String)
             @test_throws Exception    card.value(AbstractString)
@@ -398,7 +398,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr("text/plain", card.value) isa String
         end
         # COMMENT and HISTORY.
-        let card = FITSCard("COMMENT   Some comments (with leading spaces that should not be removed) ")
+        let card = FitsCard("COMMENT   Some comments (with leading spaces that should not be removed) ")
             @test card.type == FITS_COMMENT
             @test card.key == FITS"COMMENT"
             @test card.name == "COMMENT"
@@ -443,7 +443,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test FITSBase.is_end(card.type) === false
             @test FITSBase.is_end(card.key) === false
         end
-        let card = FITSCard("HISTORY A new history starts here...                                     ")
+        let card = FitsCard("HISTORY A new history starts here...                                     ")
             @test card.type == FITS_COMMENT
             @test card.key == FITS"HISTORY"
             @test card.name == "HISTORY"
@@ -489,7 +489,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test FITSBase.is_end(card.key) === false
         end
         # Non standard commentary card.
-        let card = FITSCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
+        let card = FitsCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
             @test card.type == FITS_COMMENT
             @test card.key == FITS"HIERARCH"
             @test card.name == "HIERARCH NON-STANDARD COMMENT"
@@ -535,7 +535,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test FITSBase.is_end(card.key) === false
         end
         # String valued card.
-        let card = FITSCard("REMARK  = 'Joe''s taxi'        / a string with an embedded quote         ")
+        let card = FitsCard("REMARK  = 'Joe''s taxi'        / a string with an embedded quote         ")
             @test card.type == FITS_STRING
             @test card.key == FITS"REMARK"
             @test card.name == "REMARK"
@@ -587,7 +587,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test FITSBase.is_end(card.key) == false
         end
         #
-        let card = FITSCard("EXTNAME = 'SCIDATA ' ")
+        let card = FitsCard("EXTNAME = 'SCIDATA ' ")
             @test card.type == FITS_STRING
             @test card.key == FITS"EXTNAME"
             @test card.name == "EXTNAME"
@@ -608,12 +608,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === false
         end
         #
-        let card = FITSCard("CRPIX1  =                   1. ")
+        let card = FitsCard("CRPIX1  =                   1. ")
             @test card.type == FITS_FLOAT
             @test card.key == FITS"CRPIX1"
             @test card.name == "CRPIX1"
             @test card.comment == ""
-            @test card.value() isa FITSFloat
+            @test card.value() isa FitsFloat
             @test card.value() ≈ 1.0
             @test card.value() === card.float
             @test valtype(card) === typeof(card.value())
@@ -627,12 +627,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === true
         end
         #
-        let card = FITSCard("CRVAL3  =                 0.96 / CRVAL along 3rd axis ")
+        let card = FitsCard("CRVAL3  =                 0.96 / CRVAL along 3rd axis ")
             @test card.type == FITS_FLOAT
             @test card.key == FITS"CRVAL3"
             @test card.name == "CRVAL3"
             @test card.comment == "CRVAL along 3rd axis"
-            @test card.value() isa FITSFloat
+            @test card.value() isa FitsFloat
             @test card.value() ≈ 0.96
             @test card.value() === card.float
             @test valtype(card) === typeof(card.value())
@@ -646,12 +646,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === true
         end
         #
-        let card = FITSCard("HIERARCH ESO OBS EXECTIME = +2919 / Expected execution time ")
+        let card = FitsCard("HIERARCH ESO OBS EXECTIME = +2919 / Expected execution time ")
             @test card.type == FITS_INTEGER
             @test card.key == FITS"HIERARCH"
             @test card.name == "HIERARCH ESO OBS EXECTIME"
             @test card.comment == "Expected execution time"
-            @test card.value() isa FITSInteger
+            @test card.value() isa FitsInteger
             @test card.value() == +2919
             @test card.value() === card.integer
             @test valtype(card) === typeof(card.value())
@@ -665,7 +665,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === true
         end
         # FITS cards with undefined value.
-        let card = FITSCard("DUMMY   =                        / no value given ")
+        let card = FitsCard("DUMMY   =                        / no value given ")
             @test card.type == FITS_UNDEFINED
             @test card.key == FITS"DUMMY"
             @test card.name == "DUMMY"
@@ -682,7 +682,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isinteger(card) === false
             @test isreal(card) === false
         end
-        let card = FITSCard("HIERARCH DUMMY   =               / no value given ")
+        let card = FitsCard("HIERARCH DUMMY   =               / no value given ")
             @test card.type == FITS_UNDEFINED
             @test card.key == FITS"HIERARCH"
             @test card.name == "HIERARCH DUMMY"
@@ -700,14 +700,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === false
         end
         # Complex valued cards.
-        let card = FITSCard("COMPLEX = (1,0)                  / [km/s] some complex value ")
+        let card = FitsCard("COMPLEX = (1,0)                  / [km/s] some complex value ")
             @test card.type == FITS_COMPLEX
             @test card.key == FITS"COMPLEX"
             @test card.name == "COMPLEX"
             @test card.comment == "[km/s] some complex value"
             @test card.units == "km/s"
             @test card.unitless == "some complex value"
-            @test card.value() isa FITSComplex
+            @test card.value() isa FitsComplex
             @test card.value() ≈ complex(1,0)
             @test valtype(card) === typeof(card.value())
             @test card.value(valtype(card)) === card.value()
@@ -719,12 +719,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isinteger(card) === false
             @test isreal(card) === iszero(imag(card.value()))
         end
-        let card = FITSCard("COMPLEX = (-2.7,+3.1d5)          / some other complex value ")
+        let card = FitsCard("COMPLEX = (-2.7,+3.1d5)          / some other complex value ")
             @test card.type == FITS_COMPLEX
             @test card.key == FITS"COMPLEX"
             @test card.name == "COMPLEX"
             @test card.comment == "some other complex value"
-            @test card.value() isa FITSComplex
+            @test card.value() isa FitsComplex
             @test card.value() ≈ complex(-2.7,+3.1e5)
             @test valtype(card) === typeof(card.value())
             @test card.value(valtype(card)) === card.value()
@@ -741,7 +741,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isreal(card) === iszero(imag(card.value()))
         end
         # END card.
-        let card = FITSCard("END                           ")
+        let card = FitsCard("END                           ")
             @test card.type == FITS_END
             @test card.key == FITS"END"
             @test card.name == "END"
@@ -769,7 +769,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Logical FITS cards.
         str = "SIMPLE  =                    T / this is a FITS file                            "
         for buf in (make_byte_vector(str), make_discontinuous_byte_vector(str))
-            card = FITSCard(buf)
+            card = FitsCard(buf)
                         @test card.type == FITS_LOGICAL
             @test card.key == FITS"SIMPLE"
             @test card.name == "SIMPLE"
@@ -780,19 +780,19 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test valtype(card) === typeof(card.value())
         end
         # "END", empty string "" or out of range offset yield an END card.
-        let card = FITSCard("END")
+        let card = FitsCard("END")
             @test card.type === FITS_END
             @test card.key === FITS"END"
         end
-        let card = FITSCard("")
+        let card = FitsCard("")
             @test card.type === FITS_END
             @test card.key === FITS"END"
         end
-        let card = FITSCard("xEND"; offset=1)
+        let card = FitsCard("xEND"; offset=1)
             @test card.type === FITS_END
             @test card.key === FITS"END"
         end
-        let card = FITSCard("SOMETHING"; offset=250)
+        let card = FitsCard("SOMETHING"; offset=250)
             @test card.type === FITS_END
             @test card.key === FITS"END"
         end
@@ -801,10 +801,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Logical FITS cards.
         com = "some comment"
         pair = "SIMPLE" => (true, com)
-        card = FITSCard(pair)
-        @test FITSCard(card) === card
-        @test convert(FITSCard, card) === card
-        @test convert(FITSCard, pair) == card
+        card = FitsCard(pair)
+        @test FitsCard(card) === card
+        @test convert(FitsCard, card) === card
+        @test convert(FitsCard, pair) == card
         @test convert(Pair, card) == pair
         @test Pair(card) == pair
         #@test Pair{String}(card) == pair
@@ -815,37 +815,37 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.name === "SIMPLE"
         @test card.value() === true
         @test card.comment == com
-        card = FITSCard("TWO KEYS" => (π, com))
+        card = FitsCard("TWO KEYS" => (π, com))
         @test card.type === FITS_FLOAT
         @test card.key === FITS"HIERARCH"
         @test card.name == "HIERARCH TWO KEYS"
         @test card.value() ≈ π
         @test card.comment == com
-        card = convert(FITSCard, "HIERARCH NAME" => ("some name", com))
+        card = convert(FitsCard, "HIERARCH NAME" => ("some name", com))
         @test card.type === FITS_STRING
         @test card.key === FITS"HIERARCH"
         @test card.name == "HIERARCH NAME"
         @test card.value() == "some name"
         @test card.comment == com
-        card = convert(FITSCard, "HIERARCH COMMENT" => (nothing, com))
+        card = convert(FitsCard, "HIERARCH COMMENT" => (nothing, com))
         @test card.type === FITS_COMMENT
         @test card.key === FITS"HIERARCH"
         @test card.name == "HIERARCH COMMENT"
         @test card.value() === nothing
         @test card.comment == com
-        card = convert(FITSCard, "COMMENT" => com)
+        card = convert(FitsCard, "COMMENT" => com)
         @test card.type === FITS_COMMENT
         @test card.key === FITS"COMMENT"
         @test card.name == "COMMENT"
         @test card.value() === nothing
         @test card.comment == com
-        card = convert(FITSCard, "REASON" => undef)
+        card = convert(FitsCard, "REASON" => undef)
         @test card.type === FITS_UNDEFINED
         @test card.key === FITS"REASON"
         @test card.name == "REASON"
         @test card.value() === missing
         @test card.comment == ""
-        card = convert(FITSCard, "REASON" => (missing, com))
+        card = convert(FitsCard, "REASON" => (missing, com))
         @test card.type === FITS_UNDEFINED
         @test card.key === FITS"REASON"
         @test card.name == "REASON"
@@ -854,16 +854,16 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     end
     @testset "Headers" begin
         dims = (4,5,6)
-        h = FITSHeader("SIMPLE" => (true, "FITS file"),
+        h = FitsHeader("SIMPLE" => (true, "FITS file"),
                        "BITPIX" => (-32, "bits per pixels"),
                        "NAXIS" => (length(dims), "number of dimensions"))
         @test length(h) == 3
         @test sort(collect(keys(h))) == sort(["SIMPLE", "BITPIX", "NAXIS"])
         # Same object:
-        @test convert(FITSHeader, h) === h
+        @test convert(FitsHeader, h) === h
         # Same contents but different objects:
-        hp = convert(FITSHeader, h.cards); @test hp !== h && hp == h
-        hp = FITSHeader(h); @test  hp !== h && hp == h
+        hp = convert(FitsHeader, h.cards); @test hp !== h && hp == h
+        hp = FitsHeader(h); @test  hp !== h && hp == h
         hp = copy(h); @test  hp !== h && hp == h
         @test IndexStyle(h) === IndexLinear()
         @test h["SIMPLE"] === h[1]
@@ -895,7 +895,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test get(h, 0, nothing) === nothing
         @test get(h, 1, nothing) === h[1]
         card = get(h, "HIERARCH CCD GAIN", nothing)
-        @test card isa FITSCard
+        @test card isa FitsCard
         if card !== Nothing
             @test card.key === FITS"HIERARCH"
             @test card.name == "HIERARCH CCD GAIN"
@@ -904,7 +904,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.unitless == "detector gain"
         end
         card = get(h, "CCD BIAS", nothing)
-        @test card isa FITSCard
+        @test card isa FitsCard
         if card !== Nothing
             @test card.key === FITS"HIERARCH"
             @test card.name == "HIERARCH CCD BIAS"

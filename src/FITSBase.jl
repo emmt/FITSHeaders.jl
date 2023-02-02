@@ -9,14 +9,14 @@ module FITSBase
 export
     # Quick FITS keyword:
     @FITS_str,
-    FITSKey,
+    FitsKey,
 
     # FITS cards and headers:
-    FITSCard,
-    FITSHeader,
+    FitsCard,
+    FitsHeader,
 
     # Cards types:
-    FITSCardType,
+    FitsCardType,
     FITS_LOGICAL,
     FITS_INTEGER,
     FITS_FLOAT,
@@ -34,7 +34,7 @@ export
 using Requires
 
 # Enumeration of keyword value type identifiers.
-@enum FITSCardType::Cint begin
+@enum FitsCardType::Cint begin
     FITS_LOGICAL   = 0
     FITS_INTEGER   = 1
     FITS_FLOAT     = 2
@@ -45,9 +45,9 @@ using Requires
     FITS_END       = 7 # END card
 end
 
-const FITSInteger = Int64
-const FITSFloat   = Float64
-const FITSComplex = Complex{FITSFloat}
+const FitsInteger = Int64
+const FitsFloat   = Float64
+const FitsComplex = Complex{FitsFloat}
 
 include("parser.jl")
 import .Parser:
@@ -55,7 +55,7 @@ import .Parser:
     FITS_CARD_SIZE,
     FITS_BLOCK_SIZE,
     FITS_SHORT_KEYWORD_SIZE,
-    FITSKey,
+    FitsKey,
     check_short_keyword,
     check_keyword,
     is_comment,
@@ -64,11 +64,11 @@ import .Parser:
 
 include("cards.jl")
 import .Cards:
-    FITSCard
+    FitsCard
 
 include("headers.jl")
 import .Headers:
-    FITSHeader
+    FitsHeader
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin

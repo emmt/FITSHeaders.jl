@@ -3,6 +3,8 @@
 ## Version 0.2.0
 
 - Package renamed `FITSBase.jl`.
+- To avoid collisions with `FITSIO.jl` types are prefixed by `Fits` instead of
+  `FITS`.
 
 ## Version 0.1.1
 

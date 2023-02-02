@@ -1,6 +1,6 @@
 module Headers
 
-export FITSHeader
+export FitsHeader
 
 using ..FITSBase
 using ..FITSBase: check_keyword, is_comment
@@ -9,20 +9,20 @@ using Base: @propagate_inbounds
 using Base.Order: Ordering, Forward, Reverse
 
 struct Keyword
-    key::FITSKey # quick key
+    key::FitsKey # quick key
     name::String # full name
 end
-Keyword(card::FITSCard) = Keyword(card.key, card.name)
+Keyword(card::FitsCard) = Keyword(card.key, card.name)
 Keyword(name::AbstractString) = Keyword(check_keyword(name)...)
 
 """
-    FITSHeader(args...) -> hdr
+    FitsHeader(args...) -> hdr
 
 yields a FITS header object initialized with records `args..`. If the only
-argument is an instance of `Vector{FITSCard}`, `hdr` directly uses it for its own
+argument is an instance of `Vector{FitsCard}`, `hdr` directly uses it for its own
 storage.
 
-A FITS header object behaves as a vector of [`FITSCard`](@ref) elements with
+A FITS header object behaves as a vector of [`FitsCard`](@ref) elements with
 integer or keyword (string) indices. When indexed by keywords, a FITS header
 object is similar to a dictionary except that the order of records is preserved
 and that commentary and continuation records (with keywords `"COMMENT"`,
@@ -32,7 +32,7 @@ To  append a new record `rec` to the FITS header `hdr`, call:
 
     push!(hdr, rec)
 
-where `rec` may be an instance of [`FITSCard`](@ref) or a pair `key => (val,
+where `rec` may be an instance of [`FitsCard`](@ref) or a pair `key => (val,
 com)` associating keyword `key` with a value `val` and/or a comment `com`.
 
 If the intention is to update the record, call:
@@ -58,66 +58,66 @@ can be done by the usual methods:
 
 which all return a valid integer index if a record matching `what` is found and
 `nothing` otherwise. The matching pattern `what` can be a keyword (string), a
-FITS card (an instance of [`FITSCard`](@ref) whose name is used as a matching
+FITS card (an instance of [`FitsCard`](@ref) whose name is used as a matching
 pattern), or a predicate function which takes a FITS card argument and shall
 return whether it matches. The find methods just yield `nothing` for any
 unsupported kind of pattern.
 
 """
-struct FITSHeader <: AbstractVector{FITSCard}
-    cards::Vector{FITSCard}
+struct FitsHeader <: AbstractVector{FitsCard}
+    cards::Vector{FitsCard}
     index::Dict{String,Int} # index to first (and unique for non-commentary and
                             # non-continuation keywords) entry with given
                             # keyword
 
     # Build empty header.
-    FITSHeader() = new(FITSCard[], Dict{String,Int}())
+    FitsHeader() = new(FitsCard[], Dict{String,Int}())
 
     # Copy constructor.
-    FITSHeader(hdr::FITSHeader) = new(copy(hdr.cards), copy(hdr.index))
+    FitsHeader(hdr::FitsHeader) = new(copy(hdr.cards), copy(hdr.index))
 end
 
 # By default, assume an iterator.
-function FITSHeader(iter)
-    hdr = FITSHeader()
+function FitsHeader(iter)
+    hdr = FitsHeader()
     has_length(iter) && (len = length(iter)) > 0 && sizehint!(hdr, len)
     for rec ∈ iter
-        push!(hdr, FITSCard(rec))
+        push!(hdr, FitsCard(rec))
     end
     return hdr
 end
 
-function FITSHeader(recs...)
-    hdr = FITSHeader()
+function FitsHeader(recs...)
+    hdr = FitsHeader()
     (len = length(recs)) > 0 && sizehint!(hdr, len)
     for rec ∈ recs
-        push!(hdr, FITSCard(rec))
+        push!(hdr, FitsCard(rec))
     end
     return hdr
 end
 
-FITSHeader(rec::Union{FITSCard,Pair}) = push!(FITSHeader(), FITSCard(rec))
+FitsHeader(rec::Union{FitsCard,Pair}) = push!(FitsHeader(), FitsCard(rec))
 
-Base.copy(hdr::FITSHeader) = FITSHeader(hdr)
+Base.copy(hdr::FitsHeader) = FitsHeader(hdr)
 
-is_unique(card::FITSCard) = is_unique(card.key)
+is_unique(card::FitsCard) = is_unique(card.key)
 is_unique(kwrd::Keyword) = is_unique(kwrd.key)
-is_unique(key::FITSKey) =
+is_unique(key::FitsKey) =
     (key !== FITS"COMMENT") &
     (key !== FITS"HISTORY") &
     (key !== FITS"CONTINUE") &
     (key !== FITS"")
 
-Base.convert(::Type{<:FITSHeader}, hdr::FITSHeader) = hdr
-Base.convert(::Type{<:FITSHeader}, iter) = FITSHeader(iter)
+Base.convert(::Type{<:FitsHeader}, hdr::FitsHeader) = hdr
+Base.convert(::Type{<:FitsHeader}, iter) = FitsHeader(iter)
 
-function Base.sizehint!(hdr::FITSHeader, n::Integer)
+function Base.sizehint!(hdr::FitsHeader, n::Integer)
     sizehint!(hdr.cards, n)
     sizehint!(hdr.index, n)
     return hdr
 end
 
-function Base.empty!(hdr::FITSHeader)
+function Base.empty!(hdr::FitsHeader)
     if length(hdr) > 0
         empty!(hdr.cards)
         empty!(hdr.index)
@@ -126,9 +126,9 @@ function Base.empty!(hdr::FITSHeader)
 end
 
 # Implement part of the abstract dictionary API.
-Base.keys(hdr::FITSHeader) = keys(hdr.index)
-Base.getkey(hdr::FITSHeader, kwrd::Keyword, def) = getkey(hdr.index, krwd.name, def)
-Base.getkey(hdr::FITSHeader, key::AbstractString, def) =
+Base.keys(hdr::FitsHeader) = keys(hdr.index)
+Base.getkey(hdr::FitsHeader, kwrd::Keyword, def) = getkey(hdr.index, krwd.name, def)
+Base.getkey(hdr::FitsHeader, key::AbstractString, def) =
     try
         getkey(hdr.index, Keyword(key), def)
     catch
@@ -136,26 +136,26 @@ Base.getkey(hdr::FITSHeader, key::AbstractString, def) =
     end
 
 # Implement abstract array API.
-Base.IndexStyle(::Type{<:FITSHeader}) = IndexLinear()
+Base.IndexStyle(::Type{<:FitsHeader}) = IndexLinear()
 for func in (:length, :size, :axes)
-    @eval Base.$func(hdr::FITSHeader) = $func(hdr.cards)
+    @eval Base.$func(hdr::FitsHeader) = $func(hdr.cards)
 end
-Base.firstindex(hdr::FITSHeader) = 1
-Base.lastindex(hdr::FITSHeader) = length(hdr)
+Base.firstindex(hdr::FitsHeader) = 1
+Base.lastindex(hdr::FitsHeader) = length(hdr)
 
-@inline function Base.getindex(hdr::FITSHeader, i::Int)
+@inline function Base.getindex(hdr::FitsHeader, i::Int)
     @boundscheck checkbounds(hdr, i)
     @inbounds getindex(hdr.cards, i)
 end
 
-@inline function Base.setindex!(hdr::FITSHeader, rec, i::Int)
+@inline function Base.setindex!(hdr::FitsHeader, rec, i::Int)
     @boundscheck checkbounds(hdr, i)
-    unsafe_setindex!(hdr, to_type(FITSCard, rec), i)
+    unsafe_setindex!(hdr, to_type(FitsCard, rec), i)
     return hdr
 end
 
 # This unsafe method assumes that index i is valid.
-function unsafe_setindex!(hdr::FITSHeader, card::FITSCard, i::Int)
+function unsafe_setindex!(hdr::FitsHeader, card::FitsCard, i::Int)
     i_first = findfirst(card, hdr)
     if i_first == nothing
         # No card exists in the header with this name.
@@ -173,28 +173,28 @@ function unsafe_setindex!(hdr::FITSHeader, card::FITSCard, i::Int)
     @inbounds hdr.cards[i] = card
 end
 
-Base.setindex!(hdr::FITSHeader, val, name::AbstractString) = push!(hdr, name => val)
+Base.setindex!(hdr::FitsHeader, val, name::AbstractString) = push!(hdr, name => val)
 
-function Base.getindex(hdr::FITSHeader, name::AbstractString)
+function Base.getindex(hdr::FitsHeader, name::AbstractString)
     card = get(hdr, name, nothing)
     card === nothing ? throw(KeyError(name)) : card
 end
 
-function Base.get(hdr::FITSHeader, i::Integer, def)
+function Base.get(hdr::FitsHeader, i::Integer, def)
     i = to_type(Int, i)
     checkbounds(Bool, hdr, i) ? (@inbounds hdr[i]) : def
 end
 
-function Base.get(hdr::FITSHeader, name::AbstractString, def)
+function Base.get(hdr::FitsHeader, name::AbstractString, def)
     # NOTE: Call findfirst() to deal with HIERARCH convention.
     i = findfirst(name, hdr)
     i === nothing ? def : (@inbounds hdr[i])
 end
 
-Base.get(hdr::FITSHeader, key, def) = def
+Base.get(hdr::FitsHeader, key, def) = def
 
 """
-    push!(hdr::FITSHeader, rec) -> hdr
+    push!(hdr::FitsHeader, rec) -> hdr
 
 appends a new record `rec` in into FITS header `hdr` or, if the keyword of the
 card must be unique and a record with the same name already exists in `hdr`,
@@ -210,8 +210,8 @@ comment.
 Note that COMMENT, HISTORY, blank, and CONTINUE records are always appended.
 
 """
-Base.push!(hdr::FITSHeader, rec) = push!(hdr, to_type(FITSCard, rec))
-function Base.push!(hdr::FITSHeader, card::FITSCard)
+Base.push!(hdr::FitsHeader, rec) = push!(hdr, to_type(FitsCard, rec))
+function Base.push!(hdr::FitsHeader, card::FitsCard)
     # Replace existing card with the same keyword if it must be unique.
     # Otherwise, push a new card.
     i = findfirst(card, hdr)
@@ -229,25 +229,25 @@ function Base.push!(hdr::FITSHeader, card::FITSCard)
 end
 
 """
-    findfirst(what, hdr::FITSHeader) -> i :: Union{Int,Nothing}
+    findfirst(what, hdr::FitsHeader) -> i :: Union{Int,Nothing}
 
 finds the first occurence of a record in FITS header `hdr` matching the pattern
 `what`.
 
 """
-Base.findfirst(what, hdr::FITSHeader) = nothing
+Base.findfirst(what, hdr::FitsHeader) = nothing
 
 """
-    findlast(what, hdr::FITSHeader) -> i :: Union{Int,Nothing}
+    findlast(what, hdr::FitsHeader) -> i :: Union{Int,Nothing}
 
 find the last occurence of a record in FITS header `hdr` matching the pattern
 `what`.
 
 """
-Base.findlast(what, hdr::FITSHeader) = nothing
+Base.findlast(what, hdr::FitsHeader) = nothing
 
 """
-    findnext(what, hdr::FITSHeader, start) -> i :: Union{Int,Nothing}
+    findnext(what, hdr::FitsHeader, start) -> i :: Union{Int,Nothing}
 
 find the next occurence of a record in FITS header `hdr` matching the pattern
 `what` at or after index `start`.
@@ -255,18 +255,18 @@ find the next occurence of a record in FITS header `hdr` matching the pattern
 """ Base.findnext
 
 """
-    findprev(what, hdr::FITSHeader, start) -> i :: Union{Int,Nothing}
+    findprev(what, hdr::FitsHeader, start) -> i :: Union{Int,Nothing}
 
 find the previous occurence of a record in FITS header `hdr` matching the
 pattern `what` at or before index `start`.
 
 """ Base.findprev
 
-const RecordID = Union{FITSCard,Keyword}
+const RecordID = Union{FitsCard,Keyword}
 
-Base.findfirst(pat::RecordID, hdr::FITSHeader) = get(hdr.index, pat.name, nothing)
+Base.findfirst(pat::RecordID, hdr::FitsHeader) = get(hdr.index, pat.name, nothing)
 
-function Base.findlast(pat::RecordID, hdr::FITSHeader)
+function Base.findlast(pat::RecordID, hdr::FitsHeader)
     first = findfirst(pat, hdr)
     first === nothing && return nothing
     is_unique(pat) && return first
@@ -277,20 +277,20 @@ function Base.findlast(pat::RecordID, hdr::FITSHeader)
     return first
 end
 
-Base.findfirst(func::Function, hdr::FITSHeader) = unsafe_findnext(func, hdr, firstindex(hdr))
-Base.findlast(func::Function, hdr::FITSHeader) = unsafe_findprev(func, hdr, lastindex(hdr))
+Base.findfirst(func::Function, hdr::FitsHeader) = unsafe_findnext(func, hdr, firstindex(hdr))
+Base.findlast(func::Function, hdr::FitsHeader) = unsafe_findprev(func, hdr, lastindex(hdr))
 
 # NOTE: First stage of `findnext` and `findprev` avoids costly conversion if
 # result can be decided without actually searching. Need to specify type of
 # `what` in function signature to avoid ambiguities.
-for T in (Any, AbstractString, Keyword, FITSCard, Function)
-    @eval function Base.findnext(what::$T, hdr::FITSHeader, start::Integer)
+for T in (Any, AbstractString, Keyword, FitsCard, Function)
+    @eval function Base.findnext(what::$T, hdr::FitsHeader, start::Integer)
         start = to_type(Int, start)
         start > lastindex(hdr) && return nothing
         start < firstindex(hdr) && throw(BoundsError(hdr, start))
         return unsafe_findnext(what, hdr, start)
     end
-    @eval function Base.findprev(what::$T, hdr::FITSHeader, start::Integer)
+    @eval function Base.findprev(what::$T, hdr::FitsHeader, start::Integer)
         start = to_type(Int, start)
         start < firstindex(hdr) && return nothing
         start > lastindex(hdr) && throw(BoundsError(hdr, start))
@@ -301,7 +301,7 @@ end
 # When search pattern is a string, we must catch errors in Keyword() in case
 # the pattern is not a valid FITS keyword.
 for func in (:findfirst, :findlast)
-    @eval function Base.$func(name::AbstractString, hdr::FITSHeader)
+    @eval function Base.$func(name::AbstractString, hdr::FitsHeader)
         try
             return $func(Keyword(name), hdr)
         catch
@@ -310,7 +310,7 @@ for func in (:findfirst, :findlast)
     end
 end
 for func in (:unsafe_findnext, :unsafe_findprev)
-    @eval function $func(name::AbstractString, hdr::FITSHeader, start::Int)
+    @eval function $func(name::AbstractString, hdr::FitsHeader, start::Int)
         try
             return $func(Keyword(name), hdr, start)
         catch
@@ -320,10 +320,10 @@ for func in (:unsafe_findnext, :unsafe_findprev)
 end
 
 # By default, find nothing.
-unsafe_findnext(pat, hdr::FITSHeader, start::Int) = nothing
-unsafe_findprev(pat, hdr::FITSHeader, start::Int) = nothing
+unsafe_findnext(pat, hdr::FitsHeader, start::Int) = nothing
+unsafe_findprev(pat, hdr::FitsHeader, start::Int) = nothing
 
-function unsafe_findnext(pat::RecordID, hdr::FITSHeader, start::Int)
+function unsafe_findnext(pat::RecordID, hdr::FitsHeader, start::Int)
     first = findfirst(pat, hdr)
     first === nothing && return nothing
     start ≤ first && return first
@@ -335,7 +335,7 @@ function unsafe_findnext(pat::RecordID, hdr::FITSHeader, start::Int)
     return nothing
 end
 
-function unsafe_findprev(pat::RecordID, hdr::FITSHeader, start::Int)
+function unsafe_findprev(pat::RecordID, hdr::FitsHeader, start::Int)
     first = findfirst(pat, hdr)
     first === nothing && return nothing
     start < first && return nothing
@@ -347,26 +347,26 @@ function unsafe_findprev(pat::RecordID, hdr::FITSHeader, start::Int)
     return first
 end
 
-function unsafe_findnext(func::Function, hdr::FITSHeader, start::Int)
+function unsafe_findnext(func::Function, hdr::FitsHeader, start::Int)
     @inbounds for i ∈ start:lastindex(hdr)
         func(hdr.cards[i]) && return i
     end
     return nothing
 end
 
-function unsafe_findprev(func::Function, hdr::FITSHeader, start::Int)
+function unsafe_findprev(func::Function, hdr::FitsHeader, start::Int)
     @inbounds for i ∈ start:-1:firstindex(hdr)
         func(hdr.cards[i]) && return i
     end
     return nothing
 end
 
-is_matching(card::FITSCard, pat::RecordID) =
+is_matching(card::FitsCard, pat::RecordID) =
     pat.key != FITS"HIERARCH" ? card.key == pat.key :
     card.name === pat.name || (card.key == FITS"HIERARCH" && isequal(card.name, pat.name))
 
 """
-    eachmatch(what, hdr::FITSHeader)
+    eachmatch(what, hdr::FitsHeader)
 
 yields an iterator over the records of `hdr` matching `what`.
 
@@ -401,22 +401,22 @@ is equivalent to:
     end
 
 """
-Base.eachmatch(what, hdr::FITSHeader) = HeaderIterator(what, hdr)
+Base.eachmatch(what, hdr::FitsHeader) = HeaderIterator(what, hdr)
 
 struct HeaderIterator{O<:Ordering,P}
     pattern::P
-    header::FITSHeader
-    HeaderIterator(order::O, pattern::P, header::FITSHeader) where {O,P} =
+    header::FitsHeader
+    HeaderIterator(order::O, pattern::P, header::FitsHeader) where {O,P} =
         new{O,P}(pattern, header)
 end
-HeaderIterator(pattern, header::FITSHeader) = HeaderIterator(Forward, pattern, header)
-HeaderIterator(order::Ordering, name::AbstractString, hdr::FITSHeader) =
+HeaderIterator(pattern, header::FitsHeader) = HeaderIterator(Forward, pattern, header)
+HeaderIterator(order::Ordering, name::AbstractString, hdr::FitsHeader) =
     HeaderIterator(order, try; Keyword(name); catch; NEVER_MATCHING_KEYWORD; end, hdr)
 
 const NEVER_MATCHING_KEYWORD = Keyword(0x3d3d3d3d3d3d3d3d, "========")
 
 Base.IteratorEltype(::Type{<:HeaderIterator}) = Base.HasEltype()
-Base.eltype(::Type{<:HeaderIterator}) = FITSCard
+Base.eltype(::Type{<:HeaderIterator}) = FitsCard
 
 Base.IteratorSize(::Type{<:HeaderIterator}) = Base.SizeUnknown()
 
@@ -446,15 +446,15 @@ function Base.iterate(iter::HeaderIterator{typeof(Reverse)}, i::Int)
 end
 
 """
-    collect(what, hdr::FITSHeader; order::Ordering = Forward)
+    collect(what, hdr::FitsHeader; order::Ordering = Forward)
 
 yields a vector of the records of `hdr` matching `what` and sorted according to
 `order` (`Base.Order.Forward` or `Base.Order.Reverse`).
 
 """
-function Base.collect(what, hdr::FITSHeader; order::Ordering = Forward)
+function Base.collect(what, hdr::FitsHeader; order::Ordering = Forward)
     iter = HeaderIterator(order, what, hdr)
-    dest = FITSCard[]
+    dest = FitsCard[]
     has_length(iter) && sizehint!(dest, length(iter))
     for rec in iter
         push!(dest, rec)
@@ -462,9 +462,9 @@ function Base.collect(what, hdr::FITSHeader; order::Ordering = Forward)
     return dest
 end
 
-function Base.filter(what, hdr::FITSHeader; order::Ordering = Forward)
+function Base.filter(what, hdr::FitsHeader; order::Ordering = Forward)
     iter = HeaderIterator(order, what, hdr)
-    dest = FITSHeader()
+    dest = FitsHeader()
     has_length(iter) && sizehint!(dest, length(iter))
     for rec in iter
         push!(dest, rec)

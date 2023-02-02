@@ -9,9 +9,9 @@ module Parser
 
 using ..FITSBase
 using ..FITSBase:
-    FITSInteger,
-    FITSFloat,
-    FITSComplex
+    FitsInteger,
+    FitsFloat,
+    FitsComplex
 
 using Compat
 using Base: @propagate_inbounds
@@ -174,7 +174,7 @@ end
 end
 
 """
-    FITSKey(buf, off=0, i_last=last_byte_index(buf))
+    FitsKey(buf, off=0, i_last=last_byte_index(buf))
 
 encodes the, at most, first $FITS_SHORT_KEYWORD_SIZE bytes (or ASCII
 characters) of `buf`, starting at offset `off`, in a 64-bit integer value which
@@ -187,7 +187,7 @@ fewer than $FITS_SHORT_KEYWORD_SIZE bytes are available (that is, if `off +
 $FITS_SHORT_KEYWORD_SIZE > i_last`), the result is as if `buf` has been padded
 with ASCII spaces (hexadecimal code 0x20).
 
-The only operation that makes sense with an instance of `FITSKey` is comparison
+The only operation that makes sense with an instance of `FitsKey` is comparison
 for equality for fast searching of keywords in a FITS header.
 
 The caller may use `@inbounds` macro if it is certain that bytes in the range
@@ -195,8 +195,8 @@ The caller may use `@inbounds` macro if it is certain that bytes in the range
 
 For the fastest, but unsafe, computations call:
 
-    FITSKey(Val(:full), buf, off)
-    FITSKey(Val(:pad), buf, off, i_last)
+    FitsKey(Val(:full), buf, off)
+    FitsKey(Val(:pad), buf, off, i_last)
 
 where first argument should be `Val(:full)` if there are at least
 $FITS_SHORT_KEYWORD_SIZE bytes available after `off`, and `Val(:pad)`
@@ -204,41 +204,41 @@ otherwise. These variants do not perfom bounds checking, it is the caller's
 responsibility to insure that the arguments are consistent.
 
 """
-struct FITSKey
+struct FitsKey
     val::UInt64
 end
 
-@assert sizeof(FITSKey) == FITS_SHORT_KEYWORD_SIZE
+@assert sizeof(FitsKey) == FITS_SHORT_KEYWORD_SIZE
 
-Base.convert(::Type{FITSKey}, x::FITSKey) = x
-Base.convert(::Type{FITSKey}, x::Integer) = FITSKey(x)
+Base.convert(::Type{FitsKey}, x::FitsKey) = x
+Base.convert(::Type{FitsKey}, x::Integer) = FitsKey(x)
 
 """
-    FITSKey()
-    zero(FITSKey)
+    FitsKey()
+    zero(FitsKey)
 
 yield a null FITS key, that is whose bytes are all 0. This can be asserted by
 calling `issero` on the returned key. Since any valid FITS key cannot contain
 null bytes, a null FITS key may be useful for searching keys.
 
 """
-FITSKey() = FITSKey(zero(UInt64))
+FitsKey() = FitsKey(zero(UInt64))
 # NOTE: Other constructors are implemented in parser.jl
 
-Base.iszero(key::FITSKey) = iszero(key.val)
-Base.zero(::Union{FITSKey,Type{FITSKey}}) = FITSKey()
-Base.:(==)(a::FITSKey, b::FITSKey) = a.val === b.val
-Base.convert(::Type{T}, key::FITSKey) where {T<:Integer} = convert(T, key.val)
-Base.UInt64(key::FITSKey) = key.val
+Base.iszero(key::FitsKey) = iszero(key.val)
+Base.zero(::Union{FitsKey,Type{FitsKey}}) = FitsKey()
+Base.:(==)(a::FitsKey, b::FitsKey) = a.val === b.val
+Base.convert(::Type{T}, key::FitsKey) where {T<:Integer} = convert(T, key.val)
+Base.UInt64(key::FitsKey) = key.val
 
-function Base.String(key::FITSKey)
+function Base.String(key::FitsKey)
     buf = StringVector(FITS_SHORT_KEYWORD_SIZE)
     len = @inbounds decode!(buf, key; offset = 0)
     return String(resize!(buf, len))
 end
 
-Base.show(io::IO, mime::MIME"text/plain", key::FITSKey) = show(io, key)
-function Base.show(io::IO, key::FITSKey)
+Base.show(io::IO, mime::MIME"text/plain", key::FitsKey) = show(io, key)
+function Base.show(io::IO, key::FitsKey)
     buf = Vector{UInt8}(undef, FITS_SHORT_KEYWORD_SIZE + 6)
     buf[1] = 'F'
     buf[2] = 'I'
@@ -257,7 +257,7 @@ end
 # Decode FITS quick key. Returns index of last non-space character which is
 # also the length if the buffer has 1-based indices.
 @inline function decode!(buf::AbstractVector{UInt8},
-                         key::FITSKey;
+                         key::FitsKey;
                          offset::Int = 0)
     i_first = (offset + firstindex(buf))::Int
     i_last = (i_first + (FITS_SHORT_KEYWORD_SIZE - 1))::Int
@@ -287,13 +287,13 @@ a short FITS keyword (e.g., not a `HIERARCH` one) specified as a literal string
 of, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters with no trailing spaces.
 For example `FITS"SIMPLE"` or `FITS"NAXIS2"`.
 
-The result is the same as that computed by `FITSKey` but since the quick key is
+The result is the same as that computed by `FitsKey` but since the quick key is
 given by a string macro, it is like a constant computed at compile time with no
 runtime penalty.
 
 """
 macro FITS_str(str::String)
-    FITSKey(check_short_keyword(str))
+    FitsKey(check_short_keyword(str))
 end
 
 """
@@ -335,26 +335,26 @@ is_closing_parenthesis(c::Union{Char,UInt8}) = equal(c, ')')
 is_restricted_ascii(c::Union{Char,UInt8}) = between(c, ' ', '~')
 is_keyword(c::Union{Char,UInt8}) = is_digit(c) | is_uppercase(c) | is_hyphen(c) | is_underscore(c)
 
-@inline function FITSKey(buf::ByteBuffer, off::Int = 0)
+@inline function FitsKey(buf::ByteBuffer, off::Int = 0)
     i_last = last_byte_index(buf)
     @boundscheck check_byte_index(buf, off+1, min(off+FITS_SHORT_KEYWORD_SIZE, i_last), i_last)
-    off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FITSKey(Val(:full), buf, off) :
-        FITSKey(Val(:pad), buf, off, i_last)
+    off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FitsKey(Val(:full), buf, off) :
+        FitsKey(Val(:pad), buf, off, i_last)
 end
 
-@inline function FITSKey(buf::ByteBuffer, off::Int, i_last::Int)
+@inline function FitsKey(buf::ByteBuffer, off::Int, i_last::Int)
     @boundscheck check_byte_index(buf, off+1, min(off+FITS_SHORT_KEYWORD_SIZE, i_last))
-    off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FITSKey(Val(:full), buf, off) :
-        FITSKey(Val(:pad), buf, off, i_last)
+    off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FitsKey(Val(:full), buf, off) :
+        FitsKey(Val(:pad), buf, off, i_last)
 end
 
-@inline FITSKey(val::Val{:full}, buf::ByteBuffer, off::Int) =
-    FITSKey(PointerCapability(buf), val, buf, off)
+@inline FitsKey(val::Val{:full}, buf::ByteBuffer, off::Int) =
+    FitsKey(PointerCapability(buf), val, buf, off)
 
-@inline FITSKey(::PointerFull, ::Val{:full}, buf::Vector{UInt8}, off::Int) =
-    GC.@preserve buf unsafe_load(Base.unsafe_convert(Ptr{FITSKey}, buf) + off)
+@inline FitsKey(::PointerFull, ::Val{:full}, buf::Vector{UInt8}, off::Int) =
+    GC.@preserve buf unsafe_load(Base.unsafe_convert(Ptr{FitsKey}, buf) + off)
 
-@inline function FITSKey(::PointerCapability, ::Val{:full}, buf::ByteBuffer, off::Int)
+@inline function FitsKey(::PointerCapability, ::Val{:full}, buf::ByteBuffer, off::Int)
     @inbounds begin
         @static if is_little_endian()
             # Little-endian byte order.
@@ -378,10 +378,10 @@ end
                 (get_byte(UInt64, buf, off + 8) <<  0)
         end
     end
-    return FITSKey(k)
+    return FitsKey(k)
 end
 
-@inline function FITSKey(::Val{:pad}, buf::ByteBuffer, off::Int, i_last::Int)
+@inline function FitsKey(::Val{:pad}, buf::ByteBuffer, off::Int, i_last::Int)
     @inbounds begin
         @static if is_little_endian()
             # Little-endian byte order.
@@ -405,31 +405,31 @@ end
                 (get_byte(UInt64, buf, off + 8, i_last) <<  0)
         end
     end
-    return FITSKey(k)
+    return FitsKey(k)
 end
 
 """
-    FITSBase.is_comment(A::Union{FITSCardType,FITSCard})
+    FITSBase.is_comment(A::Union{FitsCardType,FitsCard})
 
 yields whether `A` indicates a, possibly non-standard, commentary FITS keyword.
 
-    FITSBase.is_comment(key::FITSKey)
+    FITSBase.is_comment(key::FitsKey)
 
 yields whether `key` is `FITS"COMMENT"` or `FITS"HISTORY"` which corresponds to
 a standard commentary FITS keyword.
 
 """
-is_comment(key::FITSKey) = (key == FITS"COMMENT") | (key == FITS"HISTORY")
-is_comment(type::FITSCardType) = type === FITS_COMMENT
+is_comment(key::FitsKey) = (key == FITS"COMMENT") | (key == FITS"HISTORY")
+is_comment(type::FitsCardType) = type === FITS_COMMENT
 
 """
-    FITSBase.is_end(A::Union{FITSKey,FITSCardType,FITSCard})
+    FITSBase.is_end(A::Union{FitsKey,FitsCardType,FitsCard})
 
 yields whether `A` indicates the END FITS keyword.
 
 """
-is_end(key::FITSKey) = (key == FITS"END")
-is_end(type::FITSCardType) = type === FITS_END
+is_end(key::FitsKey) = (key == FITS"END")
+is_end(type::FitsCardType) = type === FITS_END
 
 for sym in (:logical, :integer, :float, :string, :complex)
     parse_func = Symbol("parse_$(sym)_value")
@@ -473,7 +473,7 @@ function try_parse_integer_value(buf::ByteBuffer,
             i_first += 1
         end
         i_first ≤ i_last || return nothing # no digits
-        val = zero(FITSInteger)
+        val = zero(FitsInteger)
         off = oftype(val, '0')
         ten = oftype(val, 10)
         for i in i_first:i_last
@@ -501,7 +501,7 @@ function try_parse_float_value(buf::ByteBuffer,
     @inbounds for i in eachindex(wrk)
         wrk[i] = filter_character_in_float_value(get_byte(buf, off + i))
     end
-    return tryparse(FITSFloat, String(wrk))
+    return tryparse(FitsFloat, String(wrk))
 end
 
 function try_parse_string_value(buf::ByteBuffer,
@@ -568,7 +568,7 @@ function try_parse_complex_value(buf::ByteBuffer,
                 re === nothing && break
                 im = @inbounds try_parse_float_value(buf, i + 1 : i_last)
                 im === nothing && break
-                return FITSComplex(re, im)
+                return FitsComplex(re, im)
             end
         end
         return nothing
@@ -619,9 +619,9 @@ where to start the parsing. At most, $FITS_CARD_SIZE bytes after `off` are
 considered in `A` which may thus belong to a larger piece of data (e.g., a FITS
 header). The result is a 5-tuple:
 
-- `type::FITSCardType` is the type of the card value.
+- `type::FitsCardType` is the type of the card value.
 
-- `key::FITSKey` is the quick key corresponding to the short keyword of the
+- `key::FitsKey` is the quick key corresponding to the short keyword of the
   card.
 
 - `name_rng` is the range of bytes containing the keyword name without trailing
@@ -735,8 +735,8 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @inbounds begin
         # Compute fast code equivalent to the short FITS keyword.
         off = i_first - 1
-        key = off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FITSKey(Val(:full), buf, off) :
-            FITSKey(Val(:pad), buf, off, i_last)
+        key = off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FitsKey(Val(:full), buf, off) :
+            FitsKey(Val(:pad), buf, off, i_last)
 
         if key == FITS"HIERARCH" && i_first ≤ i_next ≤ i_last - 2 && is_space(get_byte(buf, i_next))
             # Parse HIERARCH keyword. Errors are deferred until the value
@@ -870,8 +870,8 @@ The returned `key` is `FITS"HIERARCH"` in 4 cases:
         pfx = false # add "HIERARCH " prefix?
         off = i_first - 1
         len = length(rng)
-        key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FITSKey(Val(:full), buf, off) :
-            FITSKey(Val(:pad), buf, off, len)
+        key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FitsKey(Val(:full), buf, off) :
+            FitsKey(Val(:pad), buf, off, len)
         if key == FITS"HIERARCH"
             # Byte sequence starts with "HIERARCH". There are 3 possibilities:
             #

@@ -7,15 +7,15 @@ for FITS header cards.
 """
 module Cards
 
-export FITSCard
+export FitsCard
 
 using ..FITSBase
 using ..FITSBase:
-    FITSInteger,
-    FITSFloat,
-    FITSComplex
+    FitsInteger,
+    FitsFloat,
+    FitsComplex
 import ..FITSBase:
-    FITSCardType
+    FitsCardType
 using ..FITSBase.Parser:
     EMPTY_STRING,
     ByteBuffer,
@@ -36,13 +36,13 @@ import ..FITSBase.Parser:
 const Undefined = Union{Missing,UndefInitializer}
 const END_STRING = "END"
 const UNDEF_LOGICAL = false
-const UNDEF_INTEGER = zero(FITSInteger)
-const UNDEF_COMPLEX = FITSComplex(NaN,NaN)
-const UNDEF_FLOAT = FITSComplex(NaN,0.0)
+const UNDEF_INTEGER = zero(FitsInteger)
+const UNDEF_COMPLEX = FitsComplex(NaN,NaN)
+const UNDEF_FLOAT = FitsComplex(NaN,0.0)
 const UNDEF_STRING = EMPTY_STRING
 
 """
-    card = FITSCard(key => (val, com))
+    card = FitsCard(key => (val, com))
 
 builds a FITS header card associating keyword `key` with value `val` and
 comment string `com`. The value `val` may be:
@@ -58,8 +58,8 @@ comment string `com`. The value `val` may be:
 The comment may be omitted for a normal FITS card and the value may be omitted
 for a commentary FITS card:
 
-    card = FITSCard(key => val::Number)
-    card = FITSCard(key => str::AbstractString)
+    card = FitsCard(key => val::Number)
+    card = FitsCard(key => str::AbstractString)
 
 In the 1st case, the comment is assumed to be empty. In the 2nd case, the
 string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
@@ -79,7 +79,7 @@ As the values of FITS keywords have different types, `card.value` does not
 yield a Julia value but a callable object. Called without any argument, this
 object yields the actual card value:
 
-    card.value() -> val::Union{Bool,$FITSInteger,$FITSFloat,$FITSComplex,String,Nothing,Missing}
+    card.value() -> val::Union{Bool,$FitsInteger,$FitsFloat,$FitsComplex,String,Nothing,Missing}
 
 but such a call is not *type-stable* as indicated by the type assertion with an
 `Union{...}` above. For a type-stable result, the card value can be converted
@@ -90,18 +90,18 @@ to a given data type `T`:
 
 both yield the value of `card` converted to type `T`. For readability, `T` may
 be an abstract type: `card.value(Integer)` yields the same result as
-`card.value($FITSInteger)`, `card.value(Real)` or `card.value(AbstractFloat)`
-yield the same result as `card.value($FITSFloat)`, `card.value(Complex)` yields
-the same result as `card.value($FITSComplex)`, and `card.value(AbstractString)`
+`card.value($FitsInteger)`, `card.value(Real)` or `card.value(AbstractFloat)`
+yield the same result as `card.value($FitsFloat)`, `card.value(Complex)` yields
+the same result as `card.value($FitsComplex)`, and `card.value(AbstractString)`
 yields the same result as `card.value(String)`.
 
 To make things easier, a few properties are aliases that yield the card value
 converted to a specific type:
 
     card.logical :: Bool       # alias for card.value(Bool)
-    card.integer :: $FITSInteger      # alias for card.value(Integer)
-    card.float   :: $FITSFloat    # alias for card.value(Real)
-    card.complex :: $FITSComplex # alias for card.value(Complex)
+    card.integer :: $FitsInteger      # alias for card.value(Integer)
+    card.float   :: $FitsFloat    # alias for card.value(Real)
+    card.complex :: $FitsComplex # alias for card.value(Complex)
     card.string  :: String     # alias for card.value(String)
 
 Conversion is automatically attempted if the actual card value is of a
@@ -112,81 +112,81 @@ yields whether `card` has a value (that is whether it is neither a commentary
 card nor a card with an undefined value).
 
 """
-struct FITSCard
-    key::FITSKey
-    type::FITSCardType
+struct FitsCard
+    key::FitsKey
+    type::FitsCardType
     value_logical::Bool
-    value_integer::FITSInteger
-    value_complex::FITSComplex
+    value_integer::FitsInteger
+    value_complex::FitsComplex
     value_string::String
     name::String
     comment::String
-    FITSCard(key::FITSKey, name::AbstractString, val::Bool, com::AbstractString) =
+    FitsCard(key::FitsKey, name::AbstractString, val::Bool, com::AbstractString) =
         new(key, FITS_LOGICAL, val, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::Integer, com::AbstractString) =
+    FitsCard(key::FitsKey, name::AbstractString, val::Integer, com::AbstractString) =
         new(key, FITS_INTEGER, UNDEF_LOGICAL, val, UNDEF_COMPLEX, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::Real, com::AbstractString) =
+    FitsCard(key::FitsKey, name::AbstractString, val::Real, com::AbstractString) =
          new(key, FITS_FLOAT, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::Complex, com::AbstractString) =
+    FitsCard(key::FitsKey, name::AbstractString, val::Complex, com::AbstractString) =
          new(key, FITS_COMPLEX, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, val::AbstractString, com::AbstractString) =
+    FitsCard(key::FitsKey, name::AbstractString, val::AbstractString, com::AbstractString) =
         new(key, FITS_STRING, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, val, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, ::Undefined, com::AbstractString) =
+    FitsCard(key::FitsKey, name::AbstractString, ::Undefined, com::AbstractString) =
         new(key, FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
-    FITSCard(key::FITSKey, name::AbstractString, ::Nothing, com::AbstractString) =
+    FitsCard(key::FitsKey, name::AbstractString, ::Nothing, com::AbstractString) =
         new(key, key === FITS"END" ? FITS_END : FITS_COMMENT,
             UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
 # Constructor for imutable type does not need to return a new object.
-FITSCard(A::FITSCard) = A
-Base.convert(::Type{T}, A::FITSCard) where {T<:FITSCard} = A
+FitsCard(A::FitsCard) = A
+Base.convert(::Type{T}, A::FitsCard) where {T<:FitsCard} = A
 
 """
-    FITSCard(buf; offset=0)
+    FitsCard(buf; offset=0)
 
-yields a `FITSCard` object built by parsing the FITS header card stored in the
+yields a `FitsCard` object built by parsing the FITS header card stored in the
 string or vector of bytes `buf`. Keyword `offset` can be used to specify the
 number of bytes to skip at the beginning of `buf`, so that it is possible to
 extract a specific FITS header card, not just the first one. At most, the
 $FITS_CARD_SIZE first bytes after the offset are scanned to build the
-`FITSCard` object. The next FITS card to parse is then at `offset +
+`FitsCard` object. The next FITS card to parse is then at `offset +
 $FITS_CARD_SIZE` and so on.
 
 The considered card may be shorter than $FITS_CARD_SIZE bytes, the result being
 exactly the same as if the missing bytes were spaces. If there are no bytes
-left, a `FITSCard` object equivalent to the final `END` card of a FITS header
+left, a `FitsCard` object equivalent to the final `END` card of a FITS header
 is returned.
 
 """
-function FITSCard(buf::ByteBuffer; offset::Int = 0)
+function FitsCard(buf::ByteBuffer; offset::Int = 0)
     type, key, name_rng, val_rng, com_rng = scan_card(buf, offset)
     name = type == FITS_END ? END_STRING : make_string(buf, name_rng)
     com = make_string(buf, com_rng)
     if type == FITS_LOGICAL
-        return FITSCard(key, name, parse_logical_value(buf, val_rng), com)
+        return FitsCard(key, name, parse_logical_value(buf, val_rng), com)
     elseif type == FITS_INTEGER
-        return FITSCard(key, name, parse_integer_value(buf, val_rng), com)
+        return FitsCard(key, name, parse_integer_value(buf, val_rng), com)
     elseif type == FITS_FLOAT
-        return FITSCard(key, name, parse_float_value(buf, val_rng), com)
+        return FitsCard(key, name, parse_float_value(buf, val_rng), com)
     elseif type == FITS_STRING
-        return FITSCard(key, name, parse_string_value(buf, val_rng), com)
+        return FitsCard(key, name, parse_string_value(buf, val_rng), com)
     elseif type == FITS_COMPLEX
-        return FITSCard(key, name, parse_complex_value(buf, val_rng), com)
+        return FitsCard(key, name, parse_complex_value(buf, val_rng), com)
     elseif type == FITS_UNDEFINED
-        return FITSCard(key, name, missing, com)
+        return FitsCard(key, name, missing, com)
     else # must be commentary or END card
-        return FITSCard(key, name, nothing, com)
+        return FitsCard(key, name, nothing, com)
     end
 end
 
-is_comment(card::FITSCard) = is_comment(card.type)
-is_end(card::FITSCard) = is_end(card.type)
+is_comment(card::FitsCard) = is_comment(card.type)
+is_end(card::FitsCard) = is_end(card.type)
 
 # This version shall print something equivalent to Julia code to produce the
 # same object. We try to use the most concise syntax.
-function Base.show(io::IO, A::FITSCard)
-    print(io, "FITSCard(\"")
+function Base.show(io::IO, A::FitsCard)
+    print(io, "FitsCard(\"")
     print(io, A.name, "\"")
     if A.type != FITS_END
         if A.type == FITS_COMMENT
@@ -229,8 +229,8 @@ function Base.show(io::IO, A::FITSCard)
 end
 
 # This version is for the REPL. We try to approximate FITS syntax.
-function Base.show(io::IO, mime::MIME"text/plain", A::FITSCard)
-    print(io, "FITSCard: ")
+function Base.show(io::IO, mime::MIME"text/plain", A::FitsCard)
+    print(io, "FitsCard: ")
     print(io, A.name)
     if A.type != FITS_END
         if A.key === FITS"HIERARCH"
@@ -280,37 +280,37 @@ function Base.show(io::IO, mime::MIME"text/plain", A::FITSCard)
 end
 
 # Callable object representing a FITS card value.
-struct FITSCardValue
-    parent::FITSCard
+struct FitsCardValue
+    parent::FitsCard
 end
-Base.parent(A::FITSCardValue) = getfield(A, :parent)
-(A::FITSCardValue)() = get_value(parent(A))
-Base.convert(::Type{T}, A::FITSCardValue) where {T<:FITSCardValue} = A
+Base.parent(A::FitsCardValue) = getfield(A, :parent)
+(A::FitsCardValue)() = get_value(parent(A))
+Base.convert(::Type{T}, A::FitsCardValue) where {T<:FitsCardValue} = A
 for T in (Number, Integer, Real, AbstractFloat, Complex,
           AbstractString, String, Nothing, Missing)
     if T === Number
-        @eval (A::FITSCardValue)(::Type{T}) where {T<:$T} = get_value(T, parent(A))
-        @eval Base.convert(::Type{T}, A::FITSCardValue) where {T<:$T} = A(T)
+        @eval (A::FitsCardValue)(::Type{T}) where {T<:$T} = get_value(T, parent(A))
+        @eval Base.convert(::Type{T}, A::FitsCardValue) where {T<:$T} = A(T)
     else
-        @eval (A::FITSCardValue)(::Type{$T}) = get_value($T, parent(A))
-        @eval Base.convert(::Type{$T}, A::FITSCardValue) = A($T)
+        @eval (A::FitsCardValue)(::Type{$T}) = get_value($T, parent(A))
+        @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
     end
 end
-Base.show(io::IO, A::FITSCardValue) = show(io, A())
-Base.show(io::IO, mime::MIME"text/plain", A::FITSCardValue) = show(io, mime, A())
+Base.show(io::IO, A::FitsCardValue) = show(io, A())
+Base.show(io::IO, mime::MIME"text/plain", A::FitsCardValue) = show(io, mime, A())
 
-# If the FITSCard structure changes, it should be almost sufficient to change
+# If the FitsCard structure changes, it should be almost sufficient to change
 # the following simple accessors.
-get_type(         A::FITSCard) = getfield(A, :type)
-get_key(          A::FITSCard) = getfield(A, :key)
-get_name(         A::FITSCard) = getfield(A, :name)
-get_comment(      A::FITSCard) = getfield(A, :comment)
-get_value_logical(A::FITSCard) = getfield(A, :value_logical)
-get_value_integer(A::FITSCard) = getfield(A, :value_integer)
-get_value_complex(A::FITSCard) = getfield(A, :value_complex)
-get_value_float(  A::FITSCard) = real(get_value_complex(A))
-get_value_string( A::FITSCard) = getfield(A, :value_string)
-get_value(        A::FITSCard) = begin
+get_type(         A::FitsCard) = getfield(A, :type)
+get_key(          A::FitsCard) = getfield(A, :key)
+get_name(         A::FitsCard) = getfield(A, :name)
+get_comment(      A::FitsCard) = getfield(A, :comment)
+get_value_logical(A::FitsCard) = getfield(A, :value_logical)
+get_value_integer(A::FitsCard) = getfield(A, :value_integer)
+get_value_complex(A::FitsCard) = getfield(A, :value_complex)
+get_value_float(  A::FitsCard) = real(get_value_complex(A))
+get_value_string( A::FitsCard) = getfield(A, :value_string)
+get_value(        A::FitsCard) = begin
     type = get_type(A)
     type == FITS_LOGICAL   ? get_value_logical(A) :
     type == FITS_INTEGER   ? get_value_integer(A) :
@@ -320,13 +320,13 @@ get_value(        A::FITSCard) = begin
     type == FITS_UNDEFINED ? missing :
     nothing # FITS_COMMENT or FITS_END
 end
-get_value(::Type{Missing}, A::FITSCard) =
+get_value(::Type{Missing}, A::FitsCard) =
     get_type(A) == FITS_UNDEFINED ? missing : conversion_error(Missing, A)
-get_value(::Type{Nothing}, A::FITSCard) =
+get_value(::Type{Nothing}, A::FitsCard) =
     ((get_type(A) == FITS_COMMENT)|(get_type(A) == FITS_END)) ? nothing : conversion_error(Nothing, A)
-get_value(::Type{String}, A::FITSCard) =
+get_value(::Type{String}, A::FitsCard) =
     get_type(A) == FITS_STRING ? get_value_string(A) : conversion_error(String, A)
-get_value(::Type{Bool}, A::FITSCard) = begin
+get_value(::Type{Bool}, A::FitsCard) = begin
     type = get_type(A)
     type == FITS_LOGICAL  ?               get_value_logical(A)  :
     type == FITS_INTEGER  ? convert(Bool, get_value_integer(A)) :
@@ -334,36 +334,36 @@ get_value(::Type{Bool}, A::FITSCard) = begin
     type == FITS_COMPLEX  ? convert(Bool, get_value_complex(A)) :
     conversion_error(Bool, A)
 end
-get_value(::Type{FITSInteger}, A::FITSCard) = begin
+get_value(::Type{FitsInteger}, A::FitsCard) = begin
     type = get_type(A)
     type == FITS_INTEGER  ?                      get_value_integer(A)  :
-    type == FITS_LOGICAL  ? convert(FITSInteger, get_value_logical(A)) :
-    type == FITS_FLOAT    ? convert(FITSInteger, get_value_float(  A)) :
-    type == FITS_COMPLEX  ? convert(FITSInteger, get_value_complex(A)) :
-    conversion_error(FITSInteger, A)
+    type == FITS_LOGICAL  ? convert(FitsInteger, get_value_logical(A)) :
+    type == FITS_FLOAT    ? convert(FitsInteger, get_value_float(  A)) :
+    type == FITS_COMPLEX  ? convert(FitsInteger, get_value_complex(A)) :
+    conversion_error(FitsInteger, A)
 end
-get_value(::Type{FITSFloat}, A::FITSCard) = begin
+get_value(::Type{FitsFloat}, A::FitsCard) = begin
     type = get_type(A)
     type == FITS_FLOAT    ?                    get_value_float(  A)  :
-    type == FITS_LOGICAL  ? convert(FITSFloat, get_value_logical(A)) :
-    type == FITS_INTEGER  ? convert(FITSFloat, get_value_integer(A)) :
-    type == FITS_COMPLEX  ? convert(FITSFloat, get_value_complex(A)) :
-    conversion_error(FITSFloat, A)
+    type == FITS_LOGICAL  ? convert(FitsFloat, get_value_logical(A)) :
+    type == FITS_INTEGER  ? convert(FitsFloat, get_value_integer(A)) :
+    type == FITS_COMPLEX  ? convert(FitsFloat, get_value_complex(A)) :
+    conversion_error(FitsFloat, A)
 end
-get_value(::Type{FITSComplex}, A::FITSCard) = begin
+get_value(::Type{FitsComplex}, A::FitsCard) = begin
     type = get_type(A)
     type == FITS_COMPLEX  ?                      get_value_complex(A)  :
-    type == FITS_FLOAT    ? convert(FITSComplex, get_value_float(  A)) :
-    type == FITS_LOGICAL  ? convert(FITSComplex, get_value_logical(A)) :
-    type == FITS_INTEGER  ? convert(FITSComplex, get_value_integer(A)) :
-    conversion_error(FITSComplex, A)
+    type == FITS_FLOAT    ? convert(FitsComplex, get_value_float(  A)) :
+    type == FITS_LOGICAL  ? convert(FitsComplex, get_value_logical(A)) :
+    type == FITS_INTEGER  ? convert(FitsComplex, get_value_integer(A)) :
+    conversion_error(FitsComplex, A)
 end
-get_value(::Type{Integer},        A::FITSCard) = get_value(FITSInteger, A)
-get_value(::Type{Real},           A::FITSCard) = get_value(FITSFloat,   A)
-get_value(::Type{AbstractFloat},  A::FITSCard) = get_value(FITSFloat,   A)
-get_value(::Type{Complex},        A::FITSCard) = get_value(FITSComplex, A)
-get_value(::Type{AbstractString}, A::FITSCard) = get_value(String,      A)
-get_value(::Type{T}, A::FITSCard) where {T<:Number} = begin
+get_value(::Type{Integer},        A::FitsCard) = get_value(FitsInteger, A)
+get_value(::Type{Real},           A::FitsCard) = get_value(FitsFloat,   A)
+get_value(::Type{AbstractFloat},  A::FitsCard) = get_value(FitsFloat,   A)
+get_value(::Type{Complex},        A::FitsCard) = get_value(FitsComplex, A)
+get_value(::Type{AbstractString}, A::FitsCard) = get_value(String,      A)
+get_value(::Type{T}, A::FitsCard) where {T<:Number} = begin
     type = get_type(A)
     type == FITS_LOGICAL  ? convert(T, get_value_logical(A)) :
     type == FITS_INTEGER  ? convert(T, get_value_integer(A)) :
@@ -371,48 +371,48 @@ get_value(::Type{T}, A::FITSCard) where {T<:Number} = begin
     type == FITS_COMPLEX  ? convert(T, get_value_complex(A)) :
     conversion_error(T, A)
 end
-get_value(T::Type, A::FITSCard) = conversion_error(T, A) # catch errors
-@noinline conversion_error(T::Type, A::FITSCard) =
+get_value(T::Type, A::FitsCard) = conversion_error(T, A) # catch errors
+@noinline conversion_error(T::Type, A::FitsCard) =
     error("value of FITS keyword \"$(get_name(A))\" cannot be converted to `$T`")
 
 # Properties.
-Base.propertynames(A::FITSCard) =
+Base.propertynames(A::FitsCard) =
     (:type, :key, :name, :value, :comment, :logical, :integer, :float, :complex,
      :string, :units, :unitless)
-Base.getproperty(A::FITSCard, sym::Symbol) = getproperty(A, Val(sym))
-Base.getproperty(A::FITSCard, ::Val{:type    }) = get_type(A)
-Base.getproperty(A::FITSCard, ::Val{:key     }) = get_key(A)
-Base.getproperty(A::FITSCard, ::Val{:name    }) = get_name(A)
-Base.getproperty(A::FITSCard, ::Val{:value   }) = FITSCardValue(A)
-Base.getproperty(A::FITSCard, ::Val{:comment }) = get_comment(A)
-Base.getproperty(A::FITSCard, ::Val{:logical }) = get_value(Bool, A)
-Base.getproperty(A::FITSCard, ::Val{:integer }) = get_value(FITSInteger, A)
-Base.getproperty(A::FITSCard, ::Val{:float   }) = get_value(FITSFloat, A)
-Base.getproperty(A::FITSCard, ::Val{:string  }) = get_value(String, A)
-Base.getproperty(A::FITSCard, ::Val{:complex }) = get_value(FITSComplex, A)
-Base.getproperty(A::FITSCard, ::Val{:units   }) = get_units_part(get_comment(A))
-Base.getproperty(A::FITSCard, ::Val{:unitless}) = get_unitless_part(get_comment(A))
-@noinline Base.setproperty!(A::FITSCard, sym::Symbol, x) =
+Base.getproperty(A::FitsCard, sym::Symbol) = getproperty(A, Val(sym))
+Base.getproperty(A::FitsCard, ::Val{:type    }) = get_type(A)
+Base.getproperty(A::FitsCard, ::Val{:key     }) = get_key(A)
+Base.getproperty(A::FitsCard, ::Val{:name    }) = get_name(A)
+Base.getproperty(A::FitsCard, ::Val{:value   }) = FitsCardValue(A)
+Base.getproperty(A::FitsCard, ::Val{:comment }) = get_comment(A)
+Base.getproperty(A::FitsCard, ::Val{:logical }) = get_value(Bool, A)
+Base.getproperty(A::FitsCard, ::Val{:integer }) = get_value(FitsInteger, A)
+Base.getproperty(A::FitsCard, ::Val{:float   }) = get_value(FitsFloat, A)
+Base.getproperty(A::FitsCard, ::Val{:string  }) = get_value(String, A)
+Base.getproperty(A::FitsCard, ::Val{:complex }) = get_value(FitsComplex, A)
+Base.getproperty(A::FitsCard, ::Val{:units   }) = get_units_part(get_comment(A))
+Base.getproperty(A::FitsCard, ::Val{:unitless}) = get_unitless_part(get_comment(A))
+@noinline Base.setproperty!(A::FitsCard, sym::Symbol, x) =
     error("attempt to set read-only property of FITS card")
 
 """
-    FITSCardType(T)
+    FitsCardType(T)
 
 yields the FITS header card type code corresponding to Julia type `T`, one of:
 `FITS_LOGICAL`, `FITS_INTEGER`, `FITS_FLOAT`, `FITS_COMPLEX`, `FITS_STRING`,
 `FITS_COMMENT`, or `FITS_UNDEFINED`.
 
 """
-FITSCardType(::Type{<:Bool})           = FITS_LOGICAL
-FITSCardType(::Type{<:Integer})        = FITS_INTEGER
-FITSCardType(::Type{<:AbstractFloat})  = FITS_FLOAT
-FITSCardType(::Type{<:Complex})        = FITS_COMPLEX
-FITSCardType(::Type{<:AbstractString}) = FITS_STRING
-FITSCardType(::Type{<:Nothing})        = FITS_COMMENT
-FITSCardType(::Type{<:Undefined})      = FITS_UNDEFINED
+FitsCardType(::Type{<:Bool})           = FITS_LOGICAL
+FitsCardType(::Type{<:Integer})        = FITS_INTEGER
+FitsCardType(::Type{<:AbstractFloat})  = FITS_FLOAT
+FitsCardType(::Type{<:Complex})        = FITS_COMPLEX
+FitsCardType(::Type{<:AbstractString}) = FITS_STRING
+FitsCardType(::Type{<:Nothing})        = FITS_COMMENT
+FitsCardType(::Type{<:Undefined})      = FITS_UNDEFINED
 
 """
-    FITSCardType(card::FITSCard)
+    FitsCardType(card::FitsCard)
     card.type
 
 yield the type code of the FITS header card `card`, one of: `FITS_LOGICAL`,
@@ -420,55 +420,55 @@ yield the type code of the FITS header card `card`, one of: `FITS_LOGICAL`,
 `FITS_UNDEFINED`.
 
 """
-FITSCardType(A::FITSCard) = get_type(A)
+FitsCardType(A::FitsCard) = get_type(A)
 
-Base.isassigned(A::FITSCard) =
+Base.isassigned(A::FitsCard) =
     (A.type != FITS_COMMENT) & (A.type != FITS_UNDEFINED) & (A.type != FITS_END)
 
-Base.isinteger(A::FITSCard) =
+Base.isinteger(A::FitsCard) =
     (A.type == FITS_INTEGER) | (A.type == FITS_LOGICAL)
 
-Base.isreal(A::FITSCard) =
+Base.isreal(A::FitsCard) =
     (A.type == FITS_FLOAT) |
     (A.type == FITS_INTEGER) |
     (A.type == FITS_LOGICAL) |
     (A.type == FITS_COMPLEX && iszero(imag(get_value_complex(A))))
 
-Base.valtype(A::FITSCard) = valtype(A.type)
-Base.valtype(type::FITSCardType) =
+Base.valtype(A::FitsCard) = valtype(A.type)
+Base.valtype(type::FitsCardType) =
     type == FITS_LOGICAL   ? Bool :
-    type == FITS_INTEGER   ? FITSInteger :
-    type == FITS_FLOAT     ? FITSFloat :
+    type == FITS_INTEGER   ? FitsInteger :
+    type == FITS_FLOAT     ? FitsFloat :
     type == FITS_STRING    ? String :
-    type == FITS_COMPLEX   ? FITSComplex :
+    type == FITS_COMPLEX   ? FitsComplex :
     type == FITS_UNDEFINED ? Missing :
     Nothing # FITS_COMMENT or FITS_END
 
 # FITS cards can be specified as pairs and conversely.
-Base.convert(::Type{T}, A::FITSCard) where {T<:Pair} = T(A)
-Base.convert(::Type{T}, pair::Pair) where {T<:FITSCard} = T(pair)
-Base.Pair(A::FITSCard) = Pair(A.name, (A.value(), A.comment))
-#Base.Pair{K}(A::FITSCard) where {K} = Pair{K,<:Any}(A.name, (A.value(), A.comment))
-Base.Pair{K,V}(A::FITSCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
-Base.Pair{K,V}(A::FITSCard) where {K,T,S,V<:Tuple{T,S}} = Pair{K,V}(A.name, (A.value(T), A.comment))
-function FITSCard(pair::Pair{<:AbstractString,
+Base.convert(::Type{T}, A::FitsCard) where {T<:Pair} = T(A)
+Base.convert(::Type{T}, pair::Pair) where {T<:FitsCard} = T(pair)
+Base.Pair(A::FitsCard) = Pair(A.name, (A.value(), A.comment))
+#Base.Pair{K}(A::FitsCard) where {K} = Pair{K,<:Any}(A.name, (A.value(), A.comment))
+Base.Pair{K,V}(A::FitsCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
+Base.Pair{K,V}(A::FitsCard) where {K,T,S,V<:Tuple{T,S}} = Pair{K,V}(A.name, (A.value(T), A.comment))
+function FitsCard(pair::Pair{<:AbstractString,
                              <:Tuple{Union{AbstractString,Number,Undefined,Nothing},
                                      AbstractString}})
     key, name = check_keyword(first(pair))
     val, com = last(pair)
-    return FITSCard(key, name, val, com)
+    return FitsCard(key, name, val, com)
 end
-function FITSCard(pair::Pair{<:AbstractString, <:Union{Number,Undefined}})
+function FitsCard(pair::Pair{<:AbstractString, <:Union{Number,Undefined}})
     key, name = check_keyword(first(pair))
     val = last(pair)
-    return FITSCard(key, name, val, EMPTY_STRING)
+    return FitsCard(key, name, val, EMPTY_STRING)
 end
-function FITSCard(pair::Pair{<:AbstractString, <:AbstractString})
+function FitsCard(pair::Pair{<:AbstractString, <:AbstractString})
     key, name = check_keyword(first(pair))
     val_or_com = last(pair)
     return is_comment(key) ?
-        FITSCard(key, name, nothing, val_or_com) :
-        FITSCard(key, name, val_or_com, EMPTY_STRING)
+        FitsCard(key, name, nothing, val_or_com) :
+        FitsCard(key, name, val_or_com, EMPTY_STRING)
 end
 
 end # module
