@@ -861,6 +861,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test keys(h) == firstindex(h):lastindex(h)
         @test convert(FITSHeader, h) === h
         @test convert(FITSHeader, FITSCards.Headers.contents(h)) === h
+        @test IndexStyle(h) === IndexLinear()
         @test h["SIMPLE"] === h[1]
         @test h[1].key === FITS"SIMPLE"
         @test h[1].value() == true
@@ -887,6 +888,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test h["BSCALE"].value(Real) ≈ 1
         @test h["BSCALE"].comment == ""
         # Test HIERARCH records.
+        @test get(h, 0, nothing) === nothing
+        @test get(h, 1, nothing) === h[1]
         card = get(h, "HIERARCH CCD GAIN", nothing)
         @test card isa FITSCard
         if card !== Nothing
