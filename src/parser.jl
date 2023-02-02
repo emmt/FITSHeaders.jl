@@ -210,6 +210,9 @@ end
 
 @assert sizeof(FITSKey) == FITS_SHORT_KEYWORD_SIZE
 
+Base.convert(::Type{FITSKey}, x::FITSKey) = x
+Base.convert(::Type{FITSKey}, x::Integer) = FITSKey(x)
+
 """
     FITSKey()
     zero(FITSKey)
