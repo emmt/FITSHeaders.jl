@@ -1,7 +1,7 @@
 # FITSBase [![Build Status](https://github.com/emmt/FITSBase.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/FITSBase.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/FITSBase.jl?svg=true)](https://ci.appveyor.com/project/emmt/FITSBase-jl) [![Coverage](https://codecov.io/gh/emmt/FITSBase.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/FITSBase.jl)
 
-`FITSBase` is a pure [Julia](https://julialang.org/) package for storing and
-parsing FITS header cards. [FITS (for *Flexible Image Transport
+`FITSBase` is a pure [Julia](https://julialang.org/) package for managing basic
+FITS structures such as FITS headers. [FITS (for *Flexible Image Transport
 System*)](https://fits.gsfc.nasa.gov/fits_standard.html) is a data file format
 widely used in astronomy. A FITS file is a concatenation of *Header Data Units*
 (HDUs) that consist in a header part and a data part. The header of a HDU is a
@@ -411,7 +411,7 @@ missing
 ```
 
 
-## Modifying a FITS header
+### Modifying a FITS header
 
 A record `rec` may be pushed to a FITS header `hdr` to modify the header:
 
