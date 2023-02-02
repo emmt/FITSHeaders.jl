@@ -2,8 +2,8 @@ module Headers
 
 export FITSHeader
 
-using ..FITSCards
-using ..FITSCards: check_keyword, is_comment
+using ..FITSBase
+using ..FITSBase: check_keyword, is_comment
 
 using Base: @propagate_inbounds
 using Base.Order: Ordering, Forward, Reverse

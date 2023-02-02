@@ -1,10 +1,10 @@
 """
-    FITSCards
+    FITSBase
 
 A package implementing methods to store and parse FITS header cards.
 
 """
-module FITSCards
+module FITSBase
 
 export
     # Quick FITS keyword:
@@ -72,8 +72,8 @@ import .Headers:
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin
-        FITSCards.Parser.PointerCapability(::Type{<:MappedBuffers.MappedBuffer}) =
-            FITSCards.Parser.PointerFull()
+        FITSBase.Parser.PointerCapability(::Type{<:MappedBuffers.MappedBuffer}) =
+            FITSBase.Parser.PointerFull()
     end
 end
 

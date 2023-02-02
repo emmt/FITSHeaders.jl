@@ -1,7 +1,7 @@
-module TestingFITSCards
+module TestingFITSBase
 
-using FITSCards
-using FITSCards: FITSInteger, FITSFloat, FITSComplex
+using FITSBase
+using FITSBase: FITSInteger, FITSFloat, FITSComplex
 
 using Test
 
@@ -46,7 +46,7 @@ _load(::Type{T}, buf::Vector{UInt8}, off::Integer = 0) where {T} =
 _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     GC.@preserve buf unsafe_store!(Base.unsafe_convert(Ptr{T}, buf) + off, convert(T, x)::T)
 
-@testset "FITSCards.jl" begin
+@testset "FITSBase.jl" begin
     @testset "Assertions" begin
         # Check that `unsafe_load` and `unsafe_store!` are unaligned operations
         # and that in `pointer + offset` expression the offset is in bytes (not
@@ -108,146 +108,146 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test repr("text/plain", FITS"") == "FITS\"\""
         @test repr("text/plain", FITS"SIMPLE") == "FITS\"SIMPLE\""
         @test repr("text/plain", FITS"HIERARCH") == "FITS\"HIERARCH\""
-        @test_throws Exception FITSCards.keyword("SIMPLE#")
-        @test_throws Exception FITSCards.keyword(" SIMPLE")
-        @test_throws Exception FITSCards.keyword("SIMPLE ")
-        @test_throws Exception FITSCards.keyword("SImPLE")
-        @test_throws Exception FITSCards.keyword("TOO  MANY SPACES")
-        @test_throws Exception FITSCards.keyword("HIERARCH  A") # more than one space
+        @test_throws Exception FITSBase.keyword("SIMPLE#")
+        @test_throws Exception FITSBase.keyword(" SIMPLE")
+        @test_throws Exception FITSBase.keyword("SIMPLE ")
+        @test_throws Exception FITSBase.keyword("SImPLE")
+        @test_throws Exception FITSBase.keyword("TOO  MANY SPACES")
+        @test_throws Exception FITSBase.keyword("HIERARCH  A") # more than one space
         # Short FITS keywords.
-        @test FITSCards.Parser.parse_keyword("SIMPLE") == (FITS"SIMPLE", false)
-        @test FITSCards.keyword("SIMPLE") == "SIMPLE"
-        @test FITSCards.Parser.parse_keyword("HISTORY") == (FITS"HISTORY", false)
-        @test FITSCards.keyword("HISTORY") == "HISTORY"
+        @test FITSBase.Parser.parse_keyword("SIMPLE") == (FITS"SIMPLE", false)
+        @test FITSBase.keyword("SIMPLE") == "SIMPLE"
+        @test FITSBase.Parser.parse_keyword("HISTORY") == (FITS"HISTORY", false)
+        @test FITSBase.keyword("HISTORY") == "HISTORY"
         # Keywords longer than 8-characters are HIERARCH ones.
-        @test FITSCards.Parser.parse_keyword("LONG-NAME") == (FITS"HIERARCH", true)
-        @test FITSCards.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
-        @test FITSCards.Parser.parse_keyword("HIERARCHY") == (FITS"HIERARCH", true)
-        @test FITSCards.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
+        @test FITSBase.Parser.parse_keyword("LONG-NAME") == (FITS"HIERARCH", true)
+        @test FITSBase.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
+        @test FITSBase.Parser.parse_keyword("HIERARCHY") == (FITS"HIERARCH", true)
+        @test FITSBase.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
         # Keywords starting by "HIERARCH " are HIERARCH ones.
         for key in ("HIERARCH GIZMO", "HIERARCH MY GIZMO", "HIERARCH MY BIG GIZMO")
-            @test FITSCards.Parser.parse_keyword(key) == (FITS"HIERARCH", false)
-            @test FITSCards.keyword(key) === key # should return the same object
+            @test FITSBase.Parser.parse_keyword(key) == (FITS"HIERARCH", false)
+            @test FITSBase.keyword(key) === key # should return the same object
         end
         # Keywords with multiple words are HIERARCH ones whatever their lengths.
         for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
-            @test FITSCards.Parser.parse_keyword(key) == (FITS"HIERARCH", true)
-            @test FITSCards.keyword(key) == "HIERARCH "*key
+            @test FITSBase.Parser.parse_keyword(key) == (FITS"HIERARCH", true)
+            @test FITSBase.keyword(key) == "HIERARCH "*key
         end
         # The following cases are consequences of the implemented scanner.
-        @test FITSCards.Parser.parse_keyword("HIERARCH") == (FITS"HIERARCH", false)
-        @test FITSCards.keyword("HIERARCH") == "HIERARCH"
-        @test FITSCards.Parser.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", false)
-        @test FITSCards.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
+        @test FITSBase.Parser.parse_keyword("HIERARCH") == (FITS"HIERARCH", false)
+        @test FITSBase.keyword("HIERARCH") == "HIERARCH"
+        @test FITSBase.Parser.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", false)
+        @test FITSBase.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
     end
     @testset "Parser" begin
         # Byte order.
-        @test FITSCards.Parser.is_big_endian() === (BYTE_ORDER === :big_endian)
-        @test FITSCards.Parser.is_little_endian() === (BYTE_ORDER === :little_endian)
+        @test FITSBase.Parser.is_big_endian() === (BYTE_ORDER === :big_endian)
+        @test FITSBase.Parser.is_little_endian() === (BYTE_ORDER === :little_endian)
         # Character classes according to FITS standard.
         for b in 0x00:0xFF
             c = Char(b)
-            @test FITSCards.Parser.is_digit(c) === ('0' ≤ c ≤ '9')
-            @test FITSCards.Parser.is_uppercase(c) === ('A' ≤ c ≤ 'Z')
-            @test FITSCards.Parser.is_lowercase(c) === ('a' ≤ c ≤ 'z')
-            @test FITSCards.Parser.is_space(c) === (c == ' ')
-            @test FITSCards.Parser.is_quote(c) === (c == '\'')
-            @test FITSCards.Parser.is_equals_sign(c) === (c == '=')
-            @test FITSCards.Parser.is_hyphen(c) === (c == '-')
-            @test FITSCards.Parser.is_underscore(c) === (c == '_')
-            @test FITSCards.Parser.is_comment_separator(c) === (c == '/')
-            @test FITSCards.Parser.is_opening_parenthesis(c) === (c == '(')
-            @test FITSCards.Parser.is_closing_parenthesis(c) === (c == ')')
-            @test FITSCards.Parser.is_restricted_ascii(c) === (' ' ≤ c ≤ '~')
-            @test FITSCards.Parser.is_keyword(c) ===
+            @test FITSBase.Parser.is_digit(c) === ('0' ≤ c ≤ '9')
+            @test FITSBase.Parser.is_uppercase(c) === ('A' ≤ c ≤ 'Z')
+            @test FITSBase.Parser.is_lowercase(c) === ('a' ≤ c ≤ 'z')
+            @test FITSBase.Parser.is_space(c) === (c == ' ')
+            @test FITSBase.Parser.is_quote(c) === (c == '\'')
+            @test FITSBase.Parser.is_equals_sign(c) === (c == '=')
+            @test FITSBase.Parser.is_hyphen(c) === (c == '-')
+            @test FITSBase.Parser.is_underscore(c) === (c == '_')
+            @test FITSBase.Parser.is_comment_separator(c) === (c == '/')
+            @test FITSBase.Parser.is_opening_parenthesis(c) === (c == '(')
+            @test FITSBase.Parser.is_closing_parenthesis(c) === (c == ')')
+            @test FITSBase.Parser.is_restricted_ascii(c) === (' ' ≤ c ≤ '~')
+            @test FITSBase.Parser.is_keyword(c) ===
                 (('0' ≤ c ≤ '9') | ('A' ≤ c ≤ 'Z') | (c == '-') | (c == '_'))
         end
         # Trimming of spaces.
         for str in ("", "  a string ", "another string", "  yet  another  string    ")
-            @test SubString(str, FITSCards.Parser.trim_leading_spaces(str)) == lstrip(str)
-            @test SubString(str, FITSCards.Parser.trim_trailing_spaces(str)) == rstrip(str)
+            @test SubString(str, FITSBase.Parser.trim_leading_spaces(str)) == lstrip(str)
+            @test SubString(str, FITSBase.Parser.trim_trailing_spaces(str)) == rstrip(str)
             rng = firstindex(str):ncodeunits(str)
-            @test SubString(str, FITSCards.Parser.trim_leading_spaces(str, rng)) == lstrip(str)
-            @test SubString(str, FITSCards.Parser.trim_trailing_spaces(str, rng)) == rstrip(str)
+            @test SubString(str, FITSBase.Parser.trim_leading_spaces(str, rng)) == lstrip(str)
+            @test SubString(str, FITSBase.Parser.trim_trailing_spaces(str, rng)) == rstrip(str)
         end
         # Representation of a character.
-        @test FITSCards.Parser.repr_char(' ') == repr(' ')
-        @test FITSCards.Parser.repr_char(0x20) == repr(' ')
-        @test FITSCards.Parser.repr_char('\0') == repr(0x00)
-        @test FITSCards.Parser.repr_char(0x00) == repr(0x00)
-        @test FITSCards.Parser.repr_char('i') == repr('i')
-        @test FITSCards.Parser.repr_char(0x69) == repr('i')
+        @test FITSBase.Parser.repr_char(' ') == repr(' ')
+        @test FITSBase.Parser.repr_char(0x20) == repr(' ')
+        @test FITSBase.Parser.repr_char('\0') == repr(0x00)
+        @test FITSBase.Parser.repr_char(0x00) == repr(0x00)
+        @test FITSBase.Parser.repr_char('i') == repr('i')
+        @test FITSBase.Parser.repr_char(0x69) == repr('i')
         # FITS logical value.
-        @test FITSCards.Parser.try_parse_logical_value("T") === true
-        @test FITSCards.Parser.try_parse_logical_value("F") === false
-        @test FITSCards.Parser.try_parse_logical_value("t") === nothing
-        @test FITSCards.Parser.try_parse_logical_value("f") === nothing
-        @test FITSCards.Parser.try_parse_logical_value("true") === nothing
-        @test FITSCards.Parser.try_parse_logical_value("false") === nothing
+        @test FITSBase.Parser.try_parse_logical_value("T") === true
+        @test FITSBase.Parser.try_parse_logical_value("F") === false
+        @test FITSBase.Parser.try_parse_logical_value("t") === nothing
+        @test FITSBase.Parser.try_parse_logical_value("f") === nothing
+        @test FITSBase.Parser.try_parse_logical_value("true") === nothing
+        @test FITSBase.Parser.try_parse_logical_value("false") === nothing
         # FITS integer value.
         for val in (zero(Int64), typemin(Int64), typemax(Int64))
             str = "$val"
-            @test FITSCards.Parser.try_parse_integer_value(str) == val
+            @test FITSBase.Parser.try_parse_integer_value(str) == val
             if val > 0
                 # Add a few leading zeros.
                 str = "000$val"
-                @test FITSCards.Parser.try_parse_integer_value(str) == val
+                @test FITSBase.Parser.try_parse_integer_value(str) == val
             end
-            @test FITSCards.Parser.try_parse_integer_value(" "*str) === nothing
-            @test FITSCards.Parser.try_parse_integer_value(str*" ") === nothing
+            @test FITSBase.Parser.try_parse_integer_value(" "*str) === nothing
+            @test FITSBase.Parser.try_parse_integer_value(str*" ") === nothing
         end
         # FITS float value;
         for val in (0.0, 1.0, -1.0, float(π))
             str = "$val"
-            @test FITSCards.Parser.try_parse_float_value(str) ≈ val
-            @test FITSCards.Parser.try_parse_integer_value(" "*str) === nothing
-            @test FITSCards.Parser.try_parse_integer_value(str*" ") === nothing
+            @test FITSBase.Parser.try_parse_float_value(str) ≈ val
+            @test FITSBase.Parser.try_parse_integer_value(" "*str) === nothing
+            @test FITSBase.Parser.try_parse_integer_value(str*" ") === nothing
         end
         # FITS complex value;
-        @test FITSCards.Parser.try_parse_float_value("2.3d4") ≈ 2.3e4
-        @test FITSCards.Parser.try_parse_float_value("-1.09D3") ≈ -1.09e3
-        @test FITSCards.Parser.try_parse_complex_value("(2.3d4,-1.8)") ≈ complex(2.3e4,-1.8)
-        @test FITSCards.Parser.try_parse_complex_value("(-1.09e5,7.6D2)") ≈ complex(-1.09e5,7.6e2)
+        @test FITSBase.Parser.try_parse_float_value("2.3d4") ≈ 2.3e4
+        @test FITSBase.Parser.try_parse_float_value("-1.09D3") ≈ -1.09e3
+        @test FITSBase.Parser.try_parse_complex_value("(2.3d4,-1.8)") ≈ complex(2.3e4,-1.8)
+        @test FITSBase.Parser.try_parse_complex_value("(-1.09e5,7.6D2)") ≈ complex(-1.09e5,7.6e2)
         # FITS string value;
-        @test FITSCards.Parser.try_parse_string_value("''") == ""
-        @test FITSCards.Parser.try_parse_string_value("'''") === nothing
-        @test FITSCards.Parser.try_parse_string_value("''''") == "'"
-        @test FITSCards.Parser.try_parse_string_value("'Hello!'") == "Hello!"
-        @test FITSCards.Parser.try_parse_string_value("'Hello! '") == "Hello!"
-        @test FITSCards.Parser.try_parse_string_value("' Hello!'") == " Hello!"
-        @test FITSCards.Parser.try_parse_string_value("' Hello! '") == " Hello!"
-        @test FITSCards.Parser.try_parse_string_value("' Hello! '") == " Hello!"
-        @test FITSCards.Parser.try_parse_string_value("'Joe''s taxi'") == "Joe's taxi"
-        @test FITSCards.Parser.try_parse_string_value("'Joe's taxi'") === nothing
-        @test FITSCards.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
+        @test FITSBase.Parser.try_parse_string_value("''") == ""
+        @test FITSBase.Parser.try_parse_string_value("'''") === nothing
+        @test FITSBase.Parser.try_parse_string_value("''''") == "'"
+        @test FITSBase.Parser.try_parse_string_value("'Hello!'") == "Hello!"
+        @test FITSBase.Parser.try_parse_string_value("'Hello! '") == "Hello!"
+        @test FITSBase.Parser.try_parse_string_value("' Hello!'") == " Hello!"
+        @test FITSBase.Parser.try_parse_string_value("' Hello! '") == " Hello!"
+        @test FITSBase.Parser.try_parse_string_value("' Hello! '") == " Hello!"
+        @test FITSBase.Parser.try_parse_string_value("'Joe''s taxi'") == "Joe's taxi"
+        @test FITSBase.Parser.try_parse_string_value("'Joe's taxi'") === nothing
+        @test FITSBase.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
         # Units.
         let com = ""
-            @test FITSCards.Parser.get_units_part(com) == ""
-            @test FITSCards.Parser.get_unitless_part(com) == ""
+            @test FITSBase.Parser.get_units_part(com) == ""
+            @test FITSBase.Parser.get_unitless_part(com) == ""
         end
         let com = "some comment"
-            @test FITSCards.Parser.get_units_part(com) == ""
-            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+            @test FITSBase.Parser.get_units_part(com) == ""
+            @test FITSBase.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[]some comment"
-            @test FITSCards.Parser.get_units_part(com) == ""
-            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+            @test FITSBase.Parser.get_units_part(com) == ""
+            @test FITSBase.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[] some comment"
-            @test FITSCards.Parser.get_units_part(com) == ""
-            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+            @test FITSBase.Parser.get_units_part(com) == ""
+            @test FITSBase.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[some units]some comment"
-            @test FITSCards.Parser.get_units_part(com) == "some units"
-            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+            @test FITSBase.Parser.get_units_part(com) == "some units"
+            @test FITSBase.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[  some units   ]  some comment"
-            @test FITSCards.Parser.get_units_part(com) == "some units"
-            @test FITSCards.Parser.get_unitless_part(com) == "some comment"
+            @test FITSBase.Parser.get_units_part(com) == "some units"
+            @test FITSBase.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[some comment"
-            @test FITSCards.Parser.get_units_part(com) == ""
-            @test FITSCards.Parser.get_unitless_part(com) == "[some comment"
+            @test FITSBase.Parser.get_units_part(com) == ""
+            @test FITSBase.Parser.get_unitless_part(com) == "[some comment"
         end
     end
     @testset "Cards from strings" begin
@@ -436,12 +436,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
             # is_comment(), is_end(), ...
-            @test FITSCards.is_comment(card) === true
-            @test FITSCards.is_comment(card.type) === true
-            @test FITSCards.is_comment(card.key) === true # standard comment
-            @test FITSCards.is_end(card) === false
-            @test FITSCards.is_end(card.type) === false
-            @test FITSCards.is_end(card.key) === false
+            @test FITSBase.is_comment(card) === true
+            @test FITSBase.is_comment(card.type) === true
+            @test FITSBase.is_comment(card.key) === true # standard comment
+            @test FITSBase.is_end(card) === false
+            @test FITSBase.is_end(card.type) === false
+            @test FITSBase.is_end(card.key) === false
         end
         let card = FITSCard("HISTORY A new history starts here...                                     ")
             @test card.type == FITS_COMMENT
@@ -481,12 +481,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
             # is_comment(), is_end(), ...
-            @test FITSCards.is_comment(card) === true
-            @test FITSCards.is_comment(card.type) === true
-            @test FITSCards.is_comment(card.key) === true # standard comment
-            @test FITSCards.is_end(card) === false
-            @test FITSCards.is_end(card.type) === false
-            @test FITSCards.is_end(card.key) === false
+            @test FITSBase.is_comment(card) === true
+            @test FITSBase.is_comment(card.type) === true
+            @test FITSBase.is_comment(card.key) === true # standard comment
+            @test FITSBase.is_end(card) === false
+            @test FITSBase.is_end(card.type) === false
+            @test FITSBase.is_end(card.key) === false
         end
         # Non standard commentary card.
         let card = FITSCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
@@ -527,12 +527,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
             # is_comment(), is_end(), ...
-            @test FITSCards.is_comment(card) === true
-            @test FITSCards.is_comment(card.type) === true
-            @test FITSCards.is_comment(card.key) === false # non-standard comment
-            @test FITSCards.is_end(card) === false
-            @test FITSCards.is_end(card.type) === false
-            @test FITSCards.is_end(card.key) === false
+            @test FITSBase.is_comment(card) === true
+            @test FITSBase.is_comment(card.type) === true
+            @test FITSBase.is_comment(card.key) === false # non-standard comment
+            @test FITSBase.is_end(card) === false
+            @test FITSBase.is_end(card.type) === false
+            @test FITSBase.is_end(card.key) === false
         end
         # String valued card.
         let card = FITSCard("REMARK  = 'Joe''s taxi'        / a string with an embedded quote         ")
@@ -579,12 +579,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
              # is_comment(), is_end(), ...
-            @test FITSCards.is_comment(card) == false
-            @test FITSCards.is_comment(card.type) == false
-            @test FITSCards.is_comment(card.key) == false
-            @test FITSCards.is_end(card) == false
-            @test FITSCards.is_end(card.type) == false
-            @test FITSCards.is_end(card.key) == false
+            @test FITSBase.is_comment(card) == false
+            @test FITSBase.is_comment(card.type) == false
+            @test FITSBase.is_comment(card.key) == false
+            @test FITSBase.is_end(card) == false
+            @test FITSBase.is_end(card.type) == false
+            @test FITSBase.is_end(card.key) == false
         end
         #
         let card = FITSCard("EXTNAME = 'SCIDATA ' ")
@@ -757,12 +757,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isassigned(card) === false
             @test isinteger(card) === false
             @test isreal(card) === false
-            @test FITSCards.is_comment(card) == false
-            @test FITSCards.is_comment(card.type) == false
-            @test FITSCards.is_comment(card.key) == false
-            @test FITSCards.is_end(card) == true
-            @test FITSCards.is_end(card.type) == true
-            @test FITSCards.is_end(card.key) == true
+            @test FITSBase.is_comment(card) == false
+            @test FITSBase.is_comment(card.type) == false
+            @test FITSBase.is_comment(card.key) == false
+            @test FITSBase.is_end(card) == true
+            @test FITSBase.is_end(card.type) == true
+            @test FITSBase.is_end(card.key) == true
         end
     end
     @testset "Cards from bytes" begin

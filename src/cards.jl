@@ -1,7 +1,7 @@
 """
-    FITSCards.Cards
+    FITSBase.Cards
 
-A sub-module of the `FITSCards` package implementing the methods and properties
+A sub-module of the `FITSBase` package implementing the methods and properties
 for FITS header cards.
 
 """
@@ -9,14 +9,14 @@ module Cards
 
 export FITSCard
 
-using ..FITSCards
-using ..FITSCards:
+using ..FITSBase
+using ..FITSBase:
     FITSInteger,
     FITSFloat,
     FITSComplex
-import ..FITSCards:
+import ..FITSBase:
     FITSCardType
-using ..FITSCards.Parser:
+using ..FITSBase.Parser:
     EMPTY_STRING,
     ByteBuffer,
     check_keyword,
@@ -29,7 +29,7 @@ using ..FITSCards.Parser:
     parse_logical_value,
     parse_string_value,
     scan_card
-import ..FITSCards.Parser:
+import ..FITSBase.Parser:
     is_comment,
     is_end
 
