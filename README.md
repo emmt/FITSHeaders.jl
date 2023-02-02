@@ -65,7 +65,7 @@ FITS cards have properties:
 
 ``` julia
 card.type     # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
-card.key      # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
+card.key      # quick key of card: Fits"BITPIX", Fits"HIERARCH", etc.
 card.name     # name of card
 card.value    # callable object representing the card value
 card.comment  # comment of card
@@ -180,23 +180,23 @@ keyword. The key of a short FITS keyword is unique and exactly matches the
 first 8 bytes of the keyword as it is stored in a FITS file. Thus quick keys
 provide fast means to compare and search FITS keywords. The constructor
 `FitsKey(name)` yields the quick key of the string `name`. A quick key may be
-literally expressed by using the `@FITS_str` macro in Julia code. For example:
+literally expressed by using the `@Fits_str` macro in Julia code. For example:
 
 ``` julia
-card.key == FITS"NAXIS"
+card.key == Fits"NAXIS"
 ```
 
 is faster than, say `card.name == "NAXIS"`, to check whether the name of the
 FITS header card `card` is `"NAXIS"`. This is because, the comparison is
 performed on a single integer (not on several characters) and expression
-`FITS"...."` is a constant computed at compile time with no run-time penalty.
-Compared to `FitsKey(name)`, `FITS"...."` checks the validity of the characters
+`Fits"...."` is a constant computed at compile time with no run-time penalty.
+Compared to `FitsKey(name)`, `Fits"...."` checks the validity of the characters
 composing the literal short keyword (again this is done at compile time so
 without run-time penalty) and, for readability, does not allow for trailing
 spaces.
 
 For a `HIERARCH` keyword, the quick key is equal to the constant
-`FITS"HIERARCH"` whatever the other part of the keyword.
+`Fits"HIERARCH"` whatever the other part of the keyword.
 
 
 ## Parsing of FITS header cards

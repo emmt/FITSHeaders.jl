@@ -279,20 +279,20 @@ end
 end
 
 """
-    @FITS_str
+    @Fits_str
 
 A macro to construct a 64-bit quick key equivalent to the FITS keyword given in
 argument and as it is stored in the header of a FITS file. The argument must be
 a short FITS keyword (e.g., not a `HIERARCH` one) specified as a literal string
 of, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters with no trailing spaces.
-For example `FITS"SIMPLE"` or `FITS"NAXIS2"`.
+For example `Fits"SIMPLE"` or `Fits"NAXIS2"`.
 
 The result is the same as that computed by `FitsKey` but since the quick key is
 given by a string macro, it is like a constant computed at compile time with no
 runtime penalty.
 
 """
-macro FITS_str(str::String)
+macro Fits_str(str::String)
     FitsKey(check_short_keyword(str))
 end
 
@@ -415,11 +415,11 @@ yields whether `A` indicates a, possibly non-standard, commentary FITS keyword.
 
     FITSBase.is_comment(key::FitsKey)
 
-yields whether `key` is `FITS"COMMENT"` or `FITS"HISTORY"` which corresponds to
+yields whether `key` is `Fits"COMMENT"` or `Fits"HISTORY"` which corresponds to
 a standard commentary FITS keyword.
 
 """
-is_comment(key::FitsKey) = (key == FITS"COMMENT") | (key == FITS"HISTORY")
+is_comment(key::FitsKey) = (key == Fits"COMMENT") | (key == Fits"HISTORY")
 is_comment(type::FitsCardType) = type === FITS_COMMENT
 
 """
@@ -428,7 +428,7 @@ is_comment(type::FitsCardType) = type === FITS_COMMENT
 yields whether `A` indicates the END FITS keyword.
 
 """
-is_end(key::FitsKey) = (key == FITS"END")
+is_end(key::FitsKey) = (key == Fits"END")
 is_end(type::FitsCardType) = type === FITS_END
 
 for sym in (:logical, :integer, :float, :string, :complex)
@@ -644,13 +644,13 @@ function scan_card(buf::ByteBuffer, off::Int = 0)
         # Empty range, return the parameters of an END card to reflect that
         # except that the name range is empty.
         rng = empty_range(i_first)
-        return FITS_END, FITS"END", rng, rng, rng
+        return FITS_END, Fits"END", rng, rng, rng
     end
     @inbounds begin # NOTE: above settings warrant that
         key, name_rng, i_next = scan_keyword_part(buf, i_first:i_last)
         if !is_comment(key)
             # May be a non-commentary FITS card.
-            if key == FITS"END"
+            if key == Fits"END"
                 # Remaining part shall contains only spaces
                 com_rng = trim_leading_spaces(buf, i_next:i_last)
                 isempty(com_rng) || nonspace_in_end_card(get_byte(buf, first(com_rng)))
@@ -738,7 +738,7 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
         key = off + FITS_SHORT_KEYWORD_SIZE ≤ i_last ? FitsKey(Val(:full), buf, off) :
             FitsKey(Val(:pad), buf, off, i_last)
 
-        if key == FITS"HIERARCH" && i_first ≤ i_next ≤ i_last - 2 && is_space(get_byte(buf, i_next))
+        if key == Fits"HIERARCH" && i_first ≤ i_next ≤ i_last - 2 && is_space(get_byte(buf, i_next))
             # Parse HIERARCH keyword. Errors are deferred until the value
             # marker "= " is eventually found.
             i_error = i_first - 1 # index of first bad character
@@ -842,7 +842,7 @@ separator occurs in the range of bytes, a `HIERARCH` keyword is assumed even
 though the first bytes are not `"HIERARCH "`. Leading and trailing spaces are
 not allowed.
 
-The returned `key` is `FITS"HIERARCH"` in 4 cases:
+The returned `key` is `Fits"HIERARCH"` in 4 cases:
 
 - The first bytes of the sequence are `"HIERARCH "` followed by a name,
   possibly slit in several parts and possibly longer than
@@ -864,7 +864,7 @@ The returned `key` is `FITS"HIERARCH"` in 4 cases:
         # Compute quick key of the short FITS keyword, this is a cheap way to
         # figure out whether the sequence of bytes starts with "HIERARCH". This
         # does not check for the validity of the leading bytes, unless the key
-        # is FITS"HIERARCH".
+        # is Fits"HIERARCH".
         i_first, i_last = first(rng), last(rng)
         any_space = false # any space found so far?
         pfx = false # add "HIERARCH " prefix?
@@ -872,7 +872,7 @@ The returned `key` is `FITS"HIERARCH"` in 4 cases:
         len = length(rng)
         key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FitsKey(Val(:full), buf, off) :
             FitsKey(Val(:pad), buf, off, len)
-        if key == FITS"HIERARCH"
+        if key == Fits"HIERARCH"
             # Byte sequence starts with "HIERARCH". There are 3 possibilities:
             #
             # 1. The keyword is exatly "HIERARCH".
@@ -912,7 +912,7 @@ The returned `key` is `FITS"HIERARCH"` in 4 cases:
             is_keyword(b) || bad_character_in_keyword(b)
             # A long keyword implies using the HIERARCH convention.
             if len > FITS_SHORT_KEYWORD_SIZE
-                key = FITS"HIERARCH"
+                key = Fits"HIERARCH"
                 pfx = true
             end
         end
@@ -927,8 +927,8 @@ The returned `key` is `FITS"HIERARCH"` in 4 cases:
                 # Keyword must be a HIERARCH one because it has at least one
                 # space separator. If this was not already detected, the
                 # "HIERARCH " is missing.
-                if key != FITS"HIERARCH"
-                    key = FITS"HIERARCH"
+                if key != Fits"HIERARCH"
+                    key = Fits"HIERARCH"
                     pfx = true
                 end
             elseif is_keyword(b)

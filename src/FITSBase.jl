@@ -8,7 +8,7 @@ module FITSBase
 
 export
     # Quick FITS keyword:
-    @FITS_str,
+    @Fits_str,
     FitsKey,
 
     # FITS cards and headers:
@@ -51,7 +51,7 @@ const FitsComplex = Complex{FitsFloat}
 
 include("parser.jl")
 import .Parser:
-    @FITS_str,
+    @Fits_str,
     FITS_CARD_SIZE,
     FITS_BLOCK_SIZE,
     FITS_SHORT_KEYWORD_SIZE,

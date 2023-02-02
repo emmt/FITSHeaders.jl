@@ -103,10 +103,10 @@ Base.copy(hdr::FitsHeader) = FitsHeader(hdr)
 is_unique(card::FitsCard) = is_unique(card.key)
 is_unique(kwrd::Keyword) = is_unique(kwrd.key)
 is_unique(key::FitsKey) =
-    (key !== FITS"COMMENT") &
-    (key !== FITS"HISTORY") &
-    (key !== FITS"CONTINUE") &
-    (key !== FITS"")
+    (key !== Fits"COMMENT") &
+    (key !== Fits"HISTORY") &
+    (key !== Fits"CONTINUE") &
+    (key !== Fits"")
 
 Base.convert(::Type{<:FitsHeader}, hdr::FitsHeader) = hdr
 Base.convert(::Type{<:FitsHeader}, iter) = FitsHeader(iter)
@@ -362,8 +362,8 @@ function unsafe_findprev(func::Function, hdr::FitsHeader, start::Int)
 end
 
 is_matching(card::FitsCard, pat::RecordID) =
-    pat.key != FITS"HIERARCH" ? card.key == pat.key :
-    card.name === pat.name || (card.key == FITS"HIERARCH" && isequal(card.name, pat.name))
+    pat.key != Fits"HIERARCH" ? card.key == pat.key :
+    card.name === pat.name || (card.key == Fits"HIERARCH" && isequal(card.name, pat.name))
 
 """
     eachmatch(what, hdr::FitsHeader)

@@ -68,7 +68,7 @@ string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 FITS cards have properties:
 
     card.type     # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
-    card.key      # quick key of card: FITS"BITPIX", FITS"HIERARCH", etc.
+    card.key      # quick key of card: Fits"BITPIX", Fits"HIERARCH", etc.
     card.name     # name of card
     card.value    # callable object representing the card value
     card.comment  # comment of card
@@ -134,7 +134,7 @@ struct FitsCard
     FitsCard(key::FitsKey, name::AbstractString, ::Undefined, com::AbstractString) =
         new(key, FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
     FitsCard(key::FitsKey, name::AbstractString, ::Nothing, com::AbstractString) =
-        new(key, key === FITS"END" ? FITS_END : FITS_COMMENT,
+        new(key, key === Fits"END" ? FITS_END : FITS_COMMENT,
             UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
@@ -190,7 +190,7 @@ function Base.show(io::IO, A::FitsCard)
     print(io, A.name, "\"")
     if A.type != FITS_END
         if A.type == FITS_COMMENT
-            if A.key === FITS"COMMENT" || A.key === FITS"HISTORY"
+            if A.key === Fits"COMMENT" || A.key === Fits"HISTORY"
                 print(io, " => ")
                 show(io, A.comment)
             else
@@ -233,7 +233,7 @@ function Base.show(io::IO, mime::MIME"text/plain", A::FitsCard)
     print(io, "FitsCard: ")
     print(io, A.name)
     if A.type != FITS_END
-        if A.key === FITS"HIERARCH"
+        if A.key === Fits"HIERARCH"
             print(io, ' ')
         else
             n = ncodeunits(A.name)

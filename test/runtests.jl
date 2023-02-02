@@ -90,24 +90,24 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test zero(FitsKey) === FitsKey()
         @test convert(Integer, FitsKey()) === zero(UInt64)
         @test UInt64(FitsKey()) === zero(UInt64)
-        @test FITS"SIMPLE"   ==  make_FitsKey("SIMPLE  ")
-        @test FITS"SIMPLE"   === make_FitsKey("SIMPLE  ")
-        @test FITS"BITPIX"   === make_FitsKey("BITPIX  ")
-        @test FITS"NAXIS"    === make_FitsKey("NAXIS   ")
-        @test FITS"COMMENT"  === make_FitsKey("COMMENT ")
-        @test FITS"HISTORY"  === make_FitsKey("HISTORY ")
-        @test FITS"HIERARCH" === make_FitsKey("HIERARCH")
-        @test FITS""         === make_FitsKey("        ")
-        @test FITS"END"      === make_FitsKey("END     ")
-        @test String(FITS"") == ""
-        @test String(FITS"SIMPLE") == "SIMPLE"
-        @test String(FITS"HIERARCH") == "HIERARCH"
-        @test repr(FITS"") == "FITS\"\""
-        @test repr(FITS"SIMPLE") == "FITS\"SIMPLE\""
-        @test repr(FITS"HIERARCH") == "FITS\"HIERARCH\""
-        @test repr("text/plain", FITS"") == "FITS\"\""
-        @test repr("text/plain", FITS"SIMPLE") == "FITS\"SIMPLE\""
-        @test repr("text/plain", FITS"HIERARCH") == "FITS\"HIERARCH\""
+        @test Fits"SIMPLE"   ==  make_FitsKey("SIMPLE  ")
+        @test Fits"SIMPLE"   === make_FitsKey("SIMPLE  ")
+        @test Fits"BITPIX"   === make_FitsKey("BITPIX  ")
+        @test Fits"NAXIS"    === make_FitsKey("NAXIS   ")
+        @test Fits"COMMENT"  === make_FitsKey("COMMENT ")
+        @test Fits"HISTORY"  === make_FitsKey("HISTORY ")
+        @test Fits"HIERARCH" === make_FitsKey("HIERARCH")
+        @test Fits""         === make_FitsKey("        ")
+        @test Fits"END"      === make_FitsKey("END     ")
+        @test String(Fits"") == ""
+        @test String(Fits"SIMPLE") == "SIMPLE"
+        @test String(Fits"HIERARCH") == "HIERARCH"
+        @test repr(Fits"") == "FITS\"\""
+        @test repr(Fits"SIMPLE") == "FITS\"SIMPLE\""
+        @test repr(Fits"HIERARCH") == "FITS\"HIERARCH\""
+        @test repr("text/plain", Fits"") == "FITS\"\""
+        @test repr("text/plain", Fits"SIMPLE") == "FITS\"SIMPLE\""
+        @test repr("text/plain", Fits"HIERARCH") == "FITS\"HIERARCH\""
         @test_throws Exception FITSBase.keyword("SIMPLE#")
         @test_throws Exception FITSBase.keyword(" SIMPLE")
         @test_throws Exception FITSBase.keyword("SIMPLE ")
@@ -115,29 +115,29 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSBase.keyword("TOO  MANY SPACES")
         @test_throws Exception FITSBase.keyword("HIERARCH  A") # more than one space
         # Short FITS keywords.
-        @test FITSBase.Parser.parse_keyword("SIMPLE") == (FITS"SIMPLE", false)
+        @test FITSBase.Parser.parse_keyword("SIMPLE") == (Fits"SIMPLE", false)
         @test FITSBase.keyword("SIMPLE") == "SIMPLE"
-        @test FITSBase.Parser.parse_keyword("HISTORY") == (FITS"HISTORY", false)
+        @test FITSBase.Parser.parse_keyword("HISTORY") == (Fits"HISTORY", false)
         @test FITSBase.keyword("HISTORY") == "HISTORY"
         # Keywords longer than 8-characters are HIERARCH ones.
-        @test FITSBase.Parser.parse_keyword("LONG-NAME") == (FITS"HIERARCH", true)
+        @test FITSBase.Parser.parse_keyword("LONG-NAME") == (Fits"HIERARCH", true)
         @test FITSBase.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
-        @test FITSBase.Parser.parse_keyword("HIERARCHY") == (FITS"HIERARCH", true)
+        @test FITSBase.Parser.parse_keyword("HIERARCHY") == (Fits"HIERARCH", true)
         @test FITSBase.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
         # Keywords starting by "HIERARCH " are HIERARCH ones.
         for key in ("HIERARCH GIZMO", "HIERARCH MY GIZMO", "HIERARCH MY BIG GIZMO")
-            @test FITSBase.Parser.parse_keyword(key) == (FITS"HIERARCH", false)
+            @test FITSBase.Parser.parse_keyword(key) == (Fits"HIERARCH", false)
             @test FITSBase.keyword(key) === key # should return the same object
         end
         # Keywords with multiple words are HIERARCH ones whatever their lengths.
         for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
-            @test FITSBase.Parser.parse_keyword(key) == (FITS"HIERARCH", true)
+            @test FITSBase.Parser.parse_keyword(key) == (Fits"HIERARCH", true)
             @test FITSBase.keyword(key) == "HIERARCH "*key
         end
         # The following cases are consequences of the implemented scanner.
-        @test FITSBase.Parser.parse_keyword("HIERARCH") == (FITS"HIERARCH", false)
+        @test FITSBase.Parser.parse_keyword("HIERARCH") == (Fits"HIERARCH", false)
         @test FITSBase.keyword("HIERARCH") == "HIERARCH"
-        @test FITSBase.Parser.parse_keyword("HIERARCH SIMPLE") == (FITS"HIERARCH", false)
+        @test FITSBase.Parser.parse_keyword("HIERARCH SIMPLE") == (Fits"HIERARCH", false)
         @test FITSBase.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
     end
     @testset "Parser" begin
@@ -277,7 +277,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test :string ∈ propertynames(card)
             @test card.type === FITS_LOGICAL
             @test FitsCardType(card) === FITS_LOGICAL
-            @test card.key == FITS"SIMPLE"
+            @test card.key == Fits"SIMPLE"
             @test card.name == "SIMPLE"
             @test card.comment == "this is a FITS file"
             @test card.value() isa Bool
@@ -288,7 +288,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isassigned(card) === true
             @test isinteger(card) === true
             @test isreal(card) === true
-            @test_throws Exception card.key = FITS"HISTORY"
+            @test_throws Exception card.key = Fits"HISTORY"
             # Convert callable value object by calling the object itself.
             @test card.value(valtype(card)) === card.value()
             @test card.value(Bool)          === convert(Bool,        card.value())
@@ -319,7 +319,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Integer valued cards.
         let card = FitsCard("BITPIX  =                  -32 / number of bits per data pixel           ")
             @test card.type == FITS_INTEGER
-            @test card.key == FITS"BITPIX"
+            @test card.key == Fits"BITPIX"
             @test card.name == "BITPIX"
             @test card.comment == "number of bits per data pixel"
             @test card.value() isa FitsInteger
@@ -358,7 +358,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         end
         let card = FitsCard("NAXIS   =                    3 /      number of axes                      ")
             @test card.type == FITS_INTEGER
-            @test card.key == FITS"NAXIS"
+            @test card.key == Fits"NAXIS"
             @test card.name == "NAXIS"
             @test card.comment == "number of axes"
             @test card.units == ""
@@ -400,7 +400,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # COMMENT and HISTORY.
         let card = FitsCard("COMMENT   Some comments (with leading spaces that should not be removed) ")
             @test card.type == FITS_COMMENT
-            @test card.key == FITS"COMMENT"
+            @test card.key == Fits"COMMENT"
             @test card.name == "COMMENT"
             @test card.comment == "  Some comments (with leading spaces that should not be removed)"
             @test card.value() isa Nothing
@@ -445,7 +445,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         end
         let card = FitsCard("HISTORY A new history starts here...                                     ")
             @test card.type == FITS_COMMENT
-            @test card.key == FITS"HISTORY"
+            @test card.key == Fits"HISTORY"
             @test card.name == "HISTORY"
             @test card.comment == "A new history starts here..."
             @test card.value() isa Nothing
@@ -491,7 +491,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Non standard commentary card.
         let card = FitsCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
             @test card.type == FITS_COMMENT
-            @test card.key == FITS"HIERARCH"
+            @test card.key == Fits"HIERARCH"
             @test card.name == "HIERARCH NON-STANDARD COMMENT"
             @test card.comment == "some comment"
             @test card.value() isa Nothing
@@ -537,7 +537,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # String valued card.
         let card = FitsCard("REMARK  = 'Joe''s taxi'        / a string with an embedded quote         ")
             @test card.type == FITS_STRING
-            @test card.key == FITS"REMARK"
+            @test card.key == Fits"REMARK"
             @test card.name == "REMARK"
             @test card.comment == "a string with an embedded quote"
             @test card.value() isa String
@@ -589,7 +589,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         #
         let card = FitsCard("EXTNAME = 'SCIDATA ' ")
             @test card.type == FITS_STRING
-            @test card.key == FITS"EXTNAME"
+            @test card.key == Fits"EXTNAME"
             @test card.name == "EXTNAME"
             @test card.comment == ""
             @test isinteger(card) === false
@@ -610,7 +610,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         #
         let card = FitsCard("CRPIX1  =                   1. ")
             @test card.type == FITS_FLOAT
-            @test card.key == FITS"CRPIX1"
+            @test card.key == Fits"CRPIX1"
             @test card.name == "CRPIX1"
             @test card.comment == ""
             @test card.value() isa FitsFloat
@@ -629,7 +629,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         #
         let card = FitsCard("CRVAL3  =                 0.96 / CRVAL along 3rd axis ")
             @test card.type == FITS_FLOAT
-            @test card.key == FITS"CRVAL3"
+            @test card.key == Fits"CRVAL3"
             @test card.name == "CRVAL3"
             @test card.comment == "CRVAL along 3rd axis"
             @test card.value() isa FitsFloat
@@ -648,7 +648,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         #
         let card = FitsCard("HIERARCH ESO OBS EXECTIME = +2919 / Expected execution time ")
             @test card.type == FITS_INTEGER
-            @test card.key == FITS"HIERARCH"
+            @test card.key == Fits"HIERARCH"
             @test card.name == "HIERARCH ESO OBS EXECTIME"
             @test card.comment == "Expected execution time"
             @test card.value() isa FitsInteger
@@ -667,7 +667,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # FITS cards with undefined value.
         let card = FitsCard("DUMMY   =                        / no value given ")
             @test card.type == FITS_UNDEFINED
-            @test card.key == FITS"DUMMY"
+            @test card.key == Fits"DUMMY"
             @test card.name == "DUMMY"
             @test card.comment == "no value given"
             @test card.value() isa Missing
@@ -684,7 +684,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         end
         let card = FitsCard("HIERARCH DUMMY   =               / no value given ")
             @test card.type == FITS_UNDEFINED
-            @test card.key == FITS"HIERARCH"
+            @test card.key == Fits"HIERARCH"
             @test card.name == "HIERARCH DUMMY"
             @test card.comment == "no value given"
             @test card.value() isa Missing
@@ -702,7 +702,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Complex valued cards.
         let card = FitsCard("COMPLEX = (1,0)                  / [km/s] some complex value ")
             @test card.type == FITS_COMPLEX
-            @test card.key == FITS"COMPLEX"
+            @test card.key == Fits"COMPLEX"
             @test card.name == "COMPLEX"
             @test card.comment == "[km/s] some complex value"
             @test card.units == "km/s"
@@ -721,7 +721,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         end
         let card = FitsCard("COMPLEX = (-2.7,+3.1d5)          / some other complex value ")
             @test card.type == FITS_COMPLEX
-            @test card.key == FITS"COMPLEX"
+            @test card.key == Fits"COMPLEX"
             @test card.name == "COMPLEX"
             @test card.comment == "some other complex value"
             @test card.value() isa FitsComplex
@@ -743,7 +743,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # END card.
         let card = FitsCard("END                           ")
             @test card.type == FITS_END
-            @test card.key == FITS"END"
+            @test card.key == Fits"END"
             @test card.name == "END"
             @test card.comment == ""
             @test card.value() isa Nothing
@@ -771,7 +771,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         for buf in (make_byte_vector(str), make_discontinuous_byte_vector(str))
             card = FitsCard(buf)
                         @test card.type == FITS_LOGICAL
-            @test card.key == FITS"SIMPLE"
+            @test card.key == Fits"SIMPLE"
             @test card.name == "SIMPLE"
             @test card.comment == "this is a FITS file"
             @test card.value() isa Bool
@@ -782,19 +782,19 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # "END", empty string "" or out of range offset yield an END card.
         let card = FitsCard("END")
             @test card.type === FITS_END
-            @test card.key === FITS"END"
+            @test card.key === Fits"END"
         end
         let card = FitsCard("")
             @test card.type === FITS_END
-            @test card.key === FITS"END"
+            @test card.key === Fits"END"
         end
         let card = FitsCard("xEND"; offset=1)
             @test card.type === FITS_END
-            @test card.key === FITS"END"
+            @test card.key === Fits"END"
         end
         let card = FitsCard("SOMETHING"; offset=250)
             @test card.type === FITS_END
-            @test card.key === FITS"END"
+            @test card.key === Fits"END"
         end
     end
     @testset "Cards from pairs" begin
@@ -811,43 +811,43 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test Pair{String,Tuple{Bool,String}}(card) === pair
         @test Pair{String,Tuple{Int,String}}(card) === (card.name => (card.value(Int), card.comment))
         @test card.type === FITS_LOGICAL
-        @test card.key === FITS"SIMPLE"
+        @test card.key === Fits"SIMPLE"
         @test card.name === "SIMPLE"
         @test card.value() === true
         @test card.comment == com
         card = FitsCard("TWO KEYS" => (π, com))
         @test card.type === FITS_FLOAT
-        @test card.key === FITS"HIERARCH"
+        @test card.key === Fits"HIERARCH"
         @test card.name == "HIERARCH TWO KEYS"
         @test card.value() ≈ π
         @test card.comment == com
         card = convert(FitsCard, "HIERARCH NAME" => ("some name", com))
         @test card.type === FITS_STRING
-        @test card.key === FITS"HIERARCH"
+        @test card.key === Fits"HIERARCH"
         @test card.name == "HIERARCH NAME"
         @test card.value() == "some name"
         @test card.comment == com
         card = convert(FitsCard, "HIERARCH COMMENT" => (nothing, com))
         @test card.type === FITS_COMMENT
-        @test card.key === FITS"HIERARCH"
+        @test card.key === Fits"HIERARCH"
         @test card.name == "HIERARCH COMMENT"
         @test card.value() === nothing
         @test card.comment == com
         card = convert(FitsCard, "COMMENT" => com)
         @test card.type === FITS_COMMENT
-        @test card.key === FITS"COMMENT"
+        @test card.key === Fits"COMMENT"
         @test card.name == "COMMENT"
         @test card.value() === nothing
         @test card.comment == com
         card = convert(FitsCard, "REASON" => undef)
         @test card.type === FITS_UNDEFINED
-        @test card.key === FITS"REASON"
+        @test card.key === Fits"REASON"
         @test card.name == "REASON"
         @test card.value() === missing
         @test card.comment == ""
         card = convert(FitsCard, "REASON" => (missing, com))
         @test card.type === FITS_UNDEFINED
-        @test card.key === FITS"REASON"
+        @test card.key === Fits"REASON"
         @test card.name == "REASON"
         @test card.value() === missing
         @test card.comment == com
@@ -867,13 +867,13 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         hp = copy(h); @test  hp !== h && hp == h
         @test IndexStyle(h) === IndexLinear()
         @test h["SIMPLE"] === h[1]
-        @test h[1].key === FITS"SIMPLE"
+        @test h[1].key === Fits"SIMPLE"
         @test h[1].value() == true
         @test h["BITPIX"] === h[2]
-        @test h[2].key === FITS"BITPIX"
+        @test h[2].key === Fits"BITPIX"
         @test h[2].value() == -32
         @test h["NAXIS"] === h[3]
-        @test h[3].key === FITS"NAXIS"
+        @test h[3].key === Fits"NAXIS"
         @test h[3].value() == length(dims)
         for i in eachindex(dims)
             push!(h, "NAXIS$i" => (dims[i], "length of dimension # $i"))
@@ -897,7 +897,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         card = get(h, "HIERARCH CCD GAIN", nothing)
         @test card isa FitsCard
         if card !== Nothing
-            @test card.key === FITS"HIERARCH"
+            @test card.key === Fits"HIERARCH"
             @test card.name == "HIERARCH CCD GAIN"
             @test card.value() ≈ 3.2
             @test card.units == "ADU/e-"
@@ -906,7 +906,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         card = get(h, "CCD BIAS", nothing)
         @test card isa FitsCard
         if card !== Nothing
-            @test card.key === FITS"HIERARCH"
+            @test card.key === Fits"HIERARCH"
             @test card.name == "HIERARCH CCD BIAS"
             @test card.value() == -15
         end
