@@ -891,6 +891,16 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         h["COMMENT"] = "Yet another comment."
         @test length(eachmatch("COMMENT", h)) == 3
         @test count(Returns(true), eachmatch("COMMENT", h)) == 3
+        coms = collect("COMMENT", h)
+        @test length(coms) == 3
+        @test coms isa Vector{FitsCard}
+        @test coms[1].comment == "Some comment."
+        @test coms[2].comment == "Another comment."
+        @test coms[3].comment == "Yet another comment."
+        iter = eachmatch("COMMENT", h)
+        @test reverse(reverse(iter)) === iter
+        @test collect(iter) == coms
+        @test collect(reverse(iter)) == reverse(coms)
         # Test indexing by integer/name.
         i = findfirst("BITPIX", h)
         @test i isa Integer && h[i].name == "BITPIX"
