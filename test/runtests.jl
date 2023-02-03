@@ -885,16 +885,27 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test h["NAXIS"] === h[3]
         @test h[3].key === Fits"NAXIS"
         @test h[3].value() == length(dims)
+        # Build 2 another headers, one with just the dimensions, the other with
+        # some other records, then merge these headers.
+        h1 = FitsHeader(h["NAXIS"])
         for i in eachindex(dims)
-            push!(h, "NAXIS$i" => (dims[i], "length of dimension # $i"))
+            push!(h1, "NAXIS$i" => (dims[i], "length of dimension # $i"))
         end
-        push!(h, "COMMENT" => "Some comment.")
-        h["CCD GAIN"] = (3.2, "[ADU/e-] detector gain")
-        h["HIERARCH CCD BIAS"] = -15
-        h["BSCALE"] = 1.0
-        h["BZERO"] = 0.0
-        h["COMMENT"] = "Another comment."
-        h["COMMENT"] = "Yet another comment."
+        h2 = FitsHeader()
+        push!(h2, "COMMENT" => "Some comment.")
+        h2["CCD GAIN"] = (3.2, "[ADU/e-] detector gain")
+        h2["HIERARCH CCD BIAS"] = -15
+        h2["BSCALE"] = 1.0
+        h2["BZERO"] = 0.0
+        h2["COMMENT"] = "Another comment."
+        h2["COMMENT"] = "Yet another comment."
+        hp = merge(h, h1, h2)
+        @test merge!(h, h1, h2) === h
+        @test hp == h && hp !== h
+        @test merge!(hp, h1) == h # re-merging existing unique cards does not change anything
+        empty!(h1)
+        empty!(h2)
+        empty!(hp)
         @test length(eachmatch("COMMENT", h)) == 3
         @test count(Returns(true), eachmatch("COMMENT", h)) == 3
         coms = collect("COMMENT", h)

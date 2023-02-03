@@ -111,6 +111,17 @@ function Base.empty!(hdr::FitsHeader)
     return hdr
 end
 
+Base.merge(A::FitsHeader, B::FitsHeader...) = merge!(copy(A), B...)
+Base.merge!(A::FitsHeader) = A
+function Base.merge!(A::FitsHeader, B::FitsHeader)
+    for card in B
+        push!(A, card)
+    end
+    return A
+end
+Base.merge!(A::FitsHeader, B::FitsHeader, C::FitsHeader...) =
+    merge!(merge!(A, B), C...)
+
 # Implement part of the abstract dictionary API.
 Base.keys(hdr::FitsHeader) = keys(hdr.index)
 function Base.getkey(hdr::FitsHeader, name::AbstractString, def)

@@ -4,6 +4,7 @@
 ## Version 0.2.1
 
 - Can search cards in FITS header by regular expressions.
+- Implement merging of headers with `merge` and `merge!`.
 - `length(eachmatch(pat,hdr::FitsHeader))` yields number of matches.
 - Some bug fixes.
 
