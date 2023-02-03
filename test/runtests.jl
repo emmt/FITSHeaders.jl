@@ -943,7 +943,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.name == "HIERARCH CCD BIAS"
             @test card.value() == -15
         end
-        # Change existing record, by name and by index.
+        # Change existing record, by name and by index for a short and for a
+        # HIERARCH keyword.
         n = length(h)
         h["BSCALE"] = (1.1, "better value")
         @test length(h) == n
@@ -953,6 +954,9 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test i isa Integer
         h[i] = (h[i].name => (-64, h[i].comment))
         @test h["BITPIX"].value() == -64
+        i = findfirst("CCD BIAS", h)
+        h[i] = ("CCD LOW BIAS" => (h[i].value(), h[i].comment))
+        @test h[i].name == "HIERARCH CCD LOW BIAS"
         # It is forbidden to have more than one non-unique keyword.
         i = findfirst("BITPIX", h)
         @test_throws ArgumentError h[i+1] = h[i]
@@ -972,6 +976,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         for i in 1:3 # we need a number of commentary records
             h["HISTORY"] = "History record number $i."
             h["OTHER$i"] = (i, "Something else.")
+            if i == 1
+                # Check findlast/findfirst on a commentary keyword that has a
+                # single occurence.
+                @test findlast("HISTORY", h) == length(h) - 1
+                @test findfirst("HISTORY", h) == length(h) - 1
+            end
         end
         n = length(eachmatch("HISTORY", h))
         @test n ≥ 3

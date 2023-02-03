@@ -428,9 +428,6 @@ function unsafe_findprev(func::Function, hdr::FitsHeader, start::Int)
     return nothing
 end
 
-(obj::Matches{<:Union{FitsCard,FullName}})(card::FitsCard) =
-    have_same_name(obj.pat, card)
-
 function have_same_name(A::Union{FitsCard,FullName}, B::FitsCard)
     A.key === B.key || return false
     A.key === Fits"HIERARCH" || return true
