@@ -9,9 +9,9 @@ using ..FITSBase.Parser: full_name
 using Base: @propagate_inbounds
 using Base.Order: Ordering, Forward, Reverse
 
-# The HIERARCH perfix being optional (in some cases) to match a FITS keyword,
-# and the quick key being useful to accelerate comparison. MatchableName
-# is a guarantee to have the full name and the quick key.
+# The HIERARCH prefix being optional to match a FITS keyword, and the quick key
+# being useful to accelerate comparisons. MatchableName is a guarantee to have
+# the full name and the quick key.
 struct MatchableName
     key::FitsKey # quick key
     name::String # full name

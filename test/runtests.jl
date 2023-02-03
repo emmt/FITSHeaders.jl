@@ -860,15 +860,22 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         dims = (4,5,6)
         h = FitsHeader("SIMPLE" => (true, "FITS file"),
                        "BITPIX" => (-32, "bits per pixels"),
-                       "NAXIS" => (length(dims), "number of dimensions"))
-        @test length(h) == 3
-        @test sort(collect(keys(h))) == sort(["SIMPLE", "BITPIX", "NAXIS"])
+                       "NAXIS" => (length(dims), "number of dimensions"),
+                       "MISSING" => (missing, "Missing value."))
+        @test length(h) == 4
+        @test sort(collect(keys(h))) == ["BITPIX", "MISSING", "NAXIS", "SIMPLE"]
         # Same object:
         @test convert(FitsHeader, h) === h
         # Same contents but different objects:
         hp = convert(FitsHeader, h.cards); @test hp !== h && hp == h
         hp = FitsHeader(h); @test  hp !== h && hp == h
         hp = copy(h); @test  hp !== h && hp == h
+        @test length(empty!(hp)) == 0
+        @test get(h, "NAXIS", π) isa FitsCard
+        @test get(h, "illegal keyword!", π) === π
+        @test get(h, +, π) === π
+        @test getkey(h, "illegal keyword!", π) === π
+        @test getkey(h, "NAXIS", π) == "NAXIS"
         @test IndexStyle(h) === IndexLinear()
         @test h["SIMPLE"] === h[1]
         @test h[1].key === Fits"SIMPLE"
@@ -939,6 +946,13 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # It is forbidden to have more than one non-unique keyword.
         i = findfirst("BITPIX", h)
         @test_throws ArgumentError h[i+1] = h[i]
+        # Replace a card by comment appering earlier than any other comment.
+        n = length(eachmatch("COMMENT", h))
+        i = findfirst("COMMENT", h)
+        h[i-1] = ("COMMENT" => (nothing, "Some early comment."))
+        @test findfirst("COMMENT", h) == i - 1
+        @test length(eachmatch("COMMENT", h)) == n + 1
+        @test h[i-1].type == FITS_COMMENT
         # Replace existing card by another one with another name. Peek the
         # first of a non-unique record to check that the index is correctly
         # updated.
@@ -967,8 +981,24 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test findfirst("NON-EXISTING KEYWORD", h) === nothing
         @test findfirst("Invalid keyword", h) === nothing
         @test findfirst(π, h) === nothing
+        @test findfirst(π, h) === nothing
+        @test findlast(π, h) === nothing
+        @test findnext(π, h, firstindex(h)) === nothing
+        @test findprev(π, h, lastindex(h)) === nothing
+        @test_throws BoundsError findnext(π, h, firstindex(h) - 1)
+        @test_throws BoundsError findprev(π, h, lastindex(h) + 1)
+        @test_throws BoundsError findnext("SIMPLE", h, firstindex(h) - 1)
+        @test_throws BoundsError findprev("SIMPLE", h, lastindex(h) + 1)
+        @test findnext(π, h, lastindex(h) + 1) === nothing
+        @test findprev(π, h, firstindex(h) - 1) === nothing
+        @test findnext("SIMPLE", h, lastindex(h) + 1) === nothing
+        @test findprev("SIMPLE", h, firstindex(h) - 1) === nothing
         # Forward search.
         i = findfirst("COMMENT", h)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Some early comment."
+        i = findnext("COMMENT", h, i + 1)
         @test i isa Integer
         @test h[i].type === FITS_COMMENT
         @test h[i].comment == "Some comment."
@@ -986,7 +1016,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test i isa Integer
         @test h[i].type === FITS_COMMENT
         @test h[i].comment == "Yet another comment."
-        i = findprev(h[i], h, i - 1)
+        i = findprev("COMMENT", h, i - 1)
         @test i isa Integer
         @test h[i].type === FITS_COMMENT
         @test h[i].comment == "Another comment."
@@ -994,6 +1024,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test i isa Integer
         @test h[i].type === FITS_COMMENT
         @test h[i].comment == "Some comment."
+        i = findprev(h[i], h, i - 1)
+        @test i isa Integer
+        @test h[i].type === FITS_COMMENT
+        @test h[i].comment == "Some early comment."
         @test findprev(h[i], h, i - 1) isa Nothing
         # Check that non-commentary records are unique.
         for i in eachindex(h)
@@ -1004,6 +1038,11 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Search with a predicate.
         @test findfirst(card -> card.type === FITS_END, h) === nothing
         @test findlast(card -> card.name == "BITPIX", h) === 2
+        # Apply a filter.
+        hp = filter(card -> match(r"^NAXIS[0-9]*$", card.name) !== nothing, h)
+        @test hp isa FitsHeader
+        @test startswith(first(hp).name, "NAXIS")
+        @test startswith(last(hp).name, "NAXIS")
     end
 end
 
