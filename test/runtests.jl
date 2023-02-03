@@ -106,12 +106,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test String(Fits"") == ""
         @test String(Fits"SIMPLE") == "SIMPLE"
         @test String(Fits"HIERARCH") == "HIERARCH"
-        @test repr(Fits"") == "FITS\"\""
-        @test repr(Fits"SIMPLE") == "FITS\"SIMPLE\""
-        @test repr(Fits"HIERARCH") == "FITS\"HIERARCH\""
-        @test repr("text/plain", Fits"") == "FITS\"\""
-        @test repr("text/plain", Fits"SIMPLE") == "FITS\"SIMPLE\""
-        @test repr("text/plain", Fits"HIERARCH") == "FITS\"HIERARCH\""
+        @test repr(Fits"") == "Fits\"\""
+        @test repr(Fits"SIMPLE") == "Fits\"SIMPLE\""
+        @test repr(Fits"HIERARCH") == "Fits\"HIERARCH\""
+        @test repr("text/plain", Fits"") == "Fits\"\""
+        @test repr("text/plain", Fits"SIMPLE") == "Fits\"SIMPLE\""
+        @test repr("text/plain", Fits"HIERARCH") == "Fits\"HIERARCH\""
         @test_throws Exception FITSBase.keyword("SIMPLE#")
         @test_throws Exception FITSBase.keyword(" SIMPLE")
         @test_throws Exception FITSBase.keyword("SIMPLE ")

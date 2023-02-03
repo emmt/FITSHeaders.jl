@@ -239,18 +239,29 @@ end
 
 Base.show(io::IO, mime::MIME"text/plain", key::FitsKey) = show(io, key)
 function Base.show(io::IO, key::FitsKey)
-    buf = Vector{UInt8}(undef, FITS_SHORT_KEYWORD_SIZE + 6)
-    buf[1] = 'F'
-    buf[2] = 'I'
-    buf[3] = 'T'
-    buf[4] = 'S'
-    buf[5] = '"'
-    len = @inbounds decode!(buf, key; offset = 5) + 1
-    buf[len] = '"'
-    if len < length(buf)
-        write(io, view(buf, Base.OneTo(len)))
+    # FIXME: Improve the following test.
+    flag = true
+    for i in 0:sizeof(FitsKey)-1
+        flag &= is_restricted_ascii((key.val >> (i<<3)) % UInt8)
+    end
+    if flag
+        # Can be printed as a regular FITS keyword.
+        buf = Vector{UInt8}(undef, FITS_SHORT_KEYWORD_SIZE + 6)
+        buf[1] = 'F'
+        buf[2] = 'i'
+        buf[3] = 't'
+        buf[4] = 's'
+        buf[5] = '"'
+        len = @inbounds decode!(buf, key; offset = 5) + 1
+        buf[len] = '"'
+        if len < length(buf)
+            write(io, view(buf, Base.OneTo(len)))
+        else
+            write(io, buf)
+        end
     else
-        write(io, buf)
+        # Certainly not a regular FITS keyword.
+        write(io, "FitsKey(", repr(key.val), ")")
     end
 end
 
