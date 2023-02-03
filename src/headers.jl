@@ -3,17 +3,31 @@ module Headers
 export FitsHeader
 
 using ..FITSBase
-using ..FITSBase: check_keyword, is_comment
+using ..FITSBase: try_parse_keyword, is_comment
+using ..FITSBase.Parser: full_name
 
 using Base: @propagate_inbounds
 using Base.Order: Ordering, Forward, Reverse
 
-struct Keyword
+# The HIERARCH perfix being optional (in some cases) to match a FITS keyword,
+# and the quick key being useful to accelerate comparison. MatchableName
+# is a guarantee to have the full name and the quick key.
+struct MatchableName
     key::FitsKey # quick key
     name::String # full name
 end
-Keyword(card::FitsCard) = Keyword(card.key, card.name)
-Keyword(name::AbstractString) = Keyword(check_keyword(name)...)
+MatchableName(card::FitsCard) = MatchableName(card.key, card.name, false)
+function MatchableName(str::AbstractString)
+    c = try_parse_keyword(str)
+    # If parsing fails, return an instance that is unmatchable by any valid
+    # FITS card.
+    c isa Char && return MatchableName(zero(FitsKey), to_type(String, str))
+    key, pfx = c
+    return MatchableName(key, full_name(pfx, str))
+end
+
+# Union of types of objects that can be matched by name against a FITS card.
+const MatchableByName = Union{FitsCard,MatchableName}
 
 """
     FitsHeader(args...) -> hdr
@@ -100,8 +114,8 @@ FitsHeader(rec::Union{FitsCard,Pair}) = push!(FitsHeader(), FitsCard(rec))
 
 Base.copy(hdr::FitsHeader) = FitsHeader(hdr)
 
-is_unique(card::FitsCard) = is_unique(card.key)
-is_unique(kwrd::Keyword) = is_unique(kwrd.key)
+# Yield whether name is a unique FITS keyword.
+is_unique(obj::MatchableByName) = is_unique(obj.key)
 is_unique(key::FitsKey) =
     (key !== Fits"COMMENT") &
     (key !== Fits"HISTORY") &
@@ -127,13 +141,12 @@ end
 
 # Implement part of the abstract dictionary API.
 Base.keys(hdr::FitsHeader) = keys(hdr.index)
-Base.getkey(hdr::FitsHeader, kwrd::Keyword, def) = getkey(hdr.index, krwd.name, def)
-Base.getkey(hdr::FitsHeader, key::AbstractString, def) =
-    try
-        getkey(hdr.index, Keyword(key), def)
-    catch
-        def
-    end
+function Base.getkey(hdr::FitsHeader, name::AbstractString, def)
+    c = try_parse_keyword(name)
+    c isa Char && return def # illegal FITS keyword
+    key, pfx = c
+    return getkey(hdr.index, full_name(pfx, name), def)
+end
 
 # Implement abstract array API.
 Base.IndexStyle(::Type{<:FitsHeader}) = IndexLinear()
@@ -157,7 +170,7 @@ end
 # This unsafe method assumes that index i is valid.
 function unsafe_setindex!(hdr::FitsHeader, new_card::FitsCard, i::Int)
     @inbounds old_card = hdr.cards[i]
-    if !is_matching(new_card, old_card)
+    if !match(new_card, old_card)
         # The name of the i-th card will change. We have to update the index
         # accordingly.
         #
@@ -292,17 +305,15 @@ pattern `what` at or before index `start`.
 
 """ Base.findprev
 
-const RecordID = Union{FitsCard,Keyword}
+Base.findfirst(pat::MatchableByName, hdr::FitsHeader) = get(hdr.index, pat.name, nothing)
 
-Base.findfirst(pat::RecordID, hdr::FitsHeader) = get(hdr.index, pat.name, nothing)
-
-function Base.findlast(pat::RecordID, hdr::FitsHeader)
+function Base.findlast(pat::MatchableByName, hdr::FitsHeader)
     first = findfirst(pat, hdr)
     first === nothing && return nothing
     is_unique(pat) && return first
     # Enter slow part...
     @inbounds for i ∈ lastindex(hdr):-1:first+1
-        is_matching(hdr.cards[i], pat) && return i
+        match(pat, hdr.cards[i]) && return i
     end
     return first
 end
@@ -313,7 +324,7 @@ Base.findlast(func::Function, hdr::FitsHeader) = unsafe_findprev(func, hdr, last
 # NOTE: First stage of `findnext` and `findprev` avoids costly conversion if
 # result can be decided without actually searching. Need to specify type of
 # `what` in function signature to avoid ambiguities.
-for T in (Any, AbstractString, Keyword, FitsCard, Function)
+for T in (Any, AbstractString, MatchableName, FitsCard, Function)
     @eval function Base.findnext(what::$T, hdr::FitsHeader, start::Integer)
         start = to_type(Int, start)
         start > lastindex(hdr) && return nothing
@@ -328,24 +339,16 @@ for T in (Any, AbstractString, Keyword, FitsCard, Function)
     end
 end
 
-# When search pattern is a string, we must catch errors in Keyword() in case
-# the pattern is not a valid FITS keyword.
 for func in (:findfirst, :findlast)
-    @eval function Base.$func(name::AbstractString, hdr::FitsHeader)
-        try
-            return $func(Keyword(name), hdr)
-        catch
-            return nothing
-        end
+    @eval function Base.$func(str::AbstractString, hdr::FitsHeader)
+        pat = MatchableName(str)
+        return iszero(pat.key) ? nothing : $func(pat, hdr)
     end
 end
 for func in (:unsafe_findnext, :unsafe_findprev)
-    @eval function $func(name::AbstractString, hdr::FitsHeader, start::Int)
-        try
-            return $func(Keyword(name), hdr, start)
-        catch
-            return nothing
-        end
+    @eval function $func(str::AbstractString, hdr::FitsHeader, start::Int)
+        pat = MatchableName(str)
+        return iszero(pat.key) ? nothing : $func(pat, hdr, start)
     end
 end
 
@@ -353,26 +356,26 @@ end
 unsafe_findnext(pat, hdr::FitsHeader, start::Int) = nothing
 unsafe_findprev(pat, hdr::FitsHeader, start::Int) = nothing
 
-function unsafe_findnext(pat::RecordID, hdr::FitsHeader, start::Int)
+function unsafe_findnext(pat::MatchableByName, hdr::FitsHeader, start::Int)
     first = findfirst(pat, hdr)
     first === nothing && return nothing
     start ≤ first && return first
     is_unique(pat) && return nothing
     # Enter slow part...
     @inbounds for i ∈ start:lastindex(hdr)
-        is_matching(hdr.cards[i], pat) && return i
+        match(pat, hdr.cards[i]) && return i
     end
     return nothing
 end
 
-function unsafe_findprev(pat::RecordID, hdr::FitsHeader, start::Int)
+function unsafe_findprev(pat::MatchableByName, hdr::FitsHeader, start::Int)
     first = findfirst(pat, hdr)
     first === nothing && return nothing
     start < first && return nothing
     is_unique(pat) && return first
     # Enter slow part...
     @inbounds for i ∈ start:-1:first+1
-        is_matching(hdr.cards[i], pat) && return i
+        match(pat, hdr.cards[i]) && return i
     end
     return first
 end
@@ -391,9 +394,26 @@ function unsafe_findprev(func::Function, hdr::FitsHeader, start::Int)
     return nothing
 end
 
-is_matching(card::FitsCard, pat::RecordID) =
-    pat.key != Fits"HIERARCH" ? card.key == pat.key :
-    card.name === pat.name || (card.key == Fits"HIERARCH" && isequal(card.name, pat.name))
+"""
+    match(pat, card::FitsCard) -> bool
+
+yields whether `pat` matches the name of `card`.
+
+"""
+Base.match(pat, card::FitsCard) = false
+
+function Base.match(A::MatchableByName, B::FitsCard)
+    A.key === B.key || return false
+    A.key === Fits"HIERARCH" || return true
+    A.name === A.name || isequal(A.name, B.name)
+end
+
+function Base.match(pat::AbstractString, card::FitsCard)
+    c = try_parse_keyword(pat)
+    c isa Char && return false # `pat` is not a valid FITS keyword
+    key, pfx = c
+    return match(MatchableName(key, pat, pfx), card)
+end
 
 """
     eachmatch(what, hdr::FitsHeader)
@@ -436,14 +456,12 @@ Base.eachmatch(what, hdr::FitsHeader) = HeaderIterator(what, hdr)
 struct HeaderIterator{O<:Ordering,P}
     pattern::P
     header::FitsHeader
-    HeaderIterator(order::O, pattern::P, header::FitsHeader) where {O,P} =
-        new{O,P}(pattern, header)
+    HeaderIterator(ord::O, pat::P, hdr::FitsHeader) where {O,P} =
+        new{O,P}(pat, hdr)
 end
-HeaderIterator(pattern, header::FitsHeader) = HeaderIterator(Forward, pattern, header)
-HeaderIterator(order::Ordering, name::AbstractString, hdr::FitsHeader) =
-    HeaderIterator(order, try; Keyword(name); catch; NEVER_MATCHING_KEYWORD; end, hdr)
-
-const NEVER_MATCHING_KEYWORD = Keyword(0x3d3d3d3d3d3d3d3d, "========")
+HeaderIterator(pat, hdr::FitsHeader) = HeaderIterator(Forward, pat, hdr)
+HeaderIterator(ord::Ordering, pat::AbstractString, hdr::FitsHeader) =
+    HeaderIterator(ord, MatchableName(pat), hdr)
 
 Base.IteratorEltype(::Type{<:HeaderIterator}) = Base.HasEltype()
 Base.eltype(::Type{<:HeaderIterator}) = FitsCard

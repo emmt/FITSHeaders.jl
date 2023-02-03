@@ -793,6 +793,16 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
 end
 
 """
+    FITSBase.Parser.full_name(pfx, name::AbstractString)
+
+yields `"HIERARCH "*name` if `pfx` is true, `name` otherwise. The result is a
+`String`.
+
+"""
+full_name(pfx::Bool, name::AbstractString)::String =
+    pfx ? "HIERARCH "*name : String(name)
+
+"""
     FITSBase.keyword(name) -> full_name
 
 yields the full FITS keyword corresponding to `name`, throwing an exception if
@@ -821,10 +831,16 @@ keyword, while the 3rd and 4th ones are automatically turned into `HIERARCH`
 keywords because the 3rd one contains a space and because the 4th one is longer
 than $FITS_SHORT_KEYWORD_SIZE characters.
 
-See also [`FITSBase.check_keyword`](@ref).
+See also [`FITSBase.check_keyword`](@ref) and
+[`FITSBase.Parser.full_name`](@ref).
 
 """
-keyword(name::AbstractString) = check_keyword(name)[2]
+function keyword(name::AbstractString)
+    c = try_parse_keyword(name)
+    c isa Char && bad_character_in_keyword(c)
+    key, pfx = c
+    return full_name(pfx, name)
+end
 
 """
     FITSBase.check_keyword(name) -> key, full_name
@@ -833,78 +849,83 @@ checks the FITS keyword `name` and returns the corresponding quick key and full
 keyword name throwing an exception if `name` is not a valid FITS keyword. The
 full keyword name is a `string` instance either equal to `name` or to `"HIERARCH "*name`.
 
-See also [`FITSBase.keyword`](@ref), [`FITSBase.parse_keyword`](@ref).
+See also [`FITSBase.keyword`](@ref), [`FITSBase.parse_keyword`](@ref), and
+[`FITSBase.Parser.full_name`](@ref).
 
 """
 function check_keyword(name::AbstractString)
-    key, pfx = parse_keyword(name)
-    return key, pfx ? "HIERARCH "*name : String(name)
+    c = try_parse_keyword(name)
+    c isa Char && bad_character_in_keyword(c)
+    key, pfx = c
+    return key, full_name(pfx, name)
 end
 
 """
-    FITSBase.Parser.parse_keyword(A, rng=byte_index_range(A)) -> key, pfx
+    FITSBase.try_parse_keyword(str)
 
-parses the FITS keyword given by `A`, a string or a vector of bytes, throwing
-an exception if the name is invalid. The result is a 2-tuple: `key` is the
-quick keyword key and `pfx` is a boolean indicating whether the `"HIERARCH "`
-prefix should be prepended to `A` to form the full keyword name. If the range
-of bytes is longer than $FITS_SHORT_KEYWORD_SIZE or if any single space
-separator occurs in the range of bytes, a `HIERARCH` keyword is assumed even
-though the first bytes are not `"HIERARCH "`. Leading and trailing spaces are
-not allowed.
+parses the FITS keyword given by string `str`. In case of parsing error, the
+result is the first illegal character encountered in `str`. Otherwise, the
+result is the 2-tuple `(key,pfx)` with `key` the quick key of the keyword and
+`pfx` a boolean indicating whether the `"HIERARCH "` prefix should be prepended
+to `str` to form the full keyword name. If the string has more than
+$FITS_SHORT_KEYWORD_SIZE characters or if any single space separator occurs in
+the string, a `HIERARCH` keyword is assumed even though the string does not
+start with `"HIERARCH "`. Leading and trailing spaces are not allowed.
 
 The returned `key` is `Fits"HIERARCH"` in 4 cases:
 
-- The first bytes of the sequence are `"HIERARCH "` followed by a name,
-  possibly slit in several parts and possibly longer than
-  $FITS_SHORT_KEYWORD_SIZE, `pfx` is `false`.
+- The string starts with `"HIERARCH "` followed by a name, possibly split in
+  several words and possibly longer than $FITS_SHORT_KEYWORD_SIZE characters,
+  `pfx` is `false`.
 
-- The sequence does not starts by `"HIERARCH "` but at least one single space
-  separator occurs in the sequence, `pfx` is true.
+- The string does not starts with `"HIERARCH "` but consists in at least two
+  space-separated words, `pfx` is true.
 
-- The sequence does not starts by `"HIERARCH "` but the sequence is longer than
-  $FITS_SHORT_KEYWORD_SIZE, `pfx` is true.
+- The string does not starts with `"HIERARCH "` but is longer than
+  $FITS_SHORT_KEYWORD_SIZE characters, `pfx` is true.
 
-- The byte sequence is `"HIERARCH"`, `pfx` is `false`.
+- The string is `"HIERARCH"`, `pfx` is `false`.
 
-""" parse_keyword
-
-# FIXME: This function should only be used on strings.
-@inline function unsafe_parse_keyword(buf::ByteBuffer, rng::AbstractUnitRange{Int})
+"""
+function try_parse_keyword(str::Union{String,SubString{String}})
+    # NOTE: `str` is encoded in UTF-8 with codeunits that are bytes. Since FITS
+    # keywords must only consist in restricted ASCII characters (bytes less or
+    # equal that 0x7F), we can access the string as a vector of bytes.
+    # Moreover, if an illegal codeunit is encountered, its index is also the
+    # correct index of the offending ASCII (byte less or equal that 0x7F) or
+    # UTF8 character (byte greater that 0x7F).
     @inbounds begin
         # Compute quick key of the short FITS keyword, this is a cheap way to
         # figure out whether the sequence of bytes starts with "HIERARCH". This
         # does not check for the validity of the leading bytes, unless the key
         # is Fits"HIERARCH".
-        i_first, i_last = first(rng), last(rng)
+        len = ncodeunits(str)
+        key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FitsKey(Val(:full), str, 0) :
+            FitsKey(Val(:pad), str, 0, len)
         any_space = false # any space found so far?
-        pfx = false # add "HIERARCH " prefix?
-        off = i_first - 1
-        len = length(rng)
-        key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FitsKey(Val(:full), buf, off) :
-            FitsKey(Val(:pad), buf, off, len)
+        pfx = false # must add "HIERARCH " prefix?
+        i = 1 # starting index
         if key == Fits"HIERARCH"
-            # Byte sequence starts with "HIERARCH". There are 3 possibilities:
+            # String starts with "HIERARCH". There are 3 possibilities:
             #
-            # 1. The keyword is exatly "HIERARCH".
+            # 1. The string is exactly "HIERARCH".
             #
-            # 2. The keyword starts with "HIERARCH " and is thus a regular
+            # 2. The string starts with "HIERARCH " and is thus a regular
             #    HIERARCH keyword.
             #
-            # 2. The keyword starts with "HIERARCHx" where x is any valid
-            #    non-space character. The keyword is thus too long to be a
+            # 2. The string starts with "HIERARCHx" where x is any valid
+            #    non-space character. The string is thus too long to be a
             #    simple FITS keyword and the HIERARCH convention must be used.
             #    The prefix "HIERARCH " must be prepended for that.
             #
             # Which of these apply requires to look at next character. In any
             # case, the leading FITS_SHORT_KEYWORD_SIZE bytes are valid, so we
-            # increment i_first to not re-check this part.
-            i_first += FITS_SHORT_KEYWORD_SIZE
+            # increment index i to not re-check this part.
+            i += FITS_SHORT_KEYWORD_SIZE
             # If at least one more byte is available, we are in cases 2 or 3; in
             # case 1 otherwise.
-            if i_first ≤ i_last
-                b = get_byte(buf, i_first)
-                i_first += 1
+            if i ≤ len
+                b = get_byte(str, i)
                 if is_space(b)
                     # Case 2: the sequence starts with "HIERARCH ".
                     any_space = true
@@ -913,27 +934,27 @@ The returned `key` is `Fits"HIERARCH"` in 4 cases:
                     # be prepended.
                     pfx = true
                 else
-                    bad_character_in_keyword(b)
+                    return str[i] # illegal character
                 end
+                i += 1
             end
         elseif len ≥ 1
             # We must verify that the first byte is valid (not a space).
-            b = get_byte(buf, i_first)
-            i_first += 1
-            is_keyword(b) || bad_character_in_keyword(b)
+            b = get_byte(str, i)
+            is_keyword(b) || return str[i] # illegal character
+            i += 1
             # A long keyword implies using the HIERARCH convention.
             if len > FITS_SHORT_KEYWORD_SIZE
                 key = Fits"HIERARCH"
                 pfx = true
             end
         end
-        #println("i_first = $i_first, pfx = $pfx, key = $key")
         # Check remaining bytes.
-        for i in i_first:i_last
-            b = get_byte(buf, i)
+        while i ≤ len
+            b = get_byte(str, i)
             if is_space(b)
                 # It is an error to have 2 or more consecutive spaces.
-                any_space && bad_character_in_keyword(b)
+                any_space && return str[i] # illegal character
                 any_space = true
                 # Keyword must be a HIERARCH one because it has at least one
                 # space separator. If this was not already detected, the
@@ -946,10 +967,11 @@ The returned `key` is `Fits"HIERARCH"` in 4 cases:
                 # Not a space.
                 any_space = false
             else
-                bad_character_in_keyword(b)
+                return str[i] # illegal character
             end
+            i += 1
         end
-        any_space && bad_character_in_keyword(' ')
+        any_space && return ' ' # illegal character
         return key, pfx
     end
 end
@@ -1185,7 +1207,7 @@ provided, all the bytes of `buf` are considered. If `rng` is provided,
 end
 
 # Implement higher level "safe" methods.
-for func in (:parse_keyword, :trim_leading_spaces, :trim_trailing_spaces)
+for func in (:trim_leading_spaces, :trim_trailing_spaces)
     unsafe_func = Symbol("unsafe_$func")
     @eval begin
         $func(buf::ByteBuffer) = $unsafe_func(buf, byte_index_range(buf))

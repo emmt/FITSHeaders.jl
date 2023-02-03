@@ -119,29 +119,29 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSBase.keyword("TOO  MANY SPACES")
         @test_throws Exception FITSBase.keyword("HIERARCH  A") # more than one space
         # Short FITS keywords.
-        @test FITSBase.Parser.parse_keyword("SIMPLE") == (Fits"SIMPLE", false)
+        @test FITSBase.try_parse_keyword("SIMPLE") == (Fits"SIMPLE", false)
         @test FITSBase.keyword("SIMPLE") == "SIMPLE"
-        @test FITSBase.Parser.parse_keyword("HISTORY") == (Fits"HISTORY", false)
+        @test FITSBase.try_parse_keyword("HISTORY") == (Fits"HISTORY", false)
         @test FITSBase.keyword("HISTORY") == "HISTORY"
         # Keywords longer than 8-characters are HIERARCH ones.
-        @test FITSBase.Parser.parse_keyword("LONG-NAME") == (Fits"HIERARCH", true)
+        @test FITSBase.try_parse_keyword("LONG-NAME") == (Fits"HIERARCH", true)
         @test FITSBase.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
-        @test FITSBase.Parser.parse_keyword("HIERARCHY") == (Fits"HIERARCH", true)
+        @test FITSBase.try_parse_keyword("HIERARCHY") == (Fits"HIERARCH", true)
         @test FITSBase.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
         # Keywords starting by "HIERARCH " are HIERARCH ones.
         for key in ("HIERARCH GIZMO", "HIERARCH MY GIZMO", "HIERARCH MY BIG GIZMO")
-            @test FITSBase.Parser.parse_keyword(key) == (Fits"HIERARCH", false)
+            @test FITSBase.try_parse_keyword(key) == (Fits"HIERARCH", false)
             @test FITSBase.keyword(key) === key # should return the same object
         end
         # Keywords with multiple words are HIERARCH ones whatever their lengths.
         for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
-            @test FITSBase.Parser.parse_keyword(key) == (Fits"HIERARCH", true)
+            @test FITSBase.try_parse_keyword(key) == (Fits"HIERARCH", true)
             @test FITSBase.keyword(key) == "HIERARCH "*key
         end
         # The following cases are consequences of the implemented scanner.
-        @test FITSBase.Parser.parse_keyword("HIERARCH") == (Fits"HIERARCH", false)
+        @test FITSBase.try_parse_keyword("HIERARCH") == (Fits"HIERARCH", false)
         @test FITSBase.keyword("HIERARCH") == "HIERARCH"
-        @test FITSBase.Parser.parse_keyword("HIERARCH SIMPLE") == (Fits"HIERARCH", false)
+        @test FITSBase.try_parse_keyword("HIERARCH SIMPLE") == (Fits"HIERARCH", false)
         @test FITSBase.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
     end
     @testset "Parser" begin
