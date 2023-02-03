@@ -534,4 +534,19 @@ has_length(iter) = Base.IteratorSize(iter) isa Union{Base.HasShape,Base.HasLengt
 to_type(::Type{T}, x::T) where {T} = x
 to_type(::Type{T}, x) where {T} = convert(T, x)::T
 
+# Implement matching by regular expressions.
+struct Matches{T} <: Function
+    pattern::T
+end
+(obj::Matches{Regex})(card::FitsCard) = match(obj.pattern, card.name) !== nothing
+for func in (:findfirst, :findlast)
+    @eval Base.$func(pat::Regex, hdr::FitsHeader) = $func(Matches(pat), hdr)
+end
+for func in (:findnext, :findprev)
+    @eval Base.$func(pat::Regex, hdr::FitsHeader, start::Integer) =
+        $func(Matches(pat), hdr, start)
+end
+HeaderIterator(ord::Ordering, pat::Regex, hdr::FitsHeader) =
+    HeaderIterator(ord, Matches(pat), hdr)
+
 end # module

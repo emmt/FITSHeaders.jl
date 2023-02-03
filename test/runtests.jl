@@ -857,13 +857,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.comment == com
     end
     @testset "Headers" begin
-        dims = (4,5,6)
+        dims = (4,5,6,7)
         h = FitsHeader("SIMPLE" => (true, "FITS file"),
                        "BITPIX" => (-32, "bits per pixels"),
-                       "NAXIS" => (length(dims), "number of dimensions"),
-                       "MISSING" => (missing, "Missing value."))
-        @test length(h) == 4
-        @test sort(collect(keys(h))) == ["BITPIX", "MISSING", "NAXIS", "SIMPLE"]
+                       "NAXIS" => (length(dims), "number of dimensions"))
+        @test length(h) == 3
+        @test sort(collect(keys(h))) == ["BITPIX", "NAXIS", "SIMPLE"]
         # Same object:
         @test convert(FitsHeader, h) === h
         # Same contents but different objects:
@@ -946,13 +945,16 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # It is forbidden to have more than one non-unique keyword.
         i = findfirst("BITPIX", h)
         @test_throws ArgumentError h[i+1] = h[i]
-        # Replace a card by comment appering earlier than any other comment.
-        n = length(eachmatch("COMMENT", h))
-        i = findfirst("COMMENT", h)
-        h[i-1] = ("COMMENT" => (nothing, "Some early comment."))
-        @test findfirst("COMMENT", h) == i - 1
-        @test length(eachmatch("COMMENT", h)) == n + 1
-        @test h[i-1].type == FITS_COMMENT
+        # Replace a card by comment appering earlier than any other comment. Do
+        # this in a temporary copy to avoid corrupting the header.
+        let hp = copy(h)
+            n = length(eachmatch("COMMENT", hp))
+            i = findfirst("COMMENT", hp)
+            hp[i-1] = ("COMMENT" => (nothing, "Some early comment."))
+            @test findfirst("COMMENT", hp) == i - 1
+            @test length(eachmatch("COMMENT", hp)) == n + 1
+            @test hp[i-1].type == FITS_COMMENT
+        end
         # Replace existing card by another one with another name. Peek the
         # first of a non-unique record to check that the index is correctly
         # updated.
@@ -997,10 +999,6 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         i = findfirst("COMMENT", h)
         @test i isa Integer
         @test h[i].type === FITS_COMMENT
-        @test h[i].comment == "Some early comment."
-        i = findnext("COMMENT", h, i + 1)
-        @test i isa Integer
-        @test h[i].type === FITS_COMMENT
         @test h[i].comment == "Some comment."
         i = findnext(h[i], h, i + 1)
         @test i isa Integer
@@ -1024,10 +1022,6 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test i isa Integer
         @test h[i].type === FITS_COMMENT
         @test h[i].comment == "Some comment."
-        i = findprev(h[i], h, i - 1)
-        @test i isa Integer
-        @test h[i].type === FITS_COMMENT
-        @test h[i].comment == "Some early comment."
         @test findprev(h[i], h, i - 1) isa Nothing
         # Check that non-commentary records are unique.
         for i in eachindex(h)
@@ -1043,6 +1037,31 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test hp isa FitsHeader
         @test startswith(first(hp).name, "NAXIS")
         @test startswith(last(hp).name, "NAXIS")
+        # Search by regular expressions.
+        n = length(dims)
+        pat = r"^NAXIS[0-9]*$"
+        i = findfirst(pat, h)
+        @test h[i].name == "NAXIS"
+        i = findnext(pat, h, i+1)
+        @test h[i].name == "NAXIS1"
+        i = findnext(pat, h, i+1)
+        @test h[i].name == "NAXIS2"
+        i = findlast(pat, h)
+        @test h[i].name == "NAXIS$(n)"
+        i = findprev(pat, h, i-1)
+        @test h[i].name == "NAXIS$(n - 1)"
+        i = findnext(pat, h, i-1)
+        @test h[i].name == "NAXIS$(n - 2)"
+        let hp = filter(pat, h)
+            @test hp isa FitsHeader
+            @test startswith(first(hp).name, "NAXIS")
+            @test startswith(last(hp).name, "NAXIS")
+        end
+        let v = collect(pat, h)
+            @test v isa Vector{FitsCard}
+            @test startswith(first(v).name, "NAXIS")
+            @test startswith(last(v).name, "NAXIS")
+        end
     end
 end
 
