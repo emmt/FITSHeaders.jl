@@ -418,7 +418,16 @@ const NEVER_MATCHING_KEYWORD = Keyword(0x3d3d3d3d3d3d3d3d, "========")
 Base.IteratorEltype(::Type{<:HeaderIterator}) = Base.HasEltype()
 Base.eltype(::Type{<:HeaderIterator}) = FitsCard
 
+# Extend length for HeaderIterator but pretend its size is unknown because the
+# implementation of the length method is rather inefficient.
 Base.IteratorSize(::Type{<:HeaderIterator}) = Base.SizeUnknown()
+function Base.length(iter::HeaderIterator)
+    n = 0
+    for rec in iter
+        n += 1
+    end
+    return n
+end
 
 Base.reverse(iter::HeaderIterator{typeof(Forward)}) =
     HeaderIterator(Reverse, iter.pattern, iter.header)

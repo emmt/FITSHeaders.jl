@@ -15,6 +15,10 @@ else
     error("unsupported byte order")
 end
 
+# Returns is only defined for Julia ≥ 1.7
+struct Returns{V} <: Function; val::V; end
+(obj::Returns)(args...; kwds...) = obj.val
+
 make_FitsKey(str::AbstractString) =
     FitsKey(reinterpret(UInt64,UInt8[c for c in str])[1])
 
@@ -885,6 +889,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         h["BZERO"] = 0.0
         h["COMMENT"] = "Another comment."
         h["COMMENT"] = "Yet another comment."
+        @test length(eachmatch("COMMENT", h)) == 3
+        @test count(Returns(true), eachmatch("COMMENT", h)) == 3
         # Test indexing by integer/name.
         i = findfirst("BITPIX", h)
         @test i isa Integer && h[i].name == "BITPIX"
