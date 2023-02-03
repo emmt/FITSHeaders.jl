@@ -926,6 +926,9 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test i isa Integer
         h[i] = (h[i].name => (-64, h[i].comment))
         @test h["BITPIX"].value() == -64
+        # It is forbidden to have more than one non-unique keyword.
+        i = findfirst("BITPIX", h)
+        @test_throws ArgumentError h[i+1] = h[i]
         # Replace existing card by another one with another name. Peek the
         # first of a non-unique record to check that the index is correctly
         # updated.
