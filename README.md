@@ -305,7 +305,7 @@ FitsCard: COMMENT A comment.
 
 Note that, when indexing by name, the first matching record is returned. This
 may be a concern for non-unique keywords as in the last above example. All
-matching records can be `collect`ed into a vector of `FitsCard` elements by:
+matching records can be collected into a vector of `FitsCard` elements by:
 
 ``` julia
 collect(key, hdr) # all records whose name matches `key`
@@ -325,6 +325,11 @@ julia> collect(rec -> startswith(rec.name, "NAXIS"), hdr)
  FitsCard: NAXIS   = 2 / number of dimensions
  FitsCard: NAXIS1  = 384
  FitsCard: NAXIS2  = 288
+
+julia> collect(r"^NAXIS[0-9]+$", hdr)
+2-element Array{FitsCard,1}:
+ FitsCard("NAXIS1" => 384)
+ FitsCard("NAXIS2" => 288)
 ```
 
 This behavior is different from that of `filter` which yields another FITS
@@ -351,9 +356,9 @@ findprev(what, hdr, start)
 which all return a valid integer index if a record matching `what` is found and
 `nothing` otherwise. The matching pattern `what` can be a keyword (string), a
 FITS card (an instance of `FitsCard` whose name is used as a matching pattern),
-or a predicate function which takes a FITS card argument and shall return
-whether it matches. The find methods just yield `nothing` for any unsupported
-kind of pattern.
+a regular expression, or a predicate function which takes a FITS card argument
+and shall return whether it matches. The find methods just yield `nothing` for
+any unsupported kind of pattern.
 
 The `eachmatch` method is a simple mean to iterate over matching records:
 
