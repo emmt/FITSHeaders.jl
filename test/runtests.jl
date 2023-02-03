@@ -926,6 +926,23 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test i isa Integer
         h[i] = (h[i].name => (-64, h[i].comment))
         @test h["BITPIX"].value() == -64
+        # Replace existing card by another one with another name. Peek the
+        # first of a non-unique record to check that the index is correctly
+        # updated.
+        for i in 1:3 # we need a number of commentary records
+            h["HISTORY"] = "History record number $i."
+            h["OTHER$i"] = (i, "Something else.")
+        end
+        n = length(eachmatch("HISTORY", h))
+        @test n ≥ 3
+        while n > 0
+            i = findfirst("HISTORY", h)
+            @test i isa Integer
+            h[i] = ("SOME$i" => (42, h[i].comment))
+            n -= 1
+            @test length(eachmatch("HISTORY", h)) == n
+        end
+        @test findfirst("HISTORY", h) === nothing
         # Append non-existing record.
         n = length(h)
         h["GIZMO"] = ("Joe's taxi", "what?")

@@ -155,22 +155,52 @@ end
 end
 
 # This unsafe method assumes that index i is valid.
-function unsafe_setindex!(hdr::FitsHeader, card::FitsCard, i::Int)
-    i_first = findfirst(card, hdr)
-    if i_first == nothing
-        # No card exists in the header with this name.
-        delete!(hdr.index, (@inbounds hdr[i]).name) # remove old name in index
-        hdr.index[card.name] = i
-    elseif i != i_first
-        # Index may have to be updated.
-        is_unique(card) && error("FITS keyword \"$(card.name)\" already exists at index $(i_first)")
-        if i < i_first
-            # Inserted card will be the first one occurring in the header with
-            # this name.
-            hdr.index[card.name] = i
+function unsafe_setindex!(hdr::FitsHeader, new_card::FitsCard, i::Int)
+    @inbounds old_card = hdr.cards[i]
+    if !is_matching(new_card, old_card)
+        # The name of the i-th card will change. We have to update the index
+        # accordingly.
+        #
+        # We first determine whether the index has to be updated for the name
+        # of the new card without touching the structure until the index has
+        # been updated for the name of the old card.
+        update_index_at_new_name = false
+        j = findfirst(new_card, hdr)
+        if j == nothing
+            # No other card exists in the header with this name.
+            update_index_at_new_name = true
+        elseif i != j
+            # The card name must be unique. Throwing an error here is painless
+            # because the structure has not yet been modified.
+            is_unique(new_card) && throw(ArgumentError(
+                "FITS keyword \"$(new_card.name)\" already exists at index $j"))
+            # Index must be updated for the new card name if new card will be
+            # the first one occurring in the header with this name.
+            update_index_at_new_name = i < j
+        end
+        # Now, do update index for the name of the old card.
+        if is_unique(old_card)
+            # There should be no other cards with the same name as the old
+            # card. Remove this name from the index.
+            delete!(hdr.index, old_card.name)
+        elseif findfirst(old_card, hdr) == i
+            # More than one card with the same name as the old card are allowed
+            # and the old card is the first with this name. Update the index
+            # with the next card with this name if one such exists in the
+            # index; otherwise, delete the name from the index.
+            k = findnext(old_card, hdr, i+1)
+            if k === nothing
+                delete!(hdr.index, old_card.name)
+            else
+                hdr.index[old_card.name] = k
+            end
+        end
+        if update_index_at_new_name
+            hdr.index[new_card.name] = i
         end
     end
-    @inbounds hdr.cards[i] = card
+    # Remplace the old card by the new one.
+    @inbounds hdr.cards[i] = new_card
 end
 
 Base.setindex!(hdr::FitsHeader, val, name::AbstractString) = push!(hdr, name => val)
