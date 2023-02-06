@@ -1,5 +1,8 @@
-# User visible changes in `FITSBase` package
+# User visible changes in `BaseFITS` package
 
+## Version 0.3.0
+
+- Package renamed `BaseFITS.jl`.
 
 ## Version 0.2.1
 
