@@ -69,7 +69,8 @@ import .Cards:
 
 include("headers.jl")
 import .Headers:
-    FitsHeader
+    FitsHeader,
+    FullName
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin

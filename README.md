@@ -10,11 +10,13 @@ and associates a keyword with a value and/or a comment.
 
 The `FITSBase` package is intended to provide:
 
-- methods for fast parsing of a FITS header or of a piece of a FITS header that
-  is a single FITS header card;
+- Methods for fast parsing of a FITS header or of a piece of a FITS header that
+  is a single FITS header card.
 
-- an expressive API for creating FITS cards and accessing their components
+- An expressive API for creating FITS cards and accessing their components
   (keyword, value, and comment), possibly, in a *type-stable* way.
+
+- Methods for easy access the records of a FITS header.
 
 
 ## Building FITS cards

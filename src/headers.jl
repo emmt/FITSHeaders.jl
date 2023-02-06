@@ -254,9 +254,19 @@ function Base.push!(hdr::FitsHeader, card::FitsCard)
     return hdr
 end
 
-# The HIERARCH prefix being optional to match a FITS keyword, and the quick key
-# being useful to accelerate comparisons. FullName is a guarantee to have the
-# full name and the quick key built from a simplified keyword name.
+"""
+    FITSBase.FullName(str) -> obj
+
+yields the full name of a FITS header record given the, possibly shortened,
+name `str`. The returned object has 2 properties: `obj.name` is the full name
+and `obj.key` is the quick key uniquely representing the 8 first characters of
+the full name.
+
+The `"HIERARCH "` prefix being optional to match a FITS keyword, and the quick
+key being useful to accelerate comparisons. `FullName` is a guarantee to have
+the full name and the quick key built from a, possibly shortened, keyword name.
+
+"""
 struct FullName
     key::FitsKey # quick key
     name::String # full name
