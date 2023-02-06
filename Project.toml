@@ -1,7 +1,7 @@
 name = "FITSBase"
 uuid = "ff9d1741-4d03-4fa8-9786-af30ea789bb0"
 authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
