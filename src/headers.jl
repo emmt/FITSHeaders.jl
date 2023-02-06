@@ -64,31 +64,15 @@ struct FitsHeader <: AbstractVector{FitsCard}
                             # non-continuation keywords) entry with given
                             # keyword
 
-    # Build empty header.
-    FitsHeader() = new(FitsCard[], Dict{String,Int}())
+    # Build empty header or filled by keywords.
+    FitsHeader(; kwds...) =
+        merge!(new(FitsCard[], Dict{String,Int}()), values(kwds))
 
     # Copy constructor.
     FitsHeader(hdr::FitsHeader) = new(copy(hdr.cards), copy(hdr.index))
 end
 
-# By default, assume an iterator.
-function FitsHeader(iter)
-    hdr = FitsHeader()
-    has_length(iter) && (len = length(iter)) > 0 && sizehint!(hdr, len)
-    for rec ∈ iter
-        push!(hdr, FitsCard(rec))
-    end
-    return hdr
-end
-
-function FitsHeader(recs...)
-    hdr = FitsHeader()
-    (len = length(recs)) > 0 && sizehint!(hdr, len)
-    for rec ∈ recs
-        push!(hdr, FitsCard(rec))
-    end
-    return hdr
-end
+FitsHeader(args...) = merge!(FitsHeader(), args...)
 
 FitsHeader(rec::Union{FitsCard,Pair}) = push!(FitsHeader(), FitsCard(rec))
 
@@ -111,16 +95,38 @@ function Base.empty!(hdr::FitsHeader)
     return hdr
 end
 
-Base.merge(A::FitsHeader, B::FitsHeader...) = merge!(copy(A), B...)
-Base.merge!(A::FitsHeader) = A
-function Base.merge!(A::FitsHeader, B::FitsHeader)
-    for card in B
-        push!(A, card)
+Base.merge(hdr::FitsHeader, args...) = merge!(copy(hdr), args...)
+
+Base.merge!(dest::FitsHeader) = dest
+Base.merge!(dest::FitsHeader, A, B...) = merge!(merge!(dest, A), B...)
+
+Base.merge!(dest::FitsHeader, other::Union{Pair,FitsCard}) = push!(dest, other)
+
+function Base.merge!(dest::FitsHeader, other::FitsHeader)
+    for card in other
+        push!(dest, card)
     end
-    return A
+    return dest
 end
-Base.merge!(A::FitsHeader, B::FitsHeader, C::FitsHeader...) =
-    merge!(merge!(A, B), C...)
+
+function Base.merge!(dest::FitsHeader, other::NamedTuple)
+    if (len = length(other)) > 0
+        sizehint!(dest, length(dest) + len)
+        for key in keys(other)
+            push!(dest, FitsCard(key => other[key]))
+        end
+    end
+    return dest
+end
+
+# By default, assume an iterable object.
+function Base.merge!(dest::FitsHeader, other)
+    has_length(other) && (len = length(other)) > 0 && sizehint!(dest, length(dest) + len)
+    for item ∈ other
+        push!(dest, FitsCard(item))
+    end
+    return dest
+end
 
 # Implement part of the abstract dictionary API.
 Base.keys(hdr::FitsHeader) = keys(hdr.index)

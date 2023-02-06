@@ -835,6 +835,7 @@ See also [`BaseFITS.check_keyword`](@ref) and
 [`BaseFITS.Parser.full_name`](@ref).
 
 """
+keyword(name::Symbol) = keyword(String(name))
 function keyword(name::AbstractString)
     c = try_parse_keyword(name)
     c isa Char && bad_character_in_keyword(c)
@@ -853,6 +854,7 @@ See also [`BaseFITS.keyword`](@ref), [`BaseFITS.parse_keyword`](@ref), and
 [`BaseFITS.Parser.full_name`](@ref).
 
 """
+check_keyword(name::Symbol) = check_keyword(String(name))
 function check_keyword(name::AbstractString)
     c = try_parse_keyword(name)
     c isa Char && bad_character_in_keyword(c)

@@ -49,6 +49,18 @@ const FitsInteger = Int64
 const FitsFloat   = Float64
 const FitsComplex = Complex{FitsFloat}
 
+# Types equivalent to undefined FITS card value.
+const Undefined = Union{Missing,UndefInitializer}
+
+# Allowed types for FITS card names.
+const CardName = Union{AbstractString,Symbol}
+
+# Allowed types for FITS card values (including commentary cards).
+const CardValue = Union{Real,AbstractString,Complex,Undefined,Nothing}
+
+# Allowed types for FITS card comments.
+const CardComment = Union{AbstractString,Nothing}
+
 include("parser.jl")
 import .Parser:
     @Fits_str,

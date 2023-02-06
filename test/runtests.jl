@@ -891,12 +891,11 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         for i in eachindex(dims)
             push!(h1, "NAXIS$i" => (dims[i], "length of dimension # $i"))
         end
-        h2 = FitsHeader()
-        push!(h2, "COMMENT" => "Some comment.")
+        h2 = FitsHeader(COMMENT = "Some comment.",
+                        BSCALE = (1.0, "Scaling factor."),
+                        BZERO = (0.0, "Bias offset."))
         h2["CCD GAIN"] = (3.2, "[ADU/e-] detector gain")
         h2["HIERARCH CCD BIAS"] = -15
-        h2["BSCALE"] = 1.0
-        h2["BZERO"] = 0.0
         h2["COMMENT"] = "Another comment."
         h2["COMMENT"] = "Yet another comment."
         hp = merge(h, h1, h2)
@@ -923,7 +922,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test i isa Integer && h[i].name == "BITPIX"
         @test h["BITPIX"] === h[i]
         @test h["BSCALE"].value(Real) ≈ 1
-        @test h["BSCALE"].comment == ""
+        @test h["BSCALE"].comment == "Scaling factor."
         # Test HIERARCH records.
         @test get(h, 0, nothing) === nothing
         @test get(h, 1, nothing) === h[1]

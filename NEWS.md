@@ -4,6 +4,16 @@
 
 - Package renamed `BaseFITS.jl`.
 
+- `FitsHeader` can be built from list of header cards, list of pairs, and named
+  tuples. Here "list" means any iterable producing items of a given type. The
+  same types are allowed for `merge` and `merge!` applied to a FITS header.
+
+- Non-exported constants `CarName`, `CardValue`, `CardComment`, and `Undefined`
+  to help converting a pair into a FITS header card.
+
+- `BaseFITS.keyword` and `BaseFITS.check_keyword` can take a symbolic name as
+  argument.
+
 ## Version 0.2.1
 
 - Can search cards in FITS header by regular expressions.

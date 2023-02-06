@@ -11,9 +11,13 @@ export FitsCard
 
 using ..BaseFITS
 using ..BaseFITS:
+    CardName,
+    CardValue,
+    CardComment,
     FitsInteger,
     FitsFloat,
-    FitsComplex
+    FitsComplex,
+    Undefined
 import ..BaseFITS:
     FitsCardType
 using ..BaseFITS.Parser:
@@ -33,7 +37,6 @@ import ..BaseFITS.Parser:
     is_comment,
     is_end
 
-const Undefined = Union{Missing,UndefInitializer}
 const END_STRING = "END"
 const UNDEF_LOGICAL = false
 const UNDEF_INTEGER = zero(FitsInteger)
@@ -451,24 +454,28 @@ Base.Pair(A::FitsCard) = Pair(A.name, (A.value(), A.comment))
 #Base.Pair{K}(A::FitsCard) where {K} = Pair{K,<:Any}(A.name, (A.value(), A.comment))
 Base.Pair{K,V}(A::FitsCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
 Base.Pair{K,V}(A::FitsCard) where {K,T,S,V<:Tuple{T,S}} = Pair{K,V}(A.name, (A.value(T), A.comment))
-function FitsCard(pair::Pair{<:AbstractString,
-                             <:Tuple{Union{AbstractString,Number,Undefined,Nothing},
-                                     AbstractString}})
+function FitsCard(pair::Pair{<:CardName,<:Tuple{CardValue,CardComment}})
     key, name = check_keyword(first(pair))
     val, com = last(pair)
-    return FitsCard(key, name, val, com)
+    return FitsCard(key, name, val, to_comment(com))
 end
-function FitsCard(pair::Pair{<:AbstractString, <:Union{Number,Undefined}})
+FitsCard(pair::Pair{<:CardName, <:Tuple{CardValue}}) =
+    FitsCard(first(pair) => (last(pair)[1], nothing))
+function FitsCard(pair::Pair{<:CardName, <:CardValue})
     key, name = check_keyword(first(pair))
     val = last(pair)
     return FitsCard(key, name, val, EMPTY_STRING)
 end
-function FitsCard(pair::Pair{<:AbstractString, <:AbstractString})
+function FitsCard(pair::Pair{<:CardName, <:AbstractString})
     key, name = check_keyword(first(pair))
     val_or_com = last(pair)
     return is_comment(key) ?
         FitsCard(key, name, nothing, val_or_com) :
         FitsCard(key, name, val_or_com, EMPTY_STRING)
 end
+
+# Yield a string from any instance of CardComment.
+to_comment(com::AbstractString) = com
+to_comment(com::Nothing) = EMPTY_STRING
 
 end # module
