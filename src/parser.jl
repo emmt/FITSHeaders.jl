@@ -332,6 +332,46 @@ equal(b::T, c::T) where {T} = b === c
 between(x::UInt8, lo::Char, hi::Char) = between(x, UInt8(lo), UInt8(hi))
 between(x::T, lo::T, hi::T) where {T} = (lo ≤ x) & (x ≤ hi)
 
+const C_RESTRICTED_ASCII = 0x01 << 0
+const C_KEYWORD          = 0x01 << 1
+const C_DIGIT            = 0x01 << 2
+const C_UPPERCASE        = 0x01 << 3
+const C_LOWERCASE        = 0x01 << 4
+const C_STARTS_LOGICAL   = 0x01 << 5
+const C_STARTS_NUMBER    = 0x01 << 6
+
+function build_ctype()
+    code = zeros(UInt8, 256)
+    firstindex(code) === 1 || throw(AssertionError("firstindex(code) === 1"))
+    typemin(UInt8) === 0x00 || throw(AssertionError("typemin(UInt8) === 0x00"))
+    typemax(UInt8) === 0xFF || throw(AssertionError("typemax(UInt8) === 0xFF"))
+    typemin(Char) == Char(0) || throw(AssertionError("typemin(Char) == Char(0)"))
+    promote_type(UInt8, Int) === Int || throw(AssertionError("promote_type(UInt8, Int) === Int"))
+    for c in ' ':'~'
+        code[c%UInt8 + 1] |= C_RESTRICTED_ASCII
+    end
+    for c in '0':'9'
+        code[c%UInt8 + 1] |= C_DIGIT|C_KEYWORD|C_STARTS_NUMBER
+    end
+    for c in 'A':'Z'
+        code[c%UInt8 + 1] |= C_UPPERCASE|C_KEYWORD
+    end
+    for c in 'a':'z'
+        code[c%UInt8 + 1] |= C_LOWERCASE
+    end
+    code['T'%UInt8 + 1] |= C_STARTS_LOGICAL
+    code['F'%UInt8 + 1] |= C_STARTS_LOGICAL
+    code['.'%UInt8 + 1] |= C_STARTS_NUMBER
+    code['+'%UInt8 + 1] |= C_STARTS_NUMBER
+    code['-'%UInt8 + 1] |= C_KEYWORD|C_STARTS_NUMBER
+    code['_'%UInt8 + 1] |= C_KEYWORD
+    return code
+end
+
+const C_TYPE = build_ctype()
+c_type(c::UInt8) = @inbounds C_TYPE[c + 1]
+c_type(c::Char) = ifelse(c%UInt < length(C_TYPE), c_type(c%UInt8), zero(eltype(C_TYPE)))
+
 is_digit(c::Union{Char,UInt8}) = between(c, '0', '9')
 is_uppercase(c::Union{Char,UInt8}) = between(c, 'A', 'Z')
 is_lowercase(c::Union{Char,UInt8}) = between(c, 'a', 'z')
@@ -344,7 +384,9 @@ is_comment_separator(c::Union{Char,UInt8}) = equal(c, '/')
 is_opening_parenthesis(c::Union{Char,UInt8}) = equal(c, '(')
 is_closing_parenthesis(c::Union{Char,UInt8}) = equal(c, ')')
 is_restricted_ascii(c::Union{Char,UInt8}) = between(c, ' ', '~')
-is_keyword(c::Union{Char,UInt8}) = is_digit(c) | is_uppercase(c) | is_hyphen(c) | is_underscore(c)
+is_keyword(c::Union{Char,UInt8}) = (c_type(c) & C_KEYWORD) == C_KEYWORD
+starts_logical(c::Union{Char,UInt8}) = (c_type(c) & C_STARTS_LOGICAL) == C_STARTS_LOGICAL
+starts_number(c::Union{Char,UInt8}) = (c_type(c) & C_STARTS_NUMBER) == C_STARTS_NUMBER
 
 @inline function FitsKey(buf::ByteBuffer, off::Int = 0)
     i_last = last_byte_index(buf)
@@ -1003,7 +1045,7 @@ function scan_value_comment_parts(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     end
     # Guess card type based on first non-space byte.
     b = get_byte(buf, i)
-    if equal(b, '+') | equal(b, '-') | equal(b, '.') | is_digit(b)
+    if starts_number(b)
         # Integer or float value.
         type = equal(b, '.') ? FITS_FLOAT : FITS_INTEGER
         for j in i+1:k
