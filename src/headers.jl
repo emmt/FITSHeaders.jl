@@ -447,7 +447,7 @@ end
 function have_same_name(A::Union{FitsCard,FullName}, B::FitsCard)
     A.key === B.key || return false
     A.key === Fits"HIERARCH" || return true
-    A.name === A.name || isequal(A.name, B.name)
+    A.name === B.name || isequal(A.name, B.name)
 end
 
 """
