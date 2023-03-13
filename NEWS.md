@@ -1,5 +1,13 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.2
+
+- Fix silly bug in keyword comparison.
+
+## Version 0.3.1
+
+- Use quick table for character class.
+
 ## Version 0.3.0
 
 - Package renamed `BaseFITS.jl`.
