@@ -4,6 +4,8 @@
 
 - Use `AsType` package.
 
+- Remove `CompatHelper`.
+
 ## Version 0.3.2
 
 - Fix silly bug in keyword comparison.
