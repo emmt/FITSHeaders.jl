@@ -1,5 +1,9 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.3
+
+- Use `AsType` package.
+
 ## Version 0.3.2
 
 - Fix silly bug in keyword comparison.

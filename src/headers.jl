@@ -6,6 +6,7 @@ using ..BaseFITS
 using ..BaseFITS: try_parse_keyword, is_comment
 using ..BaseFITS.Parser: full_name
 
+using AsType
 using Base: @propagate_inbounds
 using Base.Order: Ordering, Forward, Reverse
 
@@ -152,7 +153,7 @@ end
 
 @inline function Base.setindex!(hdr::FitsHeader, rec, i::Int)
     @boundscheck checkbounds(hdr, i)
-    unsafe_setindex!(hdr, to_type(FitsCard, rec), i)
+    unsafe_setindex!(hdr, as(FitsCard, rec), i)
     return hdr
 end
 
@@ -213,7 +214,7 @@ function Base.getindex(hdr::FitsHeader, name::AbstractString)
 end
 
 function Base.get(hdr::FitsHeader, i::Integer, def)
-    i = to_type(Int, i)
+    i = as(Int, i)
     checkbounds(Bool, hdr, i) ? (@inbounds hdr[i]) : def
 end
 
@@ -242,7 +243,7 @@ comment.
 Note that COMMENT, HISTORY, blank, and CONTINUE records are always appended.
 
 """
-Base.push!(hdr::FitsHeader, rec) = push!(hdr, to_type(FitsCard, rec))
+Base.push!(hdr::FitsHeader, rec) = push!(hdr, as(FitsCard, rec))
 function Base.push!(hdr::FitsHeader, card::FitsCard)
     # Replace existing card with the same keyword if it must be unique.
     # Otherwise, push a new card.
@@ -282,7 +283,7 @@ function FullName(str::AbstractString)
     if c isa Char
         # When parsing fails, return an instance that is unmatchable by any
         # valid FITS card.
-        return FullName(zero(FitsKey), to_type(String, str))
+        return FullName(zero(FitsKey), as(String, str))
     else
         key, pfx = c
         return FullName(key, full_name(pfx, str))
@@ -376,13 +377,13 @@ end
 for T in (Any, AbstractString, FullName, FitsCard, Function)
     @eval begin
         function Base.findnext(what::$T, hdr::FitsHeader, start::Integer)
-            start = to_type(Int, start)
+            start = as(Int, start)
             start > lastindex(hdr) && return nothing
             start < firstindex(hdr) && throw(BoundsError(hdr, start))
             return unsafe_findnext(what, hdr, start)
         end
         function Base.findprev(what::$T, hdr::FitsHeader, start::Integer)
-            start = to_type(Int, start)
+            start = as(Int, start)
             start < firstindex(hdr) && return nothing
             start > lastindex(hdr) && throw(BoundsError(hdr, start))
             return unsafe_findprev(what, hdr, start)
@@ -567,8 +568,5 @@ function Base.filter(what, hdr::FitsHeader; order::Ordering = Forward)
 end
 
 has_length(iter) = Base.IteratorSize(iter) isa Union{Base.HasShape,Base.HasLength}
-
-to_type(::Type{T}, x::T) where {T} = x
-to_type(::Type{T}, x) where {T} = convert(T, x)::T
 
 end # module

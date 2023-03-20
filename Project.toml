@@ -4,6 +4,7 @@ authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors"]
 version = "0.3.2"
 
 [deps]
+AsType = "ca91d8e0-3195-446d-9999-6c164cca1bdd"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 
