@@ -1,9 +1,9 @@
 module TestingBaseFITS
 
+using AsType
+using Test
 using BaseFITS
 using BaseFITS: FitsInteger, FitsFloat, FitsComplex
-
-using Test
 
 @static if ENDIAN_BOM == 0x04030201
     const BYTE_ORDER = :little_endian
@@ -48,7 +48,7 @@ end
 _load(::Type{T}, buf::Vector{UInt8}, off::Integer = 0) where {T} =
     GC.@preserve buf unsafe_load(Base.unsafe_convert(Ptr{T}, buf) + off)
 _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
-    GC.@preserve buf unsafe_store!(Base.unsafe_convert(Ptr{T}, buf) + off, convert(T, x)::T)
+    GC.@preserve buf unsafe_store!(Base.unsafe_convert(Ptr{T}, buf) + off, as(T, x))
 
 @testset "BaseFITS.jl" begin
     @testset "Assertions" begin
