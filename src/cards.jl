@@ -374,8 +374,8 @@ get_value(::Type{T}, A::FitsCard) where {T<:Number} = begin
     type == FITS_COMPLEX  ? convert(T, get_value_complex(A)) :
     conversion_error(T, A)
 end
-get_value(T::Type, A::FitsCard) = conversion_error(T, A) # catch errors
-@noinline conversion_error(T::Type, A::FitsCard) =
+get_value(::Type{T}, A::FitsCard) where {T} = conversion_error(T, A) # catch errors
+@noinline conversion_error(::Type{T}, A::FitsCard) where {T} =
     error("value of FITS keyword \"$(get_name(A))\" cannot be converted to `$T`")
 
 # Properties.
