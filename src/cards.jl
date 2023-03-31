@@ -437,15 +437,23 @@ Base.isreal(A::FitsCard) =
     (A.type == FITS_LOGICAL) |
     (A.type == FITS_COMPLEX && iszero(imag(get_value_complex(A))))
 
-Base.valtype(A::FitsCard) = valtype(A.type)
-Base.valtype(type::FitsCardType) =
-    type == FITS_LOGICAL   ? Bool :
-    type == FITS_INTEGER   ? FitsInteger :
-    type == FITS_FLOAT     ? FitsFloat :
-    type == FITS_STRING    ? String :
-    type == FITS_COMPLEX   ? FitsComplex :
-    type == FITS_UNDEFINED ? Missing :
-    Nothing # FITS_COMMENT or FITS_END
+"""
+    valtype(x::Union{FitsCard,FitsCardType}) -> T
+
+yields the Julia type `T` corresponding to a given FITS card or card type.
+
+"""
+@inline Base.valtype(A::FitsCard) = valtype(A.type)
+Base.valtype(t::FitsCardType) =
+    t === FITS_LOGICAL   ? Bool        :
+    t === FITS_INTEGER   ? FitsInteger :
+    t === FITS_FLOAT     ? FitsFloat   :
+    t === FITS_STRING    ? String      :
+    t === FITS_COMPLEX   ? FitsComplex :
+    t === FITS_COMMENT   ? Nothing     :
+    t === FITS_UNDEFINED ? Missing     :
+    t === FITS_END       ? Nothing     :
+    throw(ArgumentError("unexpected FITS card type"))
 
 # FITS cards can be specified as pairs and conversely.
 Base.convert(::Type{T}, A::FitsCard) where {T<:Pair} = T(A)

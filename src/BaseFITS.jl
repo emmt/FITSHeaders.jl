@@ -45,6 +45,7 @@ using Requires
     FITS_END       = 7 # END card
 end
 
+# Julia types for card values.
 const FitsInteger = Int64
 const FitsFloat   = Float64
 const FitsComplex = Complex{FitsFloat}
