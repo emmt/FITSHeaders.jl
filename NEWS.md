@@ -1,5 +1,13 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.4
+
+- *Provide support for dates:* Card values of type `Dates.DateTime` are
+  automatically converted into string values and, conversely, calling
+  `card.value(DateTime)`, `convert(DataTime,card.value)`, and
+  `DateTime(card.value)` attempts to convert the string value of `card` into a
+  date.
+
 ## Version 0.3.3
 
 - Use `AsType` package.

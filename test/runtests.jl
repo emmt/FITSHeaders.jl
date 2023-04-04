@@ -1,6 +1,7 @@
 module TestingBaseFITS
 
 using AsType
+using Dates
 using Test
 using BaseFITS
 using BaseFITS: FitsInteger, FitsFloat, FitsComplex
@@ -854,6 +855,35 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.key === Fits"REASON"
         @test card.name == "REASON"
         @test card.value() === missing
+        @test card.comment == com
+        # Dates.
+        date = now()
+        card = FitsCard("DATE-OBS" => date)
+        @test card.type === FITS_STRING
+        @test card.key === Fits"DATE-OBS"
+        @test card.name == "DATE-OBS"
+        @test card.value() == string(date)
+        @test card.value(DateTime) === date
+        @test convert(DateTime, card.value) === date
+        @test DateTime(card.value) === date
+        @test card.comment == ""
+        card = FitsCard("DATE-OBS" => (date))
+        @test card.type === FITS_STRING
+        @test card.key === Fits"DATE-OBS"
+        @test card.name == "DATE-OBS"
+        @test card.value() == string(date)
+        @test card.value(DateTime) === date
+        @test convert(DateTime, card.value) === date
+        @test DateTime(card.value) === date
+        @test card.comment == ""
+        card = FitsCard("DATE-OBS" => (date, com))
+        @test card.type === FITS_STRING
+        @test card.key === Fits"DATE-OBS"
+        @test card.name == "DATE-OBS"
+        @test card.value() == string(date)
+        @test card.value(DateTime) === date
+        @test convert(DateTime, card.value) === date
+        @test DateTime(card.value) === date
         @test card.comment == com
     end
     @testset "Headers" begin

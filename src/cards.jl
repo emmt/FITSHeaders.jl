@@ -37,6 +37,12 @@ import ..BaseFITS.Parser:
     is_comment,
     is_end
 
+using Dates
+
+# Extended union of possible card values. Any of these shall extend the
+# `to_value` method.
+const CardValueExt = Union{CardValue,DateTime}
+
 const END_STRING = "END"
 const UNDEF_LOGICAL = false
 const UNDEF_INTEGER = zero(FitsInteger)
@@ -299,8 +305,13 @@ for T in (Number, Integer, Real, AbstractFloat, Complex,
         @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
     end
 end
+
 Base.show(io::IO, A::FitsCardValue) = show(io, A())
 Base.show(io::IO, mime::MIME"text/plain", A::FitsCardValue) = show(io, mime, A())
+
+(A::FitsCardValue)(::Type{DateTime}) = DateTime(A(String))
+Base.convert(::Type{DateTime}, A::FitsCardValue) = A(DateTime)
+Dates.DateTime(A::FitsCardValue) = A(DateTime)
 
 # If the FitsCard structure changes, it should be almost sufficient to change
 # the following simple accessors.
@@ -462,17 +473,17 @@ Base.Pair(A::FitsCard) = Pair(A.name, (A.value(), A.comment))
 #Base.Pair{K}(A::FitsCard) where {K} = Pair{K,<:Any}(A.name, (A.value(), A.comment))
 Base.Pair{K,V}(A::FitsCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
 Base.Pair{K,V}(A::FitsCard) where {K,T,S,V<:Tuple{T,S}} = Pair{K,V}(A.name, (A.value(T), A.comment))
-function FitsCard(pair::Pair{<:CardName,<:Tuple{CardValue,CardComment}})
+function FitsCard(pair::Pair{<:CardName,<:Tuple{CardValueExt,CardComment}})
     key, name = check_keyword(first(pair))
     val, com = last(pair)
-    return FitsCard(key, name, val, to_comment(com))
+    return FitsCard(key, name, to_value(val), to_comment(com))
 end
-FitsCard(pair::Pair{<:CardName, <:Tuple{CardValue}}) =
-    FitsCard(first(pair) => (last(pair)[1], nothing))
-function FitsCard(pair::Pair{<:CardName, <:CardValue})
+FitsCard(pair::Pair{<:CardName, <:Tuple{CardValueExt}}) =
+    FitsCard(first(pair) => (to_value(last(pair)[1]), nothing))
+function FitsCard(pair::Pair{<:CardName, <:CardValueExt})
     key, name = check_keyword(first(pair))
     val = last(pair)
-    return FitsCard(key, name, val, EMPTY_STRING)
+    return FitsCard(key, name, to_value(val), EMPTY_STRING)
 end
 function FitsCard(pair::Pair{<:CardName, <:AbstractString})
     key, name = check_keyword(first(pair))
@@ -481,6 +492,10 @@ function FitsCard(pair::Pair{<:CardName, <:AbstractString})
         FitsCard(key, name, nothing, val_or_com) :
         FitsCard(key, name, val_or_com, EMPTY_STRING)
 end
+
+# Yield a bare card value.  See alias `CardValueExt`.
+to_value(val::CardValue) = val
+to_value(val::DateTime) = string(val)
 
 # Yield a string from any instance of CardComment.
 to_comment(com::AbstractString) = com
