@@ -803,6 +803,12 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         end
     end
     @testset "Cards from pairs" begin
+        # Badly formed cards.
+        @test_throws ArgumentError FitsCard(:GIZMO => [])
+        @test_throws ArgumentError FitsCard("GIZMO" => ("comment",2))
+        @test_throws Exception FitsCard(:Gizmo => 1)
+        @test_throws Exception FitsCard("Gizmo" => 1)
+        @test FitsCard(:GIZMO => 1) isa FitsCard
         # Logical FITS cards.
         com = "some comment"
         pair = "SIMPLE" => (true, com)

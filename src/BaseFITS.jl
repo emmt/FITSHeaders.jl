@@ -62,6 +62,12 @@ const CardValue = Union{Real,AbstractString,Complex,Undefined,Nothing}
 # Allowed types for FITS card comments.
 const CardComment = Union{AbstractString,Nothing}
 
+# Signature of pairs that may possibly be converted into FITS cards.
+#
+#NOTE: The value type is purposely unspecific to allow for collections of card
+# pairs mixing different value types.
+const CardPair{K<:CardName,V} = Pair{K,V}
+
 include("parser.jl")
 import .Parser:
     @Fits_str,

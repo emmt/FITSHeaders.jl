@@ -473,25 +473,20 @@ Base.Pair(A::FitsCard) = Pair(A.name, (A.value(), A.comment))
 #Base.Pair{K}(A::FitsCard) where {K} = Pair{K,<:Any}(A.name, (A.value(), A.comment))
 Base.Pair{K,V}(A::FitsCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
 Base.Pair{K,V}(A::FitsCard) where {K,T,S,V<:Tuple{T,S}} = Pair{K,V}(A.name, (A.value(T), A.comment))
-function FitsCard(pair::Pair{<:CardName,<:Tuple{CardValueExt,CardComment}})
-    key, name = check_keyword(first(pair))
-    val, com = last(pair)
-    return FitsCard(key, name, to_value(val), to_comment(com))
-end
-FitsCard(pair::Pair{<:CardName, <:Tuple{CardValueExt}}) =
-    FitsCard(first(pair) => (to_value(last(pair)[1]), nothing))
-function FitsCard(pair::Pair{<:CardName, <:CardValueExt})
-    key, name = check_keyword(first(pair))
-    val = last(pair)
-    return FitsCard(key, name, to_value(val), EMPTY_STRING)
-end
-function FitsCard(pair::Pair{<:CardName, <:AbstractString})
-    key, name = check_keyword(first(pair))
-    val_or_com = last(pair)
-    return is_comment(key) ?
-        FitsCard(key, name, nothing, val_or_com) :
-        FitsCard(key, name, val_or_com, EMPTY_STRING)
-end
+FitsCard(pair::Pair{<:CardName, <:Any}) = build_card(pair...)
+
+# Private helper function to build a FitsCard instance.
+build_card(name::CardName, x) = build_card(check_keyword(name)..., x)
+build_card(key::FitsKey, name::AbstractString, x::Tuple{CardValueExt,CardComment}) =
+    FitsCard(key, name, to_value(x[1]), to_comment(x[2]))
+build_card(key::FitsKey, name::AbstractString, x::Tuple{CardValueExt}) =
+    FitsCard(key, name, to_value(x[1]), EMPTY_STRING)
+build_card(key::FitsKey, name::AbstractString, x::CardValueExt) =
+    FitsCard(key, name, to_value(x), EMPTY_STRING)
+build_card(key::FitsKey, name::AbstractString, x::AbstractString) =
+    is_comment(key) ? FitsCard(key, name, nothing, x) : FitsCard(key, name, x, EMPTY_STRING)
+@noinline build_card(key::FitsKey, name::AbstractString, x::X) where {X} =
+    throw(ArgumentError("invalid value and/or comment of type `$X` for FITS keyword `$name`"))
 
 # Yield a bare card value.  See alias `CardValueExt`.
 to_value(val::CardValue) = val

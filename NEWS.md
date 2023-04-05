@@ -1,5 +1,12 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.5
+
+- Fix creating FITS cards from pairs of type `Pair{<:CardName,<:Any}` which may
+  be the type of the objects in some collections, such as vectors, used to
+  represent FITS header. Non-exported `BaseFITS.CardPair{K<:CardName,V}` is an
+  alias for such pair types.
+
 ## Version 0.3.4
 
 - *Provide support for dates:* Card values of type `Dates.DateTime` are
