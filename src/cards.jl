@@ -480,11 +480,11 @@ build_card(name::CardName, x) = build_card(check_keyword(name)..., x)
 build_card(key::FitsKey, name::AbstractString, x::Tuple{CardValueExt,CardComment}) =
     FitsCard(key, name, to_value(x[1]), to_comment(x[2]))
 build_card(key::FitsKey, name::AbstractString, x::Tuple{CardValueExt}) =
-    FitsCard(key, name, to_value(x[1]), EMPTY_STRING)
+    FitsCard(key, name, to_value(x[1]), to_comment())
 build_card(key::FitsKey, name::AbstractString, x::CardValueExt) =
-    FitsCard(key, name, to_value(x), EMPTY_STRING)
+    FitsCard(key, name, to_value(x), to_comment())
 build_card(key::FitsKey, name::AbstractString, x::AbstractString) =
-    is_comment(key) ? FitsCard(key, name, nothing, x) : FitsCard(key, name, x, EMPTY_STRING)
+    is_comment(key) ? FitsCard(key, name, nothing, x) : FitsCard(key, name, x, to_comment())
 @noinline build_card(key::FitsKey, name::AbstractString, x::X) where {X} =
     throw(ArgumentError("invalid value and/or comment of type `$X` for FITS keyword `$name`"))
 
@@ -493,6 +493,7 @@ to_value(val::CardValue) = val
 to_value(val::DateTime) = string(val)
 
 # Yield a string from any instance of CardComment.
+to_comment() = to_comment(nothing)
 to_comment(com::AbstractString) = com
 to_comment(com::Nothing) = EMPTY_STRING
 
