@@ -113,6 +113,9 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test repr("text/plain", Fits"") == "Fits\"\""
         @test repr("text/plain", Fits"SIMPLE") == "Fits\"SIMPLE\""
         @test repr("text/plain", Fits"HIERARCH") == "Fits\"HIERARCH\""
+        @test string(FitsKey()) == "FitsKey(0x0000000000000000)"
+        @test string(Fits"SIMPLE") == "Fits\"SIMPLE\""
+        @test string(Fits"HISTORY") == "Fits\"HISTORY\""
         @test_throws Exception BaseFITS.keyword("SIMPLE#")
         @test_throws Exception BaseFITS.keyword(" SIMPLE")
         @test_throws Exception BaseFITS.keyword("SIMPLE ")

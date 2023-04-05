@@ -263,6 +263,7 @@ function Base.show(io::IO, key::FitsKey)
         # Certainly not a regular FITS keyword.
         write(io, "FitsKey(", repr(key.val), ")")
     end
+    return nothing # do not return the number of bytes written
 end
 
 # Decode FITS quick key. Returns index of last non-space character which is
