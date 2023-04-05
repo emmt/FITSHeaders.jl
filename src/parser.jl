@@ -975,8 +975,8 @@ function try_parse_keyword(str::Union{String,SubString{String}})
                     # Case 2: the sequence starts with "HIERARCH ".
                     any_space = true
                 elseif is_keyword(b)
-                    # Case 3: the keyword too long and a "HIERARCH " prefix must
-                    # be prepended.
+                    # Case 3: the keyword is too long and a "HIERARCH " prefix
+                    # must be prepended.
                     pfx = true
                 else
                     return str[i] # illegal character

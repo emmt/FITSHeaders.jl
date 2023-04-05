@@ -94,6 +94,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test zero(FitsKey()) === FitsKey()
         @test zero(FitsKey) === FitsKey()
         @test convert(Integer, FitsKey()) === zero(UInt64)
+        @test convert(FitsKey, 1234) === FitsKey(1234)
+        @test convert(FitsKey, FitsKey(1234)) === FitsKey(1234)
         @test UInt64(FitsKey()) === zero(UInt64)
         @test Fits"SIMPLE"   ==  make_FitsKey("SIMPLE  ")
         @test Fits"SIMPLE"   === make_FitsKey("SIMPLE  ")
@@ -122,9 +124,11 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception BaseFITS.keyword("SImPLE")
         @test_throws Exception BaseFITS.keyword("TOO  MANY SPACES")
         @test_throws Exception BaseFITS.keyword("HIERARCH  A") # more than one space
+        @test_throws Exception BaseFITS.keyword("HIERARCH+ A") # invalid character
         # Short FITS keywords.
         @test BaseFITS.try_parse_keyword("SIMPLE") == (Fits"SIMPLE", false)
         @test BaseFITS.keyword("SIMPLE") == "SIMPLE"
+        @test BaseFITS.keyword(:SIMPLE) == "SIMPLE"
         @test BaseFITS.try_parse_keyword("HISTORY") == (Fits"HISTORY", false)
         @test BaseFITS.keyword("HISTORY") == "HISTORY"
         # Keywords longer than 8-characters are HIERARCH ones.
@@ -839,6 +843,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.name === "SIMPLE"
         @test card.value() === true
         @test card.comment == com
+        @test_throws ErrorException card.value(FitsCard)
         card = FitsCard("TWO KEYS" => (π, com))
         @test card.type === FITS_FLOAT
         @test card.key === Fits"HIERARCH"
@@ -947,6 +952,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         h2["HIERARCH CCD BIAS"] = -15
         h2["COMMENT"] = "Another comment."
         h2["COMMENT"] = "Yet another comment."
+        @test merge!(h) === h
         hp = merge(h, h1, h2)
         @test merge!(h, h1, h2) === h
         @test hp == h && hp !== h
