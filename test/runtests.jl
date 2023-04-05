@@ -878,7 +878,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.type === FITS_STRING
         @test card.key === Fits"DATE-OBS"
         @test card.name == "DATE-OBS"
-        @test card.value() == string(date)
+        @test card.value() == Dates.format(date, ISODateTimeFormat)
         @test card.value(DateTime) === date
         @test convert(DateTime, card.value) === date
         @test DateTime(card.value) === date
@@ -887,7 +887,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.type === FITS_STRING
         @test card.key === Fits"DATE-OBS"
         @test card.name == "DATE-OBS"
-        @test card.value() == string(date)
+        @test card.value() == Dates.format(date, ISODateTimeFormat)
         @test card.value(DateTime) === date
         @test convert(DateTime, card.value) === date
         @test DateTime(card.value) === date
@@ -896,7 +896,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.type === FITS_STRING
         @test card.key === Fits"DATE-OBS"
         @test card.name == "DATE-OBS"
-        @test card.value() == string(date)
+        @test card.value() == Dates.format(date, ISODateTimeFormat)
         @test card.value(DateTime) === date
         @test convert(DateTime, card.value) === date
         @test DateTime(card.value) === date

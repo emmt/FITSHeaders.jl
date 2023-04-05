@@ -310,8 +310,9 @@ for T in (Integer, Real, AbstractFloat, Complex,
     @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
 end
 
-# Conversion rules for date.
-(A::FitsCardValue)(::Type{DateTime}) = DateTime(A(String))
+# Conversion rules for a date. The FITS standard imposes ISO-8601 formatting
+# for a date and time.
+(A::FitsCardValue)(::Type{DateTime}) = parse(DateTime, A(String), ISODateTimeFormat)
 Base.convert(::Type{DateTime}, A::FitsCardValue) = A(DateTime)
 Dates.DateTime(A::FitsCardValue) = A(DateTime)
 
@@ -491,7 +492,7 @@ build_card(key::FitsKey, name::AbstractString, x::AbstractString) =
 
 # Yield a bare card value.  See alias `CardValueExt`.
 to_value(val::CardValue) = val
-to_value(val::DateTime) = string(val)
+to_value(val::DateTime) = Dates.format(val, ISODateTimeFormat)
 
 # Yield a string from any instance of CardComment.
 to_comment() = to_comment(nothing)
