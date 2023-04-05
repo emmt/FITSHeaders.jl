@@ -13,35 +13,35 @@ using Base.Order: Ordering, Forward, Reverse
 """
     FitsHeader(args...) -> hdr
 
-yields a FITS header object initialized with records `args..`. If the only
-argument is an instance of `Vector{FitsCard}`, `hdr` directly uses it for its own
-storage.
+yields a FITS header object initialized with records `args..`.
 
 A FITS header object behaves as a vector of [`FitsCard`](@ref) elements with
 integer or keyword (string) indices. When indexed by keywords, a FITS header
 object is similar to a dictionary except that the order of records is preserved
 and that commentary and continuation records (with keywords `"COMMENT"`,
-`"HISTORY"`, `""`, or `"CONTINUE"`) may appears more than once.
+`"HISTORY"`, `""`, or `"CONTINUE"`) may appear more than once.
 
-To  append a new record `rec` to the FITS header `hdr`, call:
+To update or append a record to the FITS header `hdr`, call one of:
+
+    hdr[key] = x
+    push!(hdr, key => x)
+
+where `x` is the value and/or comment of the record. If the keyword `key`
+already exists in `hdr`, the record is updated, otherwise a new record is
+appended. Commentary and continuation records are however always appended.
+More generally, the `push!` method can be called as:
 
     push!(hdr, rec)
 
-where `rec` may be an instance of [`FitsCard`](@ref) or a pair `key => (val,
-com)` associating keyword `key` with a value `val` and/or a comment `com`.
+where `rec` is a [`FitsCard`](@ref) object or anything, such as `key => x`,
+that can be converted into an instance of this type.
 
-If the intention is to update the record, call:
-
-    hdr[key] = (val, com)
-
-which modifies the record if the keyword `key` already exists in `hdr` and
-appends the record to `hdr` otherwise. Note that COMMENT and HISTORY commentary
-records are always appended (as if `push!` has been called). To modify any
-existing record including commentary ones, use the syntax:
+To modify any existing record including commentary and continuation ones, use
+the syntax:
 
     hdr[i] = rec
 
-where `i` is a linear (integer) index.
+where `i` is a linear (integer) index whule `rec` is a above.
 
 Searching for the index `i` of an existing record in FITS header object `hdr`
 can be done by the usual methods:
@@ -54,9 +54,9 @@ can be done by the usual methods:
 which all return a valid integer index if a record matching `what` is found and
 `nothing` otherwise. The matching pattern `what` can be a keyword (string), a
 FITS card (an instance of [`FitsCard`](@ref) whose name is used as a matching
-pattern), or a predicate function which takes a FITS card argument and shall
-return whether it matches. The find methods just yield `nothing` for any
-unsupported kind of pattern.
+pattern), or a predicate function which takes a FITS card argument and returns
+whether it matches. The find methods just yield `nothing` for any unsupported
+kind of pattern.
 
 """
 struct FitsHeader <: AbstractVector{FitsCard}
@@ -104,8 +104,11 @@ Base.merge!(dest::FitsHeader, A, B...) = merge!(merge!(dest, A), B...)
 Base.merge!(dest::FitsHeader, other::Union{Pair,FitsCard}) = push!(dest, other)
 
 function Base.merge!(dest::FitsHeader, other::FitsHeader)
-    for card in other
-        push!(dest, card)
+    if (len = length(other)) > 0
+        sizehint!(dest, length(dest) + len)
+        for card in other
+            push!(dest, card)
+        end
     end
     return dest
 end
@@ -122,7 +125,10 @@ end
 
 # By default, assume an iterable object.
 function Base.merge!(dest::FitsHeader, other)
-    has_length(other) && (len = length(other)) > 0 && sizehint!(dest, length(dest) + len)
+    if has_length(other)
+        (len = length(other)) > 0 || return dest
+        sizehint!(dest, length(dest) + len)
+    end
     for item ∈ other
         push!(dest, FitsCard(item))
     end
@@ -229,21 +235,20 @@ Base.get(hdr::FitsHeader, key, def) = def
 """
     push!(hdr::FitsHeader, rec) -> hdr
 
-appends a new record `rec` in into FITS header `hdr` or, if the keyword of the
+appends a new record `rec` into the FITS header `hdr` or, if the keyword of the
 card must be unique and a record with the same name already exists in `hdr`,
 replaces the existing record.
 
 This is strictly equivalent to:
 
-    hdr[key] = (val, com)
+    hdr[key] = x
 
-with `key` the name of the record, and `val` and `com` the associated value and
-comment.
+with `key` the name of the record, and `x` its associated value and/or comment.
 
-Note that COMMENT, HISTORY, blank, and CONTINUE records are always appended.
+Note that commentary and continuation records (with keywords `"COMMENT"`,
+`"HISTORY"`, `""`, or `"CONTINUE"`) are always appended.
 
 """
-Base.push!(hdr::FitsHeader, rec) = push!(hdr, as(FitsCard, rec))
 function Base.push!(hdr::FitsHeader, card::FitsCard)
     # Replace existing card with the same keyword if it must be unique.
     # Otherwise, push a new card.
@@ -260,6 +265,8 @@ function Base.push!(hdr::FitsHeader, card::FitsCard)
     end
     return hdr
 end
+
+Base.push!(hdr::FitsHeader, rec) = push!(hdr, as(FitsCard, rec))
 
 """
     BaseFITS.FullName(str) -> obj
