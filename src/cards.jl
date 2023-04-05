@@ -37,7 +37,7 @@ import ..BaseFITS.Parser:
     is_comment,
     is_end
 
-using Dates
+using Dates, AsType
 
 # Extended union of possible card values. Any of these shall extend the
 # `to_value` method.
@@ -294,21 +294,23 @@ struct FitsCardValue
 end
 Base.parent(A::FitsCardValue) = getfield(A, :parent)
 (A::FitsCardValue)() = get_value(parent(A))
-Base.convert(::Type{T}, A::FitsCardValue) where {T<:FitsCardValue} = A
-for T in (Number, Integer, Real, AbstractFloat, Complex,
-          AbstractString, String, Nothing, Missing)
-    if T === Number
-        @eval (A::FitsCardValue)(::Type{T}) where {T<:$T} = get_value(T, parent(A))
-        @eval Base.convert(::Type{T}, A::FitsCardValue) where {T<:$T} = A(T)
-    else
-        @eval (A::FitsCardValue)(::Type{$T}) = get_value($T, parent(A))
-        @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
-    end
-end
+(A::FitsCardValue)(::Type{T}) where {T} = get_value(T, parent(A))
 
 Base.show(io::IO, A::FitsCardValue) = show(io, A())
 Base.show(io::IO, mime::MIME"text/plain", A::FitsCardValue) = show(io, mime, A())
 
+# General conversion rules.
+Base.convert(::Type{T}, A::FitsCardValue) where {T<:FitsCardValue} = A
+Base.convert(::Type{T}, A::FitsCardValue) where {T} = A(T)
+
+# Explict conversion rules are to avoid ambiguities.
+Base.convert(::Type{T}, A::FitsCardValue) where {T<:Number} = A(T)
+for T in (Integer, Real, AbstractFloat, Complex,
+          AbstractString, String, Nothing, Missing)
+    @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
+end
+
+# Conversion rules for date.
 (A::FitsCardValue)(::Type{DateTime}) = DateTime(A(String))
 Base.convert(::Type{DateTime}, A::FitsCardValue) = A(DateTime)
 Dates.DateTime(A::FitsCardValue) = A(DateTime)
@@ -470,9 +472,8 @@ Base.valtype(t::FitsCardType) =
 Base.convert(::Type{T}, A::FitsCard) where {T<:Pair} = T(A)
 Base.convert(::Type{T}, pair::Pair) where {T<:FitsCard} = T(pair)
 Base.Pair(A::FitsCard) = Pair(A.name, (A.value(), A.comment))
-#Base.Pair{K}(A::FitsCard) where {K} = Pair{K,<:Any}(A.name, (A.value(), A.comment))
-Base.Pair{K,V}(A::FitsCard) where {K,V} = Pair{K,V}(A.name, (A.value(), A.comment))
-Base.Pair{K,V}(A::FitsCard) where {K,T,S,V<:Tuple{T,S}} = Pair{K,V}(A.name, (A.value(T), A.comment))
+Base.Pair{K}(A::FitsCard) where {K} = Pair(as(K, A.name), (A.value(), A.comment))
+Base.Pair{K,V}(A::FitsCard) where {K,V} = Pair(as(K, A.name), as(V, (A.value(), A.comment)))
 FitsCard(pair::Pair{<:CardName, <:Any}) = build_card(pair...)
 
 # Private helper function to build a FitsCard instance.

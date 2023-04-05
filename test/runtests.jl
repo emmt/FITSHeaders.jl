@@ -808,7 +808,17 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws ArgumentError FitsCard("GIZMO" => ("comment",2))
         @test_throws Exception FitsCard(:Gizmo => 1)
         @test_throws Exception FitsCard("Gizmo" => 1)
+        # Well formed cards and invariants.
         @test FitsCard(:GIZMO => 1) isa FitsCard
+        @test FitsCard(:GIZMO => 1).type === FITS_INTEGER
+        @test FitsCard(:GIZMO => 1) === FitsCard("GIZMO" => 1)
+        @test FitsCard(:GIZMO => 1) === FitsCard("GIZMO" => (1,))
+        @test FitsCard(:GIZMO => 1) === FitsCard("GIZMO" => (1,nothing))
+        @test FitsCard(:GIZMO => 1) === FitsCard("GIZMO" => (1,""))
+        @test FitsCard(:COMMENT => "Hello world!") isa FitsCard
+        @test FitsCard(:COMMENT => "Hello world!").type === FITS_COMMENT
+        @test FitsCard(:COMMENT => "Hello world!") === FitsCard("COMMENT" => "Hello world!")
+        @test FitsCard(:COMMENT => "Hello world!") === FitsCard("COMMENT" => (nothing, "Hello world!"))
         # Logical FITS cards.
         com = "some comment"
         pair = "SIMPLE" => (true, com)
@@ -818,7 +828,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test convert(FitsCard, pair) == card
         @test convert(Pair, card) == pair
         @test Pair(card) == pair
-        #@test Pair{String}(card) == pair
+        @test Pair{String}(card) === pair
         @test Pair{String,Tuple{Bool,String}}(card) === pair
         @test Pair{String,Tuple{Int,String}}(card) === (card.name => (card.value(Int), card.comment))
         @test card.type === FITS_LOGICAL
