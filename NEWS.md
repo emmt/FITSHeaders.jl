@@ -1,5 +1,13 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.6
+
+- Package is compatible with Julia 1.0.
+
+- Avoid returning number of bytes written in `show`.
+
+- Date-time format is ISO-8601 as specified by FITS standard.
+
 ## Version 0.3.5
 
 - Fix creating FITS cards from pairs of type `Pair{<:CardName,<:Any}` which may
