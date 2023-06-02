@@ -6,7 +6,7 @@ using ..BaseFITS
 using ..BaseFITS: try_parse_keyword, is_comment
 using ..BaseFITS.Parser: full_name
 
-using AsType
+using TypeUtils
 using Base: @propagate_inbounds
 using Base.Order: Ordering, Forward, Reverse
 

@@ -1,6 +1,6 @@
 module TestingBaseFITS
 
-using AsType
+using TypeUtils
 using Dates
 using Test
 using BaseFITS

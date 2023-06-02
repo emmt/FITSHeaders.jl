@@ -4,14 +4,15 @@ authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors"]
 version = "0.3.6"
 
 [deps]
-AsType = "ca91d8e0-3195-446d-9999-6c164cca1bdd"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
+TypeUtils = "c3b1956e-8857-4d84-9b79-890df85b1e67"
 
 [compat]
 Requires = "1"
 Compat = "2, 3, 4"
+TypeUtils = "≥ 0.2"
 julia = "1.0"
 
 [extras]

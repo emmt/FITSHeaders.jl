@@ -1,5 +1,9 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.7
+
+- Package `AsType` is now [`TypeUtils`](https://github.com/emmt/TypeUtils.jl).
+
 ## Version 0.3.6
 
 - Package is compatible with Julia 1.0.

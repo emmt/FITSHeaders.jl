@@ -37,7 +37,7 @@ import ..BaseFITS.Parser:
     is_comment,
     is_end
 
-using Dates, AsType
+using Dates, TypeUtils
 
 # Extended union of possible card values. Any of these shall extend the
 # `to_value` method.
