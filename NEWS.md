@@ -1,5 +1,9 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.9
+
+- `"TFIELDS"`, `"TFORM#"`, `"TTYPE#"`, and `"TDIM#"` are also structural keywords.
+
 ## Version 0.3.8
 
 - New non-exported methods: `BaseFITS.is_structural` and `BaseFITS.is_naxis`

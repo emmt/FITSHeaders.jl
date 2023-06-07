@@ -377,6 +377,8 @@ is_digit(c::Union{Char,UInt8}) = between(c, '0', '9')
 is_uppercase(c::Union{Char,UInt8}) = between(c, 'A', 'Z')
 is_lowercase(c::Union{Char,UInt8}) = between(c, 'a', 'z')
 is_space(c::Union{Char,UInt8}) = equal(c, ' ')
+is_space(c1::T, c2::T) where {T<:Union{Char,UInt8}} = is_space(c1) & is_space(c2)
+@inline is_space(c1::T, c2::T, c3::T...) where {T<:Union{Char,UInt8}} = is_space(c1, c2) & is_space(c3...)
 is_quote(c::Union{Char,UInt8}) = equal(c, '\'')
 is_equals_sign(c::Union{Char,UInt8}) = equal(c, '=')
 is_hyphen(c::Union{Char,UInt8}) = equal(c, '-')
@@ -469,17 +471,76 @@ yields whether `A` is a structural FITS keyword or card.
 
 """
 function is_structural(key::FitsKey)
-    # NOTE This version takes 3.5ns to 6.9ns compared to 30ns with a set of all
+    # NOTE This version takes 4.5ns to 7.2ns compared to 30ns with a set of all
     #      such keys.
     b = (is_little_endian() ? key.val : (key.val >> 56)) % UInt8
-    b == UInt8('N') ? is_naxis(key) :
-    b == UInt8('B') ? key === Fits"BITPIX" :
-    b == UInt8('S') ? key === Fits"SIMPLE" :
-    b == UInt8('X') ? key === Fits"XTENSION" :
-    b == UInt8('E') ? (key === Fits"EXTEND") | (key === Fits"END") :
-    b == UInt8('P') ? key === Fits"PCOUNT" :
-    b == UInt8('G') ? key === Fits"GCOUNT" : false
+    b == UInt8('N') ? is_structural_N(key) :
+    b == UInt8('B') ? is_structural_B(key) :
+    b == UInt8('S') ? is_structural_S(key) :
+    b == UInt8('X') ? is_structural_X(key) :
+    b == UInt8('T') ? is_structural_T(key) :
+    b == UInt8('E') ? is_structural_E(key) :
+    b == UInt8('P') ? is_structural_P(key) :
+    b == UInt8('G') ? is_structural_G(key) : false
 end
+
+# Yeild whether key is a structural key starting with a `T`, a `E`, etc.
+is_structural_B(key::FitsKey) = (key === Fits"BITPIX")
+is_structural_S(key::FitsKey) = (key === Fits"SIMPLE")
+is_structural_E(key::FitsKey) = (key === Fits"EXTEND") | (key === Fits"END")
+is_structural_X(key::FitsKey) = (key === Fits"XTENSION")
+is_structural_P(key::FitsKey) = (key === Fits"PCOUNT")
+is_structural_G(key::FitsKey) = (key === Fits"GCOUNT")
+is_structural_N(key::FitsKey) = is_naxis(key)
+is_structural_T(key::FitsKey) = begin
+    key === Fits"TFIELDS" && return true
+    mask = (is_little_endian() ? 0x000000FFFFFFFFFF : 0xFFFFFFFFFF000000)
+    root = (key.val & mask)
+    if (root == (Fits"TFORM".val & mask)) | (root == (Fits"TTYPE".val & mask))
+        # Get the 3 trailing bytes.
+        b1, b2, b3 = if is_little_endian()
+            (key.val >> 40) % UInt8,
+            (key.val >> 48) % UInt8,
+            (key.val >> 56) % UInt8
+        else
+            (key.val >> 16) % UInt8,
+            (key.val >>  8) % UInt8,
+            (key.val      ) % UInt8
+        end
+        return is_indexed(b1, b2, b3)
+    end
+    mask = (is_little_endian() ? 0x00000000FFFFFFFF : 0xFFFFFFFF00000000)
+    if (key.val & mask) == (Fits"TDIM".val & mask)
+        # Get the 4 trailing bytes.
+        b1, b2, b3, b4 = if is_little_endian()
+            (key.val >> 32) % UInt8,
+            (key.val >> 40) % UInt8,
+            (key.val >> 48) % UInt8,
+            (key.val >> 56) % UInt8
+        else
+            (key.val >> 24) % UInt8,
+            (key.val >> 16) % UInt8,
+            (key.val >>  8) % UInt8,
+            (key.val      ) % UInt8
+        end
+        # NOTE: Last byte must be a space because the maximum number of columns
+        #       is 999.
+        return is_space(b4) && is_indexed(b1, b2, b3)
+    end
+    return false
+end
+
+"""
+    BaseFITS.Parser.is_indexed(b...)
+
+yields whether trailing bytes `b...` of a FITS keyword indicate an indexed
+keyword.
+
+"""
+is_indexed() = false
+is_indexed(b1::UInt8) = is_digit(b1)
+@inline is_indexed(b1::UInt8, b2::UInt8...) =
+    is_indexed(b1) & (is_space(b2...) | is_indexed(b2...))
 
 """
     BaseFITS.is_comment(A::Union{FitsCardType,FitsCard})
@@ -515,11 +576,7 @@ function is_naxis(key::FitsKey)
             (key.val >>  8) % UInt8,
             (key.val      ) % UInt8
         end
-        if is_space(b1)
-            return is_space(b2) & is_space(b3)
-        elseif is_digit(b1)
-            return (is_space(b2) & is_space(b3)) | (is_digit(b2) & (is_space(b3) | is_digit(b3)))
-        end
+        return is_space(b1) ? is_space(b2, b3) : is_indexed(b1, b2, b3)
     end
     return false
 end
