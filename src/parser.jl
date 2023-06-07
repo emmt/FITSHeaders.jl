@@ -463,6 +463,25 @@ end
 end
 
 """
+    BaseFITS.is_structural(A::Union{FitsKey,FitsCard})
+
+yields whether `A` is a structural FITS keyword or card.
+
+"""
+function is_structural(key::FitsKey)
+    # NOTE This version takes 3.5ns to 6.9ns compared to 30ns with a set of all
+    #      such keys.
+    b = (is_little_endian() ? key.val : (key.val >> 56)) % UInt8
+    b == UInt8('N') ? is_naxis(key) :
+    b == UInt8('B') ? key === Fits"BITPIX" :
+    b == UInt8('S') ? key === Fits"SIMPLE" :
+    b == UInt8('X') ? key === Fits"XTENSION" :
+    b == UInt8('E') ? (key === Fits"EXTEND") | (key === Fits"END") :
+    b == UInt8('P') ? key === Fits"PCOUNT" :
+    b == UInt8('G') ? key === Fits"GCOUNT" : false
+end
+
+"""
     BaseFITS.is_comment(A::Union{FitsCardType,FitsCard})
 
 yields whether `A` indicates a, possibly non-standard, commentary FITS keyword.
@@ -475,6 +494,35 @@ a standard commentary FITS keyword.
 """
 is_comment(key::FitsKey) = (key == Fits"COMMENT") | (key == Fits"HISTORY")
 is_comment(type::FitsCardType) = type === FITS_COMMENT
+
+"""
+    BaseFITS.is_naxis(A::Union{FitsKey,FitsCard})
+
+yields whether `A` is a FITS "NAXIS" or "NAXIS#" keyword or card with`#`
+denoting a decimal number.
+
+"""
+function is_naxis(key::FitsKey)
+    mask = (is_little_endian() ? 0x000000FFFFFFFFFF : 0xFFFFFFFFFF000000)
+    if (key.val & mask) == (Fits"NAXIS".val & mask)
+        # Get the 3 trailing bytes.
+        b1, b2, b3 = if is_little_endian()
+            (key.val >> 40) % UInt8,
+            (key.val >> 48) % UInt8,
+            (key.val >> 56) % UInt8
+        else
+            (key.val >> 16) % UInt8,
+            (key.val >>  8) % UInt8,
+            (key.val      ) % UInt8
+        end
+        if is_space(b1)
+            return is_space(b2) & is_space(b3)
+        elseif is_digit(b1)
+            return (is_space(b2) & is_space(b3)) | (is_digit(b2) & (is_space(b3) | is_digit(b3)))
+        end
+    end
+    return false
+end
 
 """
     BaseFITS.is_end(A::Union{FitsKey,FitsCardType,FitsCard})

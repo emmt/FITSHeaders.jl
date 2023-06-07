@@ -4,7 +4,9 @@ using TypeUtils
 using Dates
 using Test
 using BaseFITS
-using BaseFITS: FitsInteger, FitsFloat, FitsComplex
+using BaseFITS:
+    FitsInteger, FitsFloat, FitsComplex,
+    is_structural, is_comment, is_naxis, is_end
 
 @static if ENDIAN_BOM == 0x04030201
     const BYTE_ORDER = :little_endian
@@ -151,6 +153,58 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test BaseFITS.keyword("HIERARCH") == "HIERARCH"
         @test BaseFITS.try_parse_keyword("HIERARCH SIMPLE") == (Fits"HIERARCH", false)
         @test BaseFITS.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
+
+        @test  is_structural(Fits"SIMPLE")
+        @test  is_structural(Fits"BITPIX")
+        @test  is_structural(Fits"NAXIS")
+        @test  is_structural(Fits"NAXIS1")
+        @test  is_structural(Fits"NAXIS999")
+        @test  is_structural(Fits"XTENSION")
+        @test  is_structural(Fits"PCOUNT")
+        @test  is_structural(Fits"GCOUNT")
+        @test  is_structural(Fits"END")
+        @test !is_structural(Fits"COMMENT")
+        @test !is_structural(Fits"HISTORY")
+        @test !is_structural(Fits"HIERARCH")
+
+        @test !is_comment(Fits"SIMPLE")
+        @test !is_comment(Fits"BITPIX")
+        @test !is_comment(Fits"NAXIS")
+        @test !is_comment(Fits"NAXIS1")
+        @test !is_comment(Fits"NAXIS999")
+        @test !is_comment(Fits"XTENSION")
+        @test !is_comment(Fits"PCOUNT")
+        @test !is_comment(Fits"GCOUNT")
+        @test !is_comment(Fits"END")
+        @test  is_comment(Fits"COMMENT")
+        @test  is_comment(Fits"HISTORY")
+        @test !is_comment(Fits"HIERARCH")
+
+        @test !is_naxis(Fits"SIMPLE")
+        @test !is_naxis(Fits"BITPIX")
+        @test  is_naxis(Fits"NAXIS")
+        @test  is_naxis(Fits"NAXIS1")
+        @test  is_naxis(Fits"NAXIS999")
+        @test !is_naxis(Fits"XTENSION")
+        @test !is_naxis(Fits"PCOUNT")
+        @test !is_naxis(Fits"GCOUNT")
+        @test !is_naxis(Fits"END")
+        @test !is_naxis(Fits"COMMENT")
+        @test !is_naxis(Fits"HISTORY")
+        @test !is_naxis(Fits"HIERARCH")
+
+        @test !is_end(Fits"SIMPLE")
+        @test !is_end(Fits"BITPIX")
+        @test !is_end(Fits"NAXIS")
+        @test !is_end(Fits"NAXIS1")
+        @test !is_end(Fits"NAXIS999")
+        @test !is_end(Fits"XTENSION")
+        @test !is_end(Fits"PCOUNT")
+        @test !is_end(Fits"GCOUNT")
+        @test  is_end(Fits"END")
+        @test !is_end(Fits"COMMENT")
+        @test !is_end(Fits"HISTORY")
+        @test !is_end(Fits"HIERARCH")
     end
     @testset "Parser" begin
         # Byte order.
@@ -448,12 +502,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
             # is_comment(), is_end(), ...
-            @test BaseFITS.is_comment(card) === true
-            @test BaseFITS.is_comment(card.type) === true
-            @test BaseFITS.is_comment(card.key) === true # standard comment
-            @test BaseFITS.is_end(card) === false
-            @test BaseFITS.is_end(card.type) === false
-            @test BaseFITS.is_end(card.key) === false
+            @test is_comment(card) === true
+            @test is_comment(card.type) === true
+            @test is_comment(card.key) === true # standard comment
+            @test is_end(card) === false
+            @test is_end(card.type) === false
+            @test is_end(card.key) === false
+            @test is_structural(card) == false
+            @test is_naxis(card) == false
         end
         let card = FitsCard("HISTORY A new history starts here...                                     ")
             @test card.type == FITS_COMMENT
@@ -493,12 +549,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
             # is_comment(), is_end(), ...
-            @test BaseFITS.is_comment(card) === true
-            @test BaseFITS.is_comment(card.type) === true
-            @test BaseFITS.is_comment(card.key) === true # standard comment
-            @test BaseFITS.is_end(card) === false
-            @test BaseFITS.is_end(card.type) === false
-            @test BaseFITS.is_end(card.key) === false
+            @test is_comment(card) === true
+            @test is_comment(card.type) === true
+            @test is_comment(card.key) === true # standard comment
+            @test is_end(card) === false
+            @test is_end(card.type) === false
+            @test is_end(card.key) === false
+            @test is_structural(card) == false
+            @test is_naxis(card) == false
         end
         # Non standard commentary card.
         let card = FitsCard("NON-STANDARD COMMENT" => (nothing, "some comment"))
@@ -539,12 +597,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
             # is_comment(), is_end(), ...
-            @test BaseFITS.is_comment(card) === true
-            @test BaseFITS.is_comment(card.type) === true
-            @test BaseFITS.is_comment(card.key) === false # non-standard comment
-            @test BaseFITS.is_end(card) === false
-            @test BaseFITS.is_end(card.type) === false
-            @test BaseFITS.is_end(card.key) === false
+            @test is_comment(card) === true
+            @test is_comment(card.type) === true
+            @test is_comment(card.key) === false # non-standard comment
+            @test is_end(card) === false
+            @test is_end(card.type) === false
+            @test is_end(card.key) === false
+            @test is_structural(card) == false
+            @test is_naxis(card) == false
         end
         # String valued card.
         let card = FitsCard("REMARK  = 'Joe''s taxi'        / a string with an embedded quote         ")
@@ -591,12 +651,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test repr(card.value) isa String
             @test repr("text/plain", card.value) isa String
              # is_comment(), is_end(), ...
-            @test BaseFITS.is_comment(card) == false
-            @test BaseFITS.is_comment(card.type) == false
-            @test BaseFITS.is_comment(card.key) == false
-            @test BaseFITS.is_end(card) == false
-            @test BaseFITS.is_end(card.type) == false
-            @test BaseFITS.is_end(card.key) == false
+            @test is_comment(card) == false
+            @test is_comment(card.type) == false
+            @test is_comment(card.key) == false
+            @test is_end(card) == false
+            @test is_end(card.type) == false
+            @test is_end(card.key) == false
+            @test is_structural(card) == false
+            @test is_naxis(card) == false
         end
         #
         let card = FitsCard("EXTNAME = 'SCIDATA ' ")
@@ -769,12 +831,14 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test isassigned(card) === false
             @test isinteger(card) === false
             @test isreal(card) === false
-            @test BaseFITS.is_comment(card) == false
-            @test BaseFITS.is_comment(card.type) == false
-            @test BaseFITS.is_comment(card.key) == false
-            @test BaseFITS.is_end(card) == true
-            @test BaseFITS.is_end(card.type) == true
-            @test BaseFITS.is_end(card.key) == true
+            @test is_comment(card) == false
+            @test is_comment(card.type) == false
+            @test is_comment(card.key) == false
+            @test is_end(card) == true
+            @test is_end(card.type) == true
+            @test is_end(card.key) == true
+            @test is_structural(card) == true
+            @test is_naxis(card) == false
         end
     end
     @testset "Cards from bytes" begin

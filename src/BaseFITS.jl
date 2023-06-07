@@ -78,7 +78,9 @@ import .Parser:
     check_short_keyword,
     check_keyword,
     try_parse_keyword,
+    is_structural,
     is_comment,
+    is_naxis,
     is_end,
     keyword
 

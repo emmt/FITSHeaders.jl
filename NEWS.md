@@ -1,5 +1,11 @@
 # User visible changes in `BaseFITS` package
 
+## Version 0.3.8
+
+- New non-exported methods: `BaseFITS.is_structural` and `BaseFITS.is_naxis`
+  to respectively check whether a FITS card or keyword is a structural or axis
+  one.
+
 ## Version 0.3.7
 
 - Package `AsType` is now [`TypeUtils`](https://github.com/emmt/TypeUtils.jl).

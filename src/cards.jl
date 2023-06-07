@@ -34,7 +34,9 @@ using ..BaseFITS.Parser:
     parse_string_value,
     scan_card
 import ..BaseFITS.Parser:
+    is_structural,
     is_comment,
+    is_naxis,
     is_end
 
 using Dates, TypeUtils
@@ -189,7 +191,9 @@ function FitsCard(buf::ByteBuffer; offset::Int = 0)
     end
 end
 
+is_structural(card::FitsCard) = is_structural(card.key)
 is_comment(card::FitsCard) = is_comment(card.type)
+is_naxis(card::FitsCard) = is_naxis(card.key)
 is_end(card::FitsCard) = is_end(card.type)
 
 # This version shall print something equivalent to Julia code to produce the
