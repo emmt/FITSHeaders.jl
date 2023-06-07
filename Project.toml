@@ -1,7 +1,7 @@
 name = "BaseFITS"
 uuid = "b056ee54-6bb4-44e7-9abb-abfb59909e18"
 authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors"]
-version = "0.3.7"
+version = "0.3.8"
 
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
