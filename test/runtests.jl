@@ -1028,6 +1028,10 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         hp = FitsHeader(h); @test  hp !== h && hp == h
         hp = copy(h); @test  hp !== h && hp == h
         @test length(empty!(hp)) == 0
+        @test  haskey(h, "NAXIS")
+        @test !haskey(h, "NO-SUCH-KEY")
+        @test  haskey(h, firstindex(h))
+        @test !haskey(h, lastindex(h) + 1)
         @test get(h, "NAXIS", π) isa FitsCard
         @test get(h, "illegal keyword!", π) === π
         @test get(h, +, π) === π
