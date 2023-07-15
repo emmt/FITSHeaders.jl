@@ -232,6 +232,10 @@ end
 
 Base.get(hdr::FitsHeader, key, def) = def
 
+Base.haskey(hdr::FitsHeader, i::Integer) = checkbounds(Bool, hdr, i)
+Base.haskey(hdr::FitsHeader, key::AbstractString) = findfirst(key, hdr) !== nothing
+Base.haskey(hdr::FitsHeader, key) = false
+
 """
     push!(hdr::FitsHeader, rec) -> hdr
 
