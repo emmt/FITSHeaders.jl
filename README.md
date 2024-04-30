@@ -10,13 +10,13 @@ and associates a keyword with a value and/or a comment.
 
 The `BaseFITS` package is intended to provide:
 
-- Methods for fast parsing of a FITS header or of a piece of a FITS header that
-  is a single FITS header card.
+- Methods for fast parsing of a FITS header or of a piece of a FITS header
+  (that is a single FITS header card).
 
 - An expressive API for creating FITS cards and accessing their components
   (keyword, value, and comment), possibly, in a *type-stable* way.
 
-- Methods for easy access the records of a FITS header.
+- Methods for easy and efficient access to the records of a FITS header.
 
 
 ## Building FITS cards
@@ -57,13 +57,14 @@ is extended by the `BaseFITS` package to perform these conversions.
 
 If the string value of a FITS card is too long, it shall be split across
 several consecutive `CONTINUE` cards when writing a FITS file. Likewise, if the
-comment of a commentary keyword is too long, it shall be split across several
-consecutive cards with the same keyword when writing a FITS file.
+comment of a commentary keyword (`"COMMENT"` or `"HISTORY"`) is too long, it
+shall be split across several consecutive cards with the same keyword when
+writing a FITS file.
 
 
 ## FITS cards properties
 
-FITS cards have properties:
+FITS cards have the following properties (among others):
 
 ``` julia
 card.type     # type of card: FITS_LOGICAL, FITS_INTEGER, etc.
@@ -99,8 +100,8 @@ the same result as `card.value(Float64)`, `card.value(Complex)` yields the same
 result as `card.value(ComplexF64)`, and `card.value(AbstractString)` yields the
 same result as `card.value(String)`.
 
-To make things easier, a few properties are aliases that yield the card value
-converted to a specific type:
+To make things easier, a few additional properties are aliases that yield the
+card value converted to a specific type:
 
 ``` julia
 card.logical :: Bool       # alias for card.value(Bool)
@@ -126,7 +127,7 @@ There are two kinds of FITS keywords:
   restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
   (hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or
   underscore (hexadecimal code 0x5F). In a FITS file, keywords shorter than 8
-  characters are padded with ordinary spaces (hexadecimal code 0x20).
+  characters are right-padded with ordinary spaces (hexadecimal code 0x20).
 
 - `HIERARCH` FITS keywords start with the string `"HIERARCH "` (with a single
   trailing space) followed by one or more words composed from the same
@@ -151,7 +152,6 @@ FitsCard: HIERARCH SOME KEY = 3 / keyword has 8 characters but 2 words
 
 julia> card.name
 "HIERARCH SOME KEY"
-
 ```
 
 This rule is only applied to the construction of FITS cards from pairs. When
@@ -427,27 +427,32 @@ push!(hdr, rec)
 ```
 
 where `rec` may have any form allowed by the `FitsCard` constructor. If the
-keyword of `rec` must be unique and a record of the same name exists in `hdr`,
-it is replaced by `rec`; otherwise, `rec` is appended to the end of the list of
-records stored by `hdr`.
+keyword is `"COMMENT"`, `"HISTORY"`, `""`, or `"CONTINUE"`, `rec` is appended
+to the end of the list of records stored by `hdr`. For other keywords which
+must be unique, if a record of the same name exists in `hdr`, it is replaced by
+`rec`; otherwise, it is appended to the end of the list of records stored by
+`hdr`.
 
-The `setindex!` method may also be used with a linear (integer) or a keyword
-(string) index. The above rule for unique / non-unique keywords is always
-applied. For example, the two following statements are equivalent:
+The `setindex!` method may be used with a keyword (string) index. For example,
+the two following statements are equivalent:
 
 ``` julia
 hdr[key] = (val, com)
 push!(hdr, key => (val, com))
 ```
 
-while, assuming `i` is an integer:
+The `setindex!` method may also be used with a linear (integer) index.. For
+example:
 
 ``` julia
 hdr[i] = rec
 ```
 
-replaces the `i`-th record in `hdr` by `rec`. The following example illustrates
-how this can be used to change the comment of the BITPIX record:
+replaces the `i`-th record in `hdr` by `rec`. With an integer index, the rule
+for unique / non-unique keywords is not applied, so this indexing should be
+restricted to editing the value and/or comment of an existing entry. The
+following example illustrates how this can be used to modify the comment of the
+BITPIX record:
 
 ``` julia
 julia> if (i = findfirst("BITPIX", hdr)) != nothing

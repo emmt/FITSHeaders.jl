@@ -1,5 +1,11 @@
 # User visible changes in `BaseFITS` package
 
+# Version 0.3.11
+
+- Update doc.
+
+- Submitted as an official Julia package.
+
 ## Version 0.3.10
 
 - Extend `haskey` for `FitsHeader` objects.
