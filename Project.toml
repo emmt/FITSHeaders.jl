@@ -1,4 +1,4 @@
-name = "BaseFITS"
+name = "FITSHeaders"
 uuid = "b056ee54-6bb4-44e7-9abb-abfb59909e18"
 authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors"]
 version = "0.3.11"

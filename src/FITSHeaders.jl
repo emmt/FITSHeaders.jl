@@ -1,10 +1,10 @@
 """
-    BaseFITS
+    FITSHeaders
 
 A package implementing methods to store and parse FITS header cards.
 
 """
-module BaseFITS
+module FITSHeaders
 
 export
     # Quick FITS keyword:
@@ -46,8 +46,10 @@ using Requires
 end
 
 # Julia types for card values.
+const FitsLogical = Bool
 const FitsInteger = Int64
 const FitsFloat   = Float64
+const FitsString  = String
 const FitsComplex = Complex{FitsFloat}
 
 # Types equivalent to undefined FITS card value.
@@ -95,8 +97,8 @@ import .Headers:
 
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin
-        BaseFITS.Parser.PointerCapability(::Type{<:MappedBuffers.MappedBuffer}) =
-            BaseFITS.Parser.PointerFull()
+        FITSHeaders.Parser.PointerCapability(::Type{<:MappedBuffers.MappedBuffer}) =
+            FITSHeaders.Parser.PointerFull()
     end
 end
 

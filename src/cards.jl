@@ -1,7 +1,7 @@
 """
-    BaseFITS.Cards
+    FITSHeaders.Cards
 
-A sub-module of the `BaseFITS` package implementing the methods and properties
+A sub-module of the `FITSHeaders` package implementing the methods and properties
 for FITS header cards.
 
 """
@@ -9,18 +9,20 @@ module Cards
 
 export FitsCard
 
-using ..BaseFITS
-using ..BaseFITS:
+using ..FITSHeaders
+using ..FITSHeaders:
     CardName,
     CardValue,
     CardComment,
+    FitsLogical,
     FitsInteger,
     FitsFloat,
+    FitsString,
     FitsComplex,
     Undefined
-import ..BaseFITS:
+import ..FITSHeaders:
     FitsCardType
-using ..BaseFITS.Parser:
+using ..FITSHeaders.Parser:
     EMPTY_STRING,
     ByteBuffer,
     check_keyword,
@@ -33,7 +35,7 @@ using ..BaseFITS.Parser:
     parse_logical_value,
     parse_string_value,
     scan_card
-import ..BaseFITS.Parser:
+import ..FITSHeaders.Parser:
     is_structural,
     is_comment,
     is_naxis,

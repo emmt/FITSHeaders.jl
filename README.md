@@ -1,6 +1,6 @@
-# BaseFITS [![Build Status](https://github.com/emmt/BaseFITS.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/BaseFITS.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/BaseFITS.jl?svg=true)](https://ci.appveyor.com/project/emmt/BaseFITS-jl) [![Coverage](https://codecov.io/gh/emmt/BaseFITS.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/BaseFITS.jl)
+# FITSHeaders [![Build Status](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Build Status](https://ci.appveyor.com/api/projects/status/github/emmt/FITSHeaders.jl?svg=true)](https://ci.appveyor.com/project/emmt/FITSHeaders-jl) [![Coverage](https://codecov.io/gh/emmt/FITSHeaders.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/FITSHeaders.jl)
 
-`BaseFITS` is a pure [Julia](https://julialang.org/) package for managing basic
+`FITSHeaders` is a pure [Julia](https://julialang.org/) package for managing basic
 FITS structures such as FITS headers. [FITS (for *Flexible Image Transport
 System*)](https://fits.gsfc.nasa.gov/fits_standard.html) is a data file format
 widely used in astronomy. A FITS file is a concatenation of *Header Data Units*
@@ -8,7 +8,7 @@ widely used in astronomy. A FITS file is a concatenation of *Header Data Units*
 collection of so-called *FITS cards*. Each such card is stored in textual form
 and associates a keyword with a value and/or a comment.
 
-The `BaseFITS` package is intended to provide:
+The `FITSHeaders` package is intended to provide:
 
 - Methods for fast parsing of a FITS header or of a piece of a FITS header
   (that is a single FITS header card).
@@ -53,7 +53,7 @@ string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
 `"HISTORY"` and the card value otherwise.
 
 Conversely, `Pair(card)` yields the pair `key => (val, com)`. The `convert` method
-is extended by the `BaseFITS` package to perform these conversions.
+is extended by the `FITSHeaders` package to perform these conversions.
 
 If the string value of a FITS card is too long, it shall be split across
 several consecutive `CONTINUE` cards when writing a FITS file. Likewise, if the
@@ -158,26 +158,26 @@ This rule is only applied to the construction of FITS cards from pairs. When
 parsing a FITS header card from a file, the `"HIERARCH "` prefix must be
 present.
 
-The non-exported method `BaseFITS.keyword` may be used to apply this rule:
+The non-exported method `FITSHeaders.keyword` may be used to apply this rule:
 
 ``` julia
-julia> BaseFITS.keyword("VERY-LONG-NAME")
+julia> FITSHeaders.keyword("VERY-LONG-NAME")
 "HIERARCH VERY-LONG-NAME"
 
-julia> BaseFITS.keyword("SOME KEY")
+julia> FITSHeaders.keyword("SOME KEY")
 "HIERARCH SOME KEY"
 
-julia> BaseFITS.keyword("NAME")
+julia> FITSHeaders.keyword("NAME")
 "NAME"
 
-julia> BaseFITS.keyword("HIERARCH NAME")
+julia> FITSHeaders.keyword("HIERARCH NAME")
 "HIERARCH NAME"
 ```
 
 
 ## Quick FITS keys
 
-In `BaseFITS`, a key of type `FitsKey` is a 64-bit value computed from a FITS
+In `FITSHeaders`, a key of type `FitsKey` is a 64-bit value computed from a FITS
 keyword. The key of a short FITS keyword is unique and exactly matches the
 first 8 bytes of the keyword as it is stored in a FITS file. Thus quick keys
 provide fast means to compare and search FITS keywords. The constructor
@@ -207,7 +207,7 @@ Each FITS header card is stored in a FITS file as 80 consecutive bytes from the
 restricted set of ASCII characters from `' '` to `'~'` (hexadecimal codes 0x20
 to 0x7E). Hence Julia strings (whether they are encoded in ASCII or in UTF8)
 can be treated as vectors of bytes. The parsing methods provided by the
-`BaseFITS` package exploit this to deal with FITS headers and cards stored as
+`FITSHeaders` package exploit this to deal with FITS headers and cards stored as
 either vectors of bytes (of type `AbstractVector{UInt8}`) or as Julia strings
 (of type `String` or `SubString{String}`).
 
@@ -233,7 +233,7 @@ returned.
 
 ## FITS headers
 
-The `BaseFITS` package provides objects of type `FitsHeader` to store,
+The `FITSHeaders` package provides objects of type `FitsHeader` to store,
 possibly partial, FITS headers.
 
 
@@ -464,7 +464,7 @@ julia> if (i = findfirst("BITPIX", hdr)) != nothing
 
 ## Timings
 
-`BaseFITS` is ought to be fast. Below are times and memory allocations for
+`FITSHeaders` is ought to be fast. Below are times and memory allocations for
 parsing 80-byte FITS cards measured with Julia 1.8.5 on a Linux laptop with an
 Intel Core i7-5500U CPU:
 

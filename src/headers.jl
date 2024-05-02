@@ -2,9 +2,9 @@ module Headers
 
 export FitsHeader
 
-using ..BaseFITS
-using ..BaseFITS: try_parse_keyword, is_comment
-using ..BaseFITS.Parser: full_name
+using ..FITSHeaders
+using ..FITSHeaders: try_parse_keyword, is_comment
+using ..FITSHeaders.Parser: full_name
 
 using TypeUtils
 using Base: @propagate_inbounds
@@ -273,7 +273,7 @@ end
 Base.push!(hdr::FitsHeader, rec) = push!(hdr, as(FitsCard, rec))
 
 """
-    BaseFITS.FullName(str) -> obj
+    FITSHeaders.FullName(str) -> obj
 
 yields the full name of a FITS header record given the, possibly shortened,
 name `str`. The returned object has 2 properties: `obj.name` is the full name

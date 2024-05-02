@@ -1,10 +1,10 @@
-module TestingBaseFITS
+module TestingFITSHeaders
 
 using TypeUtils
 using Dates
 using Test
-using BaseFITS
-using BaseFITS:
+using FITSHeaders
+using FITSHeaders:
     FitsInteger, FitsFloat, FitsComplex,
     is_structural, is_comment, is_naxis, is_end
 
@@ -53,7 +53,7 @@ _load(::Type{T}, buf::Vector{UInt8}, off::Integer = 0) where {T} =
 _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     GC.@preserve buf unsafe_store!(Base.unsafe_convert(Ptr{T}, buf) + off, as(T, x))
 
-@testset "BaseFITS.jl" begin
+@testset "FITSHeaders.jl" begin
     @testset "Assertions" begin
         # Check that `unsafe_load` and `unsafe_store!` are unaligned operations
         # and that in `pointer + offset` expression the offset is in bytes (not
@@ -120,39 +120,39 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test string(FitsKey()) == "FitsKey(0x0000000000000000)"
         @test string(Fits"SIMPLE") == "Fits\"SIMPLE\""
         @test string(Fits"HISTORY") == "Fits\"HISTORY\""
-        @test_throws Exception BaseFITS.keyword("SIMPLE#")
-        @test_throws Exception BaseFITS.keyword(" SIMPLE")
-        @test_throws Exception BaseFITS.keyword("SIMPLE ")
-        @test_throws Exception BaseFITS.keyword("SImPLE")
-        @test_throws Exception BaseFITS.keyword("TOO  MANY SPACES")
-        @test_throws Exception BaseFITS.keyword("HIERARCH  A") # more than one space
-        @test_throws Exception BaseFITS.keyword("HIERARCH+ A") # invalid character
+        @test_throws Exception FITSHeaders.keyword("SIMPLE#")
+        @test_throws Exception FITSHeaders.keyword(" SIMPLE")
+        @test_throws Exception FITSHeaders.keyword("SIMPLE ")
+        @test_throws Exception FITSHeaders.keyword("SImPLE")
+        @test_throws Exception FITSHeaders.keyword("TOO  MANY SPACES")
+        @test_throws Exception FITSHeaders.keyword("HIERARCH  A") # more than one space
+        @test_throws Exception FITSHeaders.keyword("HIERARCH+ A") # invalid character
         # Short FITS keywords.
-        @test BaseFITS.try_parse_keyword("SIMPLE") == (Fits"SIMPLE", false)
-        @test BaseFITS.keyword("SIMPLE") == "SIMPLE"
-        @test BaseFITS.keyword(:SIMPLE) == "SIMPLE"
-        @test BaseFITS.try_parse_keyword("HISTORY") == (Fits"HISTORY", false)
-        @test BaseFITS.keyword("HISTORY") == "HISTORY"
+        @test FITSHeaders.try_parse_keyword("SIMPLE") == (Fits"SIMPLE", false)
+        @test FITSHeaders.keyword("SIMPLE") == "SIMPLE"
+        @test FITSHeaders.keyword(:SIMPLE) == "SIMPLE"
+        @test FITSHeaders.try_parse_keyword("HISTORY") == (Fits"HISTORY", false)
+        @test FITSHeaders.keyword("HISTORY") == "HISTORY"
         # Keywords longer than 8-characters are HIERARCH ones.
-        @test BaseFITS.try_parse_keyword("LONG-NAME") == (Fits"HIERARCH", true)
-        @test BaseFITS.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
-        @test BaseFITS.try_parse_keyword("HIERARCHY") == (Fits"HIERARCH", true)
-        @test BaseFITS.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
+        @test FITSHeaders.try_parse_keyword("LONG-NAME") == (Fits"HIERARCH", true)
+        @test FITSHeaders.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
+        @test FITSHeaders.try_parse_keyword("HIERARCHY") == (Fits"HIERARCH", true)
+        @test FITSHeaders.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
         # Keywords starting by "HIERARCH " are HIERARCH ones.
         for key in ("HIERARCH GIZMO", "HIERARCH MY GIZMO", "HIERARCH MY BIG GIZMO")
-            @test BaseFITS.try_parse_keyword(key) == (Fits"HIERARCH", false)
-            @test BaseFITS.keyword(key) === key # should return the same object
+            @test FITSHeaders.try_parse_keyword(key) == (Fits"HIERARCH", false)
+            @test FITSHeaders.keyword(key) === key # should return the same object
         end
         # Keywords with multiple words are HIERARCH ones whatever their lengths.
         for key in ("A B", "A B C", "SOME KEY", "TEST CASE")
-            @test BaseFITS.try_parse_keyword(key) == (Fits"HIERARCH", true)
-            @test BaseFITS.keyword(key) == "HIERARCH "*key
+            @test FITSHeaders.try_parse_keyword(key) == (Fits"HIERARCH", true)
+            @test FITSHeaders.keyword(key) == "HIERARCH "*key
         end
         # The following cases are consequences of the implemented scanner.
-        @test BaseFITS.try_parse_keyword("HIERARCH") == (Fits"HIERARCH", false)
-        @test BaseFITS.keyword("HIERARCH") == "HIERARCH"
-        @test BaseFITS.try_parse_keyword("HIERARCH SIMPLE") == (Fits"HIERARCH", false)
-        @test BaseFITS.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
+        @test FITSHeaders.try_parse_keyword("HIERARCH") == (Fits"HIERARCH", false)
+        @test FITSHeaders.keyword("HIERARCH") == "HIERARCH"
+        @test FITSHeaders.try_parse_keyword("HIERARCH SIMPLE") == (Fits"HIERARCH", false)
+        @test FITSHeaders.keyword("HIERARCH SIMPLE") == "HIERARCH SIMPLE"
 
         @test  is_structural(Fits"SIMPLE")
         @test  is_structural(Fits"BITPIX")
@@ -248,112 +248,112 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     end
     @testset "Parser" begin
         # Byte order.
-        @test BaseFITS.Parser.is_big_endian() === (BYTE_ORDER === :big_endian)
-        @test BaseFITS.Parser.is_little_endian() === (BYTE_ORDER === :little_endian)
+        @test FITSHeaders.Parser.is_big_endian() === (BYTE_ORDER === :big_endian)
+        @test FITSHeaders.Parser.is_little_endian() === (BYTE_ORDER === :little_endian)
         # Character classes according to FITS standard.
         for b in 0x00:0xFF
             c = Char(b)
-            @test BaseFITS.Parser.is_digit(c) === ('0' ≤ c ≤ '9')
-            @test BaseFITS.Parser.is_uppercase(c) === ('A' ≤ c ≤ 'Z')
-            @test BaseFITS.Parser.is_lowercase(c) === ('a' ≤ c ≤ 'z')
-            @test BaseFITS.Parser.is_space(c) === (c == ' ')
-            @test BaseFITS.Parser.is_quote(c) === (c == '\'')
-            @test BaseFITS.Parser.is_equals_sign(c) === (c == '=')
-            @test BaseFITS.Parser.is_hyphen(c) === (c == '-')
-            @test BaseFITS.Parser.is_underscore(c) === (c == '_')
-            @test BaseFITS.Parser.is_comment_separator(c) === (c == '/')
-            @test BaseFITS.Parser.is_opening_parenthesis(c) === (c == '(')
-            @test BaseFITS.Parser.is_closing_parenthesis(c) === (c == ')')
-            @test BaseFITS.Parser.is_restricted_ascii(c) === (' ' ≤ c ≤ '~')
-            @test BaseFITS.Parser.is_keyword(c) ===
+            @test FITSHeaders.Parser.is_digit(c) === ('0' ≤ c ≤ '9')
+            @test FITSHeaders.Parser.is_uppercase(c) === ('A' ≤ c ≤ 'Z')
+            @test FITSHeaders.Parser.is_lowercase(c) === ('a' ≤ c ≤ 'z')
+            @test FITSHeaders.Parser.is_space(c) === (c == ' ')
+            @test FITSHeaders.Parser.is_quote(c) === (c == '\'')
+            @test FITSHeaders.Parser.is_equals_sign(c) === (c == '=')
+            @test FITSHeaders.Parser.is_hyphen(c) === (c == '-')
+            @test FITSHeaders.Parser.is_underscore(c) === (c == '_')
+            @test FITSHeaders.Parser.is_comment_separator(c) === (c == '/')
+            @test FITSHeaders.Parser.is_opening_parenthesis(c) === (c == '(')
+            @test FITSHeaders.Parser.is_closing_parenthesis(c) === (c == ')')
+            @test FITSHeaders.Parser.is_restricted_ascii(c) === (' ' ≤ c ≤ '~')
+            @test FITSHeaders.Parser.is_keyword(c) ===
                 (('0' ≤ c ≤ '9') | ('A' ≤ c ≤ 'Z') | (c == '-') | (c == '_'))
         end
         # Trimming of spaces.
         for str in ("", "  a string ", "another string", "  yet  another  string    ")
-            @test SubString(str, BaseFITS.Parser.trim_leading_spaces(str)) == lstrip(str)
-            @test SubString(str, BaseFITS.Parser.trim_trailing_spaces(str)) == rstrip(str)
+            @test SubString(str, FITSHeaders.Parser.trim_leading_spaces(str)) == lstrip(str)
+            @test SubString(str, FITSHeaders.Parser.trim_trailing_spaces(str)) == rstrip(str)
             rng = firstindex(str):ncodeunits(str)
-            @test SubString(str, BaseFITS.Parser.trim_leading_spaces(str, rng)) == lstrip(str)
-            @test SubString(str, BaseFITS.Parser.trim_trailing_spaces(str, rng)) == rstrip(str)
+            @test SubString(str, FITSHeaders.Parser.trim_leading_spaces(str, rng)) == lstrip(str)
+            @test SubString(str, FITSHeaders.Parser.trim_trailing_spaces(str, rng)) == rstrip(str)
         end
         # Representation of a character.
-        @test BaseFITS.Parser.repr_char(' ') == repr(' ')
-        @test BaseFITS.Parser.repr_char(0x20) == repr(' ')
-        @test BaseFITS.Parser.repr_char('\0') == repr(0x00)
-        @test BaseFITS.Parser.repr_char(0x00) == repr(0x00)
-        @test BaseFITS.Parser.repr_char('i') == repr('i')
-        @test BaseFITS.Parser.repr_char(0x69) == repr('i')
+        @test FITSHeaders.Parser.repr_char(' ') == repr(' ')
+        @test FITSHeaders.Parser.repr_char(0x20) == repr(' ')
+        @test FITSHeaders.Parser.repr_char('\0') == repr(0x00)
+        @test FITSHeaders.Parser.repr_char(0x00) == repr(0x00)
+        @test FITSHeaders.Parser.repr_char('i') == repr('i')
+        @test FITSHeaders.Parser.repr_char(0x69) == repr('i')
         # FITS logical value.
-        @test BaseFITS.Parser.try_parse_logical_value("T") === true
-        @test BaseFITS.Parser.try_parse_logical_value("F") === false
-        @test BaseFITS.Parser.try_parse_logical_value("t") === nothing
-        @test BaseFITS.Parser.try_parse_logical_value("f") === nothing
-        @test BaseFITS.Parser.try_parse_logical_value("true") === nothing
-        @test BaseFITS.Parser.try_parse_logical_value("false") === nothing
+        @test FITSHeaders.Parser.try_parse_logical_value("T") === true
+        @test FITSHeaders.Parser.try_parse_logical_value("F") === false
+        @test FITSHeaders.Parser.try_parse_logical_value("t") === nothing
+        @test FITSHeaders.Parser.try_parse_logical_value("f") === nothing
+        @test FITSHeaders.Parser.try_parse_logical_value("true") === nothing
+        @test FITSHeaders.Parser.try_parse_logical_value("false") === nothing
         # FITS integer value.
         for val in (zero(Int64), typemin(Int64), typemax(Int64))
             str = "$val"
-            @test BaseFITS.Parser.try_parse_integer_value(str) == val
+            @test FITSHeaders.Parser.try_parse_integer_value(str) == val
             if val > 0
                 # Add a few leading zeros.
                 str = "000$val"
-                @test BaseFITS.Parser.try_parse_integer_value(str) == val
+                @test FITSHeaders.Parser.try_parse_integer_value(str) == val
             end
-            @test BaseFITS.Parser.try_parse_integer_value(" "*str) === nothing
-            @test BaseFITS.Parser.try_parse_integer_value(str*" ") === nothing
+            @test FITSHeaders.Parser.try_parse_integer_value(" "*str) === nothing
+            @test FITSHeaders.Parser.try_parse_integer_value(str*" ") === nothing
         end
         # FITS float value;
         for val in (0.0, 1.0, -1.0, float(π))
             str = "$val"
-            @test BaseFITS.Parser.try_parse_float_value(str) ≈ val
-            @test BaseFITS.Parser.try_parse_integer_value(" "*str) === nothing
-            @test BaseFITS.Parser.try_parse_integer_value(str*" ") === nothing
+            @test FITSHeaders.Parser.try_parse_float_value(str) ≈ val
+            @test FITSHeaders.Parser.try_parse_integer_value(" "*str) === nothing
+            @test FITSHeaders.Parser.try_parse_integer_value(str*" ") === nothing
         end
         # FITS complex value;
-        @test BaseFITS.Parser.try_parse_float_value("2.3d4") ≈ 2.3e4
-        @test BaseFITS.Parser.try_parse_float_value("-1.09D3") ≈ -1.09e3
-        @test BaseFITS.Parser.try_parse_complex_value("(2.3d4,-1.8)") ≈ complex(2.3e4,-1.8)
-        @test BaseFITS.Parser.try_parse_complex_value("(-1.09e5,7.6D2)") ≈ complex(-1.09e5,7.6e2)
+        @test FITSHeaders.Parser.try_parse_float_value("2.3d4") ≈ 2.3e4
+        @test FITSHeaders.Parser.try_parse_float_value("-1.09D3") ≈ -1.09e3
+        @test FITSHeaders.Parser.try_parse_complex_value("(2.3d4,-1.8)") ≈ complex(2.3e4,-1.8)
+        @test FITSHeaders.Parser.try_parse_complex_value("(-1.09e5,7.6D2)") ≈ complex(-1.09e5,7.6e2)
         # FITS string value;
-        @test BaseFITS.Parser.try_parse_string_value("''") == ""
-        @test BaseFITS.Parser.try_parse_string_value("'''") === nothing
-        @test BaseFITS.Parser.try_parse_string_value("''''") == "'"
-        @test BaseFITS.Parser.try_parse_string_value("'Hello!'") == "Hello!"
-        @test BaseFITS.Parser.try_parse_string_value("'Hello! '") == "Hello!"
-        @test BaseFITS.Parser.try_parse_string_value("' Hello!'") == " Hello!"
-        @test BaseFITS.Parser.try_parse_string_value("' Hello! '") == " Hello!"
-        @test BaseFITS.Parser.try_parse_string_value("' Hello! '") == " Hello!"
-        @test BaseFITS.Parser.try_parse_string_value("'Joe''s taxi'") == "Joe's taxi"
-        @test BaseFITS.Parser.try_parse_string_value("'Joe's taxi'") === nothing
-        @test BaseFITS.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
+        @test FITSHeaders.Parser.try_parse_string_value("''") == ""
+        @test FITSHeaders.Parser.try_parse_string_value("'''") === nothing
+        @test FITSHeaders.Parser.try_parse_string_value("''''") == "'"
+        @test FITSHeaders.Parser.try_parse_string_value("'Hello!'") == "Hello!"
+        @test FITSHeaders.Parser.try_parse_string_value("'Hello! '") == "Hello!"
+        @test FITSHeaders.Parser.try_parse_string_value("' Hello!'") == " Hello!"
+        @test FITSHeaders.Parser.try_parse_string_value("' Hello! '") == " Hello!"
+        @test FITSHeaders.Parser.try_parse_string_value("' Hello! '") == " Hello!"
+        @test FITSHeaders.Parser.try_parse_string_value("'Joe''s taxi'") == "Joe's taxi"
+        @test FITSHeaders.Parser.try_parse_string_value("'Joe's taxi'") === nothing
+        @test FITSHeaders.Parser.try_parse_string_value("'Joe'''s taxi'") === nothing
         # Units.
         let com = ""
-            @test BaseFITS.Parser.get_units_part(com) == ""
-            @test BaseFITS.Parser.get_unitless_part(com) == ""
+            @test FITSHeaders.Parser.get_units_part(com) == ""
+            @test FITSHeaders.Parser.get_unitless_part(com) == ""
         end
         let com = "some comment"
-            @test BaseFITS.Parser.get_units_part(com) == ""
-            @test BaseFITS.Parser.get_unitless_part(com) == "some comment"
+            @test FITSHeaders.Parser.get_units_part(com) == ""
+            @test FITSHeaders.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[]some comment"
-            @test BaseFITS.Parser.get_units_part(com) == ""
-            @test BaseFITS.Parser.get_unitless_part(com) == "some comment"
+            @test FITSHeaders.Parser.get_units_part(com) == ""
+            @test FITSHeaders.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[] some comment"
-            @test BaseFITS.Parser.get_units_part(com) == ""
-            @test BaseFITS.Parser.get_unitless_part(com) == "some comment"
+            @test FITSHeaders.Parser.get_units_part(com) == ""
+            @test FITSHeaders.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[some units]some comment"
-            @test BaseFITS.Parser.get_units_part(com) == "some units"
-            @test BaseFITS.Parser.get_unitless_part(com) == "some comment"
+            @test FITSHeaders.Parser.get_units_part(com) == "some units"
+            @test FITSHeaders.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[  some units   ]  some comment"
-            @test BaseFITS.Parser.get_units_part(com) == "some units"
-            @test BaseFITS.Parser.get_unitless_part(com) == "some comment"
+            @test FITSHeaders.Parser.get_units_part(com) == "some units"
+            @test FITSHeaders.Parser.get_unitless_part(com) == "some comment"
         end
         let com = "[some comment"
-            @test BaseFITS.Parser.get_units_part(com) == ""
-            @test BaseFITS.Parser.get_unitless_part(com) == "[some comment"
+            @test FITSHeaders.Parser.get_units_part(com) == ""
+            @test FITSHeaders.Parser.get_unitless_part(com) == "[some comment"
         end
     end
     @testset "Cards from strings" begin

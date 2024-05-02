@@ -1,14 +1,14 @@
 """
-    BaseFITS.Parser
+    FITSHeaders.Parser
 
-A sub-module of the `BaseFITS` package implementing methods for parsing FITS
+A sub-module of the `FITSHeaders` package implementing methods for parsing FITS
 header cards.
 
 """
 module Parser
 
-using ..BaseFITS
-using ..BaseFITS:
+using ..FITSHeaders
+using ..FITSHeaders:
     FitsInteger,
     FitsFloat,
     FitsComplex
@@ -53,7 +53,7 @@ to pad it with ASCII spaces (hexadecimal code 0x20).
 const FITS_SHORT_KEYWORD_SIZE = 8
 
 """
-    BaseFITS.Parser.PointerCapability(T) -> Union{PointerNone,PointerFull}
+    FITSHeaders.Parser.PointerCapability(T) -> Union{PointerNone,PointerFull}
 
 yields whether `Base.unsafe_convert(Ptr{UInt8},obj)` and
 `Base.cconvert(Ptr{UInt8},obj)` are fully implemented for an object `obj` of
@@ -69,10 +69,10 @@ PointerCapability(::Type{<:Union{Array,String,SubString{String}}}) = PointerFull
 PointerCapability(::Type) = PointerNone()
 
 """
-    BaseFITS.Parser.ByteString
+    FITSHeaders.Parser.ByteString
 
 is the union of types of strings that can be considered as vectors of bytes to
-implement fast parsing methods (see [`BaseFITS.Parser.ByteBuffer`](@ref)).
+implement fast parsing methods (see [`FITSHeaders.Parser.ByteBuffer`](@ref)).
 
 FITS header cards consist in character from the restricted set of ASCII
 characters from `' '` to `'~'` (hexadecimal codes 0x20 to 0x7E). Hence Julia
@@ -82,16 +82,16 @@ strings (encoded in ASCII or in UTF8) can be treated as vectors of bytes.
 const ByteString = Union{String,SubString{String}}
 
 """
-    BaseFITS.Parser.ByteVector
+    FITSHeaders.Parser.ByteVector
 
 is an alias for types that can be considered as vectors of bytes to
-implement fast parsing methods (see [`BaseFITS.Parser.ByteBuffer`](@ref)).
+implement fast parsing methods (see [`FITSHeaders.Parser.ByteBuffer`](@ref)).
 
 """
 const ByteVector = AbstractVector{UInt8}
 
 """
-    BaseFITS.Parser.ByteBuffer
+    FITSHeaders.Parser.ByteBuffer
 
 is the union of types that can be considered as buffers of bytes and that can
 treated as vectors of bytes to parse FITS header cards using the following
@@ -102,13 +102,13 @@ helper functions (assuming `A isa ByteBuffer` holds):
     byte_index_range(A) # yields the range of byte indices in A
     get_byte(A,i)       # yields the i-th byte from A
 
-See [`BaseFITS.Parser.ByteString`](@ref) and [`BaseFITS.Parser.ByteVector`](@ref).
+See [`FITSHeaders.Parser.ByteString`](@ref) and [`FITSHeaders.Parser.ByteVector`](@ref).
 
 """
 const ByteBuffer = Union{ByteString,ByteVector}
 
 """
-    BaseFITS.Parser.get_byte(T = UInt8, A, i)
+    FITSHeaders.Parser.get_byte(T = UInt8, A, i)
 
 yields the `i`-th byte of `A` which may be a vector of bytes or a string.
 Optional first argument `T` is to specify the data type of the returned value.
@@ -116,7 +116,7 @@ Optional first argument `T` is to specify the data type of the returned value.
 When parsing a FITS header or keyword, it is possible to specify the index `n`
 of the last available byte in `A` and call:
 
-   BaseFITS.Parser.get_byte(T = UInt8, A, i, n)
+   FITSHeaders.Parser.get_byte(T = UInt8, A, i, n)
 
 which yields the `i`-th byte of `A` if `i ≤ n` and `0x20` (an ASCII space)
 otherwise.
@@ -130,7 +130,7 @@ This function propagates the `@inbounds` macro.
 @inline @propagate_inbounds get_byte(::Type{T}, args...) where {T<:Unsigned} = get_byte(args...) % T
 
 """
-    BaseFITS.Parser.first_byte_index(A)
+    FITSHeaders.Parser.first_byte_index(A)
 
 yields the index of the first byte in `A`.
 
@@ -139,7 +139,7 @@ yields the index of the first byte in `A`.
 @inline first_byte_index(A::ByteVector) = firstindex(A)
 
 """
-    BaseFITS.Parser.last_byte_index(A)
+    FITSHeaders.Parser.last_byte_index(A)
 
 yields the index of the last byte in `A`.
 
@@ -148,7 +148,7 @@ yields the index of the last byte in `A`.
 @inline last_byte_index(A::ByteVector) = lastindex(A)
 
 """
-    BaseFITS.Parser.byte_index_range(A)
+    FITSHeaders.Parser.byte_index_range(A)
 
 yields the range of byte indices in `A`.
 
@@ -309,7 +309,7 @@ macro Fits_str(str::String)
 end
 
 """
-    BaseFITS.check_short_keyword(str) -> str
+    FITSHeaders.check_short_keyword(str) -> str
 
 returns the string `str` throwing an exception if `str` is not a short FITS
 keyword consisting in, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters from
@@ -465,7 +465,7 @@ end
 end
 
 """
-    BaseFITS.is_structural(A::Union{FitsKey,FitsCard})
+    FITSHeaders.is_structural(A::Union{FitsKey,FitsCard})
 
 yields whether `A` is a structural FITS keyword or card.
 
@@ -531,7 +531,7 @@ is_structural_T(key::FitsKey) = begin
 end
 
 """
-    BaseFITS.Parser.is_indexed(b...)
+    FITSHeaders.Parser.is_indexed(b...)
 
 yields whether trailing bytes `b...` of a FITS keyword indicate an indexed
 keyword.
@@ -543,11 +543,11 @@ is_indexed(b1::UInt8) = is_digit(b1)
     is_indexed(b1) & (is_space(b2...) | is_indexed(b2...))
 
 """
-    BaseFITS.is_comment(A::Union{FitsCardType,FitsCard})
+    FITSHeaders.is_comment(A::Union{FitsCardType,FitsCard})
 
 yields whether `A` indicates a, possibly non-standard, commentary FITS keyword.
 
-    BaseFITS.is_comment(key::FitsKey)
+    FITSHeaders.is_comment(key::FitsKey)
 
 yields whether `key` is `Fits"COMMENT"` or `Fits"HISTORY"` which corresponds to
 a standard commentary FITS keyword.
@@ -557,7 +557,7 @@ is_comment(key::FitsKey) = (key == Fits"COMMENT") | (key == Fits"HISTORY")
 is_comment(type::FitsCardType) = type === FITS_COMMENT
 
 """
-    BaseFITS.is_naxis(A::Union{FitsKey,FitsCard})
+    FITSHeaders.is_naxis(A::Union{FitsKey,FitsCard})
 
 yields whether `A` is a FITS "NAXIS" or "NAXIS#" keyword or card with`#`
 denoting a decimal number.
@@ -582,7 +582,7 @@ function is_naxis(key::FitsKey)
 end
 
 """
-    BaseFITS.is_end(A::Union{FitsKey,FitsCardType,FitsCard})
+    FITSHeaders.is_end(A::Union{FitsKey,FitsCardType,FitsCard})
 
 yields whether `A` indicates the END FITS keyword.
 
@@ -735,7 +735,7 @@ function try_parse_complex_value(buf::ByteBuffer,
 end
 
 """
-    BaseFITS.Parser.make_string(buf, rng) -> str::String
+    FITSHeaders.Parser.make_string(buf, rng) -> str::String
 
 yields a string from the bytes of `buf` in the range of indices `rng`.
 
@@ -770,7 +770,7 @@ function unsafe_make_string(::PointerCapability, buf::ByteBuffer,
 end
 
 """
-    BaseFITS.Parser.scan_card(A, off=0) -> type, key, name_rng, val_rng, com_rng
+    FITSHeaders.Parser.scan_card(A, off=0) -> type, key, name_rng, val_rng, com_rng
 
 parses a FITS header card `A` as it is written in a FITS file. `A` may be a
 string or a vector of bytes. Optional argument `off` is an offset in bytes
@@ -831,7 +831,7 @@ function scan_card(buf::ByteBuffer, off::Int = 0)
 end
 
 """
-    BaseFITS.Parser.scan_short_keyword_part(A, rng) -> name_rng
+    FITSHeaders.Parser.scan_short_keyword_part(A, rng) -> name_rng
 
 scans the first bytes of `A` in the index range `rng` for a valid short FITS
 keyword and returns the index range to this keyword. A short FITS keyword
@@ -872,7 +872,7 @@ index:
 end
 
 """
-    BaseFITS.Parser.scan_keyword_part(A, rng) -> key, name_rng, i_next
+    FITSHeaders.Parser.scan_keyword_part(A, rng) -> key, name_rng, i_next
 
 parses a the keyword part of FITS header card stored in bytes `rng` of `A`.
 Returns `key` the keyword quick key, `name_rng` the byte index range for the
@@ -941,7 +941,7 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
 end
 
 """
-    BaseFITS.Parser.full_name(pfx, name::AbstractString)
+    FITSHeaders.Parser.full_name(pfx, name::AbstractString)
 
 yields `"HIERARCH "*name` if `pfx` is true, `name` otherwise. The result is a
 `String`.
@@ -951,7 +951,7 @@ full_name(pfx::Bool, name::AbstractString)::String =
     pfx ? "HIERARCH "*name : String(name)
 
 """
-    BaseFITS.keyword(name) -> full_name
+    FITSHeaders.keyword(name) -> full_name
 
 yields the full FITS keyword corresponding to `name`, throwing an exception if
 `name` is not a valid FITS keyword.  The result is equal to either `name` or
@@ -960,16 +960,16 @@ to `"HIERARCH "*name`.
 Examples:
 
 ``` jldoctest
-julia> BaseFITS.keyword("GIZMO")
+julia> FITSHeaders.keyword("GIZMO")
 "GIZMO"
 
-julia> BaseFITS.keyword("HIERARCH GIZMO")
+julia> FITSHeaders.keyword("HIERARCH GIZMO")
 "HIERARCH GIZMO"
 
-julia> BaseFITS.keyword("GIZ MO")
+julia> FITSHeaders.keyword("GIZ MO")
 "HIERARCH GIZ MO"
 
-julia> BaseFITS.keyword("VERYLONGNAME")
+julia> FITSHeaders.keyword("VERYLONGNAME")
 "HIERARCH VERYLONGNAME"
 ```
 
@@ -979,8 +979,8 @@ keyword, while the 3rd and 4th ones are automatically turned into `HIERARCH`
 keywords because the 3rd one contains a space and because the 4th one is longer
 than $FITS_SHORT_KEYWORD_SIZE characters.
 
-See also [`BaseFITS.check_keyword`](@ref) and
-[`BaseFITS.Parser.full_name`](@ref).
+See also [`FITSHeaders.check_keyword`](@ref) and
+[`FITSHeaders.Parser.full_name`](@ref).
 
 """
 keyword(name::Symbol) = keyword(String(name))
@@ -992,14 +992,14 @@ function keyword(name::AbstractString)
 end
 
 """
-    BaseFITS.check_keyword(name) -> key, full_name
+    FITSHeaders.check_keyword(name) -> key, full_name
 
 checks the FITS keyword `name` and returns the corresponding quick key and full
 keyword name throwing an exception if `name` is not a valid FITS keyword. The
 full keyword name is a `string` instance either equal to `name` or to `"HIERARCH "*name`.
 
-See also [`BaseFITS.keyword`](@ref), [`BaseFITS.parse_keyword`](@ref), and
-[`BaseFITS.Parser.full_name`](@ref).
+See also [`FITSHeaders.keyword`](@ref), [`FITSHeaders.parse_keyword`](@ref), and
+[`FITSHeaders.Parser.full_name`](@ref).
 
 """
 check_keyword(name::Symbol) = check_keyword(String(name))
@@ -1011,7 +1011,7 @@ function check_keyword(name::AbstractString)
 end
 
 """
-    BaseFITS.try_parse_keyword(str)
+    FITSHeaders.try_parse_keyword(str)
 
 parses the FITS keyword given by string `str`. In case of parsing error, the
 result is the first illegal character encountered in `str`. Otherwise, the
@@ -1127,7 +1127,7 @@ function try_parse_keyword(str::Union{String,SubString{String}})
 end
 
 """
-    BaseFITS.Parser.scan_value_comment_parts(buf, rng) -> type, val_rng, com_rng
+    FITSHeaders.Parser.scan_value_comment_parts(buf, rng) -> type, val_rng, com_rng
 
 scans the range `rng` of bytes to find the value and comment of a FITS card
 stored in `buf`. If `rng` is not empty, `first(rng)` shall be the index of the
@@ -1201,7 +1201,7 @@ function scan_value_comment_parts(buf::ByteBuffer, rng::AbstractUnitRange{Int})
 end
 
 """
-    BaseFITS.Parser.scan_comment_part(buf, rng) -> com_rng
+    FITSHeaders.Parser.scan_comment_part(buf, rng) -> com_rng
 
 scans the range `rng` of bytes to find the comment part of a FITS card stored
 in `buf`. If `rng` is not empty, `first(rng)` shall be the index of the first
@@ -1313,7 +1313,7 @@ function get_unitless_part(str::Union{String,SubString{String}})
 end
 
 """
-    BaseFITS.Parser.trim_leading_spaces(buf[, rng]) -> sub_rng
+    FITSHeaders.Parser.trim_leading_spaces(buf[, rng]) -> sub_rng
 
 yields the range `sub_rng` of byte indices in `buf` (a string or a vector of
 bytes) without the leading spaces in `buf`. Optional argument `rng` is to
@@ -1335,7 +1335,7 @@ provided, all the bytes of `buf` are considered. If `rng` is provided,
 end
 
 """
-    BaseFITS.Parser.trim_trailing_spaces(buf[, rng]) -> sub_rng
+    FITSHeaders.Parser.trim_trailing_spaces(buf[, rng]) -> sub_rng
 
 yields the range `sub_rng` of byte indices in `buf` (a string or a vector of
 bytes) without the trailing spaces in `buf`. Optional argument `rng` is to

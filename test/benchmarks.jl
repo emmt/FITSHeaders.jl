@@ -1,5 +1,5 @@
 module BenchmarkingBaseFITS
-using BaseFITS
+using FITSHeaders
 using BenchmarkTools
 
 let s = "SIMPLE  =                    T / this is a FITS file                            "

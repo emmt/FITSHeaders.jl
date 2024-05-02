@@ -1,4 +1,4 @@
-MIT License
+The `FITSHeaders` Julia package is licensed under the MIT "Expat" License.
 
 Copyright (c) 2023 Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors
 

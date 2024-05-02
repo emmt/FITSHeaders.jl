@@ -1,4 +1,8 @@
-# User visible changes in `BaseFITS` package
+# User visible changes in `FITSHeaders` package
+
+# Version 0.4.0
+
+- Package renamed as `FITSHeaders`.
 
 # Version 0.3.11
 
