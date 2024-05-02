@@ -1,5 +1,5 @@
 name = "FITSHeaders"
-uuid = "b056ee54-6bb4-44e7-9abb-abfb59909e18"
+uuid = "8163a04c-c153-4fb1-a498-3402381ec208"
 authors = ["Éric Thiébaut <eric.thiebaut@univ-lyon1.fr> and contributors"]
 version = "0.3.11"
 
