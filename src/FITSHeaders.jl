@@ -46,10 +46,8 @@ using Requires
 end
 
 # Julia types for card values.
-const FitsLogical = Bool
 const FitsInteger = Int64
 const FitsFloat   = Float64
-const FitsString  = String
 const FitsComplex = Complex{FitsFloat}
 
 # Types equivalent to undefined FITS card value.

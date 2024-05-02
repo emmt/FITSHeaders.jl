@@ -14,10 +14,8 @@ using ..FITSHeaders:
     CardName,
     CardValue,
     CardComment,
-    FitsLogical,
     FitsInteger,
     FitsFloat,
-    FitsString,
     FitsComplex,
     Undefined
 import ..FITSHeaders:
@@ -48,7 +46,6 @@ using Dates, TypeUtils
 const CardValueExt = Union{CardValue,DateTime}
 
 const END_STRING = "END"
-const UNDEF_LOGICAL = false
 const UNDEF_INTEGER = zero(FitsInteger)
 const UNDEF_COMPLEX = FitsComplex(NaN,NaN)
 const UNDEF_FLOAT = FitsComplex(NaN,0.0)
@@ -128,27 +125,26 @@ card nor a card with an undefined value).
 struct FitsCard
     key::FitsKey
     type::FitsCardType
-    value_logical::Bool
     value_integer::FitsInteger
     value_complex::FitsComplex
     value_string::String
     name::String
     comment::String
     FitsCard(key::FitsKey, name::AbstractString, val::Bool, com::AbstractString) =
-        new(key, FITS_LOGICAL, val, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+        new(key, FITS_LOGICAL, val, UNDEF_COMPLEX, UNDEF_STRING, name, com)
     FitsCard(key::FitsKey, name::AbstractString, val::Integer, com::AbstractString) =
-        new(key, FITS_INTEGER, UNDEF_LOGICAL, val, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+        new(key, FITS_INTEGER, val, UNDEF_COMPLEX, UNDEF_STRING, name, com)
     FitsCard(key::FitsKey, name::AbstractString, val::Real, com::AbstractString) =
-         new(key, FITS_FLOAT, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
+         new(key, FITS_FLOAT, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
     FitsCard(key::FitsKey, name::AbstractString, val::Complex, com::AbstractString) =
-         new(key, FITS_COMPLEX, UNDEF_LOGICAL, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
+         new(key, FITS_COMPLEX, UNDEF_INTEGER, val, UNDEF_STRING, name, com)
     FitsCard(key::FitsKey, name::AbstractString, val::AbstractString, com::AbstractString) =
-        new(key, FITS_STRING, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, val, name, com)
+        new(key, FITS_STRING, UNDEF_INTEGER, UNDEF_COMPLEX, val, name, com)
     FitsCard(key::FitsKey, name::AbstractString, ::Undefined, com::AbstractString) =
-        new(key, FITS_UNDEFINED, UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+        new(key, FITS_UNDEFINED, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
     FitsCard(key::FitsKey, name::AbstractString, ::Nothing, com::AbstractString) =
         new(key, key === Fits"END" ? FITS_END : FITS_COMMENT,
-            UNDEF_LOGICAL, UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
+            UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
 # Constructor for imutable type does not need to return a new object.
@@ -328,7 +324,7 @@ get_type(         A::FitsCard) = getfield(A, :type)
 get_key(          A::FitsCard) = getfield(A, :key)
 get_name(         A::FitsCard) = getfield(A, :name)
 get_comment(      A::FitsCard) = getfield(A, :comment)
-get_value_logical(A::FitsCard) = getfield(A, :value_logical)
+get_value_logical(A::FitsCard) = !iszero(getfield(A, :value_integer))
 get_value_integer(A::FitsCard) = getfield(A, :value_integer)
 get_value_complex(A::FitsCard) = getfield(A, :value_complex)
 get_value_float(  A::FitsCard) = real(get_value_complex(A))

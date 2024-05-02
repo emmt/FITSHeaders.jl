@@ -4,6 +4,8 @@
 
 - Package renamed as `FITSHeaders`.
 
+- Logical value stored as an integer in `FitsCard`. This is an internal change.
+
 # Version 0.3.11
 
 - Update doc.
