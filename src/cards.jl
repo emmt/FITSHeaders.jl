@@ -313,6 +313,49 @@ for T in (Integer, Real, AbstractFloat, Complex,
     @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
 end
 
+# `apply(f, A, B)` apply binary operator `f` to `A` and `B` at least one being
+# a card value.
+function apply(f, A::FitsCardValue, B::FitsCardValue)
+    A = parent(A)
+    type = get_type(A)
+    type == FITS_LOGICAL   ? apply(f, get_value_logical(  A), B) :
+    type == FITS_INTEGER   ? apply(f, get_value_integer(  A), B) :
+    type == FITS_FLOAT     ? apply(f, get_value_float(    A), B) :
+    type == FITS_STRING    ? apply(f, get_value_string(   A), B) :
+    type == FITS_COMPLEX   ? apply(f, get_value_complex(  A), B) :
+    type == FITS_UNDEFINED ? apply(f, undef, B) : apply(f, nothing, B)
+end
+
+function apply(f, A::FitsCardValue, B::Any)
+    A = parent(A)
+    type = get_type(A)
+    type == FITS_LOGICAL   ? f(get_value_logical(  A), B) :
+    type == FITS_INTEGER   ? f(get_value_integer(  A), B) :
+    type == FITS_FLOAT     ? f(get_value_float(    A), B) :
+    type == FITS_STRING    ? f(get_value_string(   A), B) :
+    type == FITS_COMPLEX   ? f(get_value_complex(  A), B) :
+    type == FITS_UNDEFINED ? f(undef, B) : f(nothing, B)
+end
+
+function apply(f, A::Any, B::FitsCardValue)
+    B = parent(B)
+    type = get_type(B)
+    type == FITS_LOGICAL   ? f(A, get_value_logical(B)) :
+    type == FITS_INTEGER   ? f(A, get_value_integer(B)) :
+    type == FITS_FLOAT     ? f(A, get_value_float(  B)) :
+    type == FITS_STRING    ? f(A, get_value_string( B)) :
+    type == FITS_COMPLEX   ? f(A, get_value_complex(B)) :
+    type == FITS_UNDEFINED ? f(A, undef) : f(A, nothing)
+end
+
+for op in (:(==), :(<))
+    @eval begin
+        Base.$op(A::FitsCardValue, B::FitsCardValue) = apply($op, A, B)
+        Base.$op(A::FitsCardValue, B::Any) = apply($op, A, B)
+        Base.$op(A::Any, B::FitsCardValue) = apply($op, A, B)
+    end
+end
+
 # Conversion rules for a date. The FITS standard imposes ISO-8601 formatting
 # for a date and time.
 (A::FitsCardValue)(::Type{DateTime}) = parse(DateTime, A(String), ISODateTimeFormat)

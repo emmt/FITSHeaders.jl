@@ -7,6 +7,9 @@
 - Undefined FITS card value is `undef` (was `missing`). When creating a FITS
   card, `missing` is considered as `undef`.
 
+- Comparison operators (`==`, `!=`, `<`, `>`, `≤`, and `≥`) can be applied to
+  FITS card values. The other operand may also be a card value.
+
 - Logical value stored as an integer in `FitsCard`. This is an internal change.
 
 # Version 0.3.11

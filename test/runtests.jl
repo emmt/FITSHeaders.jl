@@ -1012,6 +1012,66 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test DateTime(card.value) === date
         @test card.comment == com
     end
+    @testset "Operations on card values" begin
+        A = FitsCard("KEY_A" => true).value
+        B = FitsCard("KEY_B" => 42).value
+        C = FitsCard("KEY_C" => 24.0).value
+        D = FitsCard("KEY_D" => "hello").value
+        @test A == A()
+        @test A() == A
+        @test A == true
+        @test A != false
+        @test A > false
+        @test A ≥ true
+        @test A ≤ true
+
+        @test B == B()
+        @test B() == B
+        @test B == 42
+        @test B != 41
+        @test B > Int16(41)
+        @test B ≥ Int16(42)
+        @test B ≤ Int16(42)
+
+        @test C == C()
+        @test C() == C
+        @test C == C
+        @test C == 24
+        @test C != 25
+        @test C > 23
+        @test C ≥ 24
+        @test C ≤ 24
+
+        @test D == D()
+        @test D() == D
+        @test D == "hello"
+        @test D != "Hello"
+
+        @test A == A
+        @test A != B
+        @test A != C
+        @test A != D
+
+        @test B != A
+        @test B == B
+        @test B != C
+        @test B != D
+
+        @test C != A
+        @test C != B
+        @test C == C
+        @test C != D
+
+        @test D != A
+        @test D != B
+        @test D != C
+        @test D == D
+
+        @test B > A
+        @test B ≥ A
+        @test B > C
+        @test B ≥ C
+    end
     @testset "Headers" begin
         dims = (4,5,6,7)
         h = FitsHeader("SIMPLE" => (true, "FITS file"),
