@@ -1,4 +1,4 @@
-module BenchmarkingBaseFITS
+module BenchmarkingFITSHeaders
 using FITSHeaders
 using BenchmarkTools
 
