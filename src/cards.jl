@@ -17,6 +17,7 @@ using ..FITSHeaders:
     FitsInteger,
     FitsFloat,
     FitsComplex,
+    Undef,
     Undefined
 import ..FITSHeaders:
     FitsCardType
@@ -63,7 +64,7 @@ comment string `com`. The value `val` may be:
 - a complex to yield a card of type `FITS_COMPLEX`;
 - a string to yield a card of type `FITS_STRING`;
 - `nothing` to yield a card of type `FITS_COMMENT`;
-- `missing` or `undef` to yield a card of type `FITS_UNDEFINED`.
+- `undef` or `missing` to yield a card of type `FITS_UNDEFINED`.
 
 The comment may be omitted for a normal FITS card and the value may be omitted
 for a commentary FITS card:
@@ -89,7 +90,7 @@ As the values of FITS keywords have different types, `card.value` does not
 yield a Julia value but a callable object. Called without any argument, this
 object yields the actual card value:
 
-    card.value() -> val::Union{Bool,$FitsInteger,$FitsFloat,$FitsComplex,String,Nothing,Missing}
+    card.value() -> val::Union{Bool,$FitsInteger,$FitsFloat,$FitsComplex,String,Nothing,$Undef}
 
 but such a call is not *type-stable* as indicated by the type assertion with an
 `Union{...}` above. For a type-stable result, the card value can be converted
@@ -183,7 +184,7 @@ function FitsCard(buf::ByteBuffer; offset::Int = 0)
     elseif type == FITS_COMPLEX
         return FitsCard(key, name, parse_complex_value(buf, val_rng), com)
     elseif type == FITS_UNDEFINED
-        return FitsCard(key, name, missing, com)
+        return FitsCard(key, name, undef, com)
     else # must be commentary or END card
         return FitsCard(key, name, nothing, com)
     end
@@ -227,7 +228,7 @@ function Base.show(io::IO, A::FitsCard)
             elseif A.type == FITS_STRING
                 show(io, A.string)
             elseif A.type == FITS_UNDEFINED
-                print(io, "missing")
+                print(io, "undef")
             end
             if commented
                 print(io, ", ")
@@ -308,7 +309,7 @@ Base.convert(::Type{T}, A::FitsCardValue) where {T} = A(T)
 # Explict conversion rules are to avoid ambiguities.
 Base.convert(::Type{T}, A::FitsCardValue) where {T<:Number} = A(T)
 for T in (Integer, Real, AbstractFloat, Complex,
-          AbstractString, String, Nothing, Missing)
+          AbstractString, String, Nothing, Undef)
     @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
 end
 
@@ -336,11 +337,11 @@ get_value(        A::FitsCard) = begin
     type == FITS_FLOAT     ? get_value_float(  A) :
     type == FITS_STRING    ? get_value_string( A) :
     type == FITS_COMPLEX   ? get_value_complex(A) :
-    type == FITS_UNDEFINED ? missing :
+    type == FITS_UNDEFINED ? undef :
     nothing # FITS_COMMENT or FITS_END
 end
-get_value(::Type{Missing}, A::FitsCard) =
-    get_type(A) == FITS_UNDEFINED ? missing : conversion_error(Missing, A)
+get_value(::Type{Undef}, A::FitsCard) =
+    get_type(A) == FITS_UNDEFINED ? undef : conversion_error(Undef, A)
 get_value(::Type{Nothing}, A::FitsCard) =
     ((get_type(A) == FITS_COMMENT)|(get_type(A) == FITS_END)) ? nothing : conversion_error(Nothing, A)
 get_value(::Type{String}, A::FitsCard) =
@@ -467,7 +468,7 @@ Base.valtype(t::FitsCardType) =
     t === FITS_STRING    ? String      :
     t === FITS_COMPLEX   ? FitsComplex :
     t === FITS_COMMENT   ? Nothing     :
-    t === FITS_UNDEFINED ? Missing     :
+    t === FITS_UNDEFINED ? Undef       :
     t === FITS_END       ? Nothing     :
     throw(ArgumentError("unexpected FITS card type"))
 

@@ -51,7 +51,8 @@ const FitsFloat   = Float64
 const FitsComplex = Complex{FitsFloat}
 
 # Types equivalent to undefined FITS card value.
-const Undefined = Union{Missing,UndefInitializer}
+const Undef = typeof(undef)
+const Undefined = Union{Missing,Undef}
 
 # Allowed types for FITS card names.
 const CardName = Union{AbstractString,Symbol}

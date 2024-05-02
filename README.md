@@ -38,7 +38,7 @@ with `key` the card name, `val` its value, and `com` its comment. The value
 - a complex to yield a card of type `FITS_COMPLEX`;
 - a string to yield a card of type `FITS_STRING`;
 - `nothing` to yield a card of type `FITS_COMMENT`;
-- `missing` or `undef` to yield a card of type `FITS_UNDEFINED`.
+- `undef` or `missing` to yield a card of type `FITS_UNDEFINED`.
 
 The comment may be omitted for a normal FITS card and the value may be omitted
 for a commentary FITS card:
@@ -81,7 +81,7 @@ yield a Julia value but a callable object. Called without any argument, this
 object yields the actual card value:
 
 ``` julia
-card.value() -> val::Union{Bool,Int64,Float64,ComplexF64,String,Nothing,Missing}
+card.value() -> val::Union{Bool,Int64,Float64,ComplexF64,String,Nothing,UndefInitializer}
 ```
 
 but such a call is not *type-stable* as indicated by the union `Union{...}` in

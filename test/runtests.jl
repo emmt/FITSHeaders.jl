@@ -784,8 +784,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.key == Fits"DUMMY"
             @test card.name == "DUMMY"
             @test card.comment == "no value given"
-            @test card.value() isa Missing
-            @test card.value() === missing
+            @test card.value() === undef
             @test valtype(card) === typeof(card.value())
             @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
@@ -801,8 +800,7 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
             @test card.key == Fits"HIERARCH"
             @test card.name == "HIERARCH DUMMY"
             @test card.comment == "no value given"
-            @test card.value() isa Missing
-            @test card.value() === missing
+            @test card.value() === undef
             @test valtype(card) === typeof(card.value())
             @test card.value(valtype(card)) === card.value()
             @test repr(card) isa String
@@ -976,13 +974,13 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test card.type === FITS_UNDEFINED
         @test card.key === Fits"REASON"
         @test card.name == "REASON"
-        @test card.value() === missing
+        @test card.value() === undef
         @test card.comment == ""
         card = convert(FitsCard, "REASON" => (missing, com))
         @test card.type === FITS_UNDEFINED
         @test card.key === Fits"REASON"
         @test card.name == "REASON"
-        @test card.value() === missing
+        @test card.value() === undef
         @test card.comment == com
         # Dates.
         date = now()
