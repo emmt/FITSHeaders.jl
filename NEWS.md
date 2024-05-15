@@ -1,5 +1,9 @@
 # User visible changes in `FITSHeaders` package
 
+# Version 0.4.1
+
+- Update compatibility for `TypeUtils`.
+
 # Version 0.4.0
 
 - Package renamed as `FITSHeaders`.
