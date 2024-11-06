@@ -1,5 +1,7 @@
 # User visible changes in `FITSHeaders` package
 
+- Lowercase letters are allowed in `HIERARCH` tokens.
+
 # Version 0.4.1
 
 - Update compatibility for `TypeUtils`.

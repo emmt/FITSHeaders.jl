@@ -123,7 +123,6 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         @test_throws Exception FITSHeaders.keyword("SIMPLE#")
         @test_throws Exception FITSHeaders.keyword(" SIMPLE")
         @test_throws Exception FITSHeaders.keyword("SIMPLE ")
-        @test_throws Exception FITSHeaders.keyword("SImPLE")
         @test_throws Exception FITSHeaders.keyword("TOO  MANY SPACES")
         @test_throws Exception FITSHeaders.keyword("HIERARCH  A") # more than one space
         @test_throws Exception FITSHeaders.keyword("HIERARCH+ A") # invalid character
@@ -136,6 +135,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Keywords longer than 8-characters are HIERARCH ones.
         @test FITSHeaders.try_parse_keyword("LONG-NAME") == (Fits"HIERARCH", true)
         @test FITSHeaders.keyword("LONG-NAME") == "HIERARCH LONG-NAME"
+        @test FITSHeaders.try_parse_keyword("Mixed") == (Fits"HIERARCH", true)
+        @test FITSHeaders.keyword("Mixed") == "HIERARCH Mixed"
         @test FITSHeaders.try_parse_keyword("HIERARCHY") == (Fits"HIERARCH", true)
         @test FITSHeaders.keyword("HIERARCHY") == "HIERARCH HIERARCHY"
         # Keywords starting by "HIERARCH " are HIERARCH ones.
@@ -915,8 +916,6 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
         # Badly formed cards.
         @test_throws ArgumentError FitsCard(:GIZMO => [])
         @test_throws ArgumentError FitsCard("GIZMO" => ("comment",2))
-        @test_throws Exception FitsCard(:Gizmo => 1)
-        @test_throws Exception FitsCard("Gizmo" => 1)
         # Well formed cards and invariants.
         @test FitsCard(:GIZMO => 1) isa FitsCard
         @test FitsCard(:GIZMO => 1).type === FITS_INTEGER

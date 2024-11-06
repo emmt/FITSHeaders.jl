@@ -340,6 +340,7 @@ const C_UPPERCASE        = 0x01 << 3
 const C_LOWERCASE        = 0x01 << 4
 const C_STARTS_LOGICAL   = 0x01 << 5
 const C_STARTS_NUMBER    = 0x01 << 6
+const C_HIERARCH_TOKEN   = 0x01 << 7 # allowed characters for tokens after HIERARCH keyword
 
 function build_ctype()
     code = zeros(UInt8, 256)
@@ -352,20 +353,20 @@ function build_ctype()
         code[c%UInt8 + 1] |= C_RESTRICTED_ASCII
     end
     for c in '0':'9'
-        code[c%UInt8 + 1] |= C_DIGIT|C_KEYWORD|C_STARTS_NUMBER
+        code[c%UInt8 + 1] |= C_DIGIT|C_STARTS_NUMBER|C_KEYWORD|C_HIERARCH_TOKEN
     end
     for c in 'A':'Z'
-        code[c%UInt8 + 1] |= C_UPPERCASE|C_KEYWORD
+        code[c%UInt8 + 1] |= C_UPPERCASE|C_KEYWORD|C_HIERARCH_TOKEN
     end
     for c in 'a':'z'
-        code[c%UInt8 + 1] |= C_LOWERCASE
+        code[c%UInt8 + 1] |= C_LOWERCASE|C_HIERARCH_TOKEN
     end
     code['T'%UInt8 + 1] |= C_STARTS_LOGICAL
     code['F'%UInt8 + 1] |= C_STARTS_LOGICAL
-    code['.'%UInt8 + 1] |= C_STARTS_NUMBER
+    code['.'%UInt8 + 1] |= C_STARTS_NUMBER|C_HIERARCH_TOKEN
     code['+'%UInt8 + 1] |= C_STARTS_NUMBER
-    code['-'%UInt8 + 1] |= C_KEYWORD|C_STARTS_NUMBER
-    code['_'%UInt8 + 1] |= C_KEYWORD
+    code['-'%UInt8 + 1] |= C_STARTS_NUMBER|C_KEYWORD|C_HIERARCH_TOKEN
+    code['_'%UInt8 + 1] |= C_KEYWORD|C_HIERARCH_TOKEN
     return code
 end
 
@@ -388,6 +389,7 @@ is_opening_parenthesis(c::Union{Char,UInt8}) = equal(c, '(')
 is_closing_parenthesis(c::Union{Char,UInt8}) = equal(c, ')')
 is_restricted_ascii(c::Union{Char,UInt8}) = between(c, ' ', '~')
 is_keyword(c::Union{Char,UInt8}) = (c_type(c) & C_KEYWORD) == C_KEYWORD
+is_hierarch_token(c::Union{Char,UInt8}) = (c_type(c) & C_HIERARCH_TOKEN) == C_HIERARCH_TOKEN
 starts_logical(c::Union{Char,UInt8}) = (c_type(c) & C_STARTS_LOGICAL) == C_STARTS_LOGICAL
 starts_number(c::Union{Char,UInt8}) = (c_type(c) & C_STARTS_NUMBER) == C_STARTS_NUMBER
 
@@ -907,7 +909,7 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
                 b = get_byte(buf, i)
                 if is_space(b)
                     nspaces += 1
-                elseif is_keyword(b)
+                elseif is_hierarch_token(b)
                     # Update last index of long keyword to that of the last non-space.
                     i_mark = i
                     if (nspaces > 1) & (i_error < i_first)
@@ -953,9 +955,8 @@ full_name(pfx::Bool, name::AbstractString)::String =
 """
     FITSHeaders.keyword(name) -> full_name
 
-yields the full FITS keyword corresponding to `name`, throwing an exception if
-`name` is not a valid FITS keyword.  The result is equal to either `name` or
-to `"HIERARCH "*name`.
+yields the full FITS keyword corresponding to `name`, throwing an exception if `name` is
+not a valid FITS keyword. The result is equal to either `name` or to `"HIERARCH "*name`.
 
 Examples:
 
@@ -966,6 +967,9 @@ julia> FITSHeaders.keyword("GIZMO")
 julia> FITSHeaders.keyword("HIERARCH GIZMO")
 "HIERARCH GIZMO"
 
+julia> FITSHeaders.keyword("Gizmo")
+"HIERARCH Gizmo"
+
 julia> FITSHeaders.keyword("GIZ MO")
 "HIERARCH GIZ MO"
 
@@ -973,11 +977,11 @@ julia> FITSHeaders.keyword("VERYLONGNAME")
 "HIERARCH VERYLONGNAME"
 ```
 
-where the 1st one is a short FITS keyword (with less than
-$FITS_SHORT_KEYWORD_SIZE characters), the 3rd one is explictely a `HIERARCH`
-keyword, while the 3rd and 4th ones are automatically turned into `HIERARCH`
-keywords because the 3rd one contains a space and because the 4th one is longer
-than $FITS_SHORT_KEYWORD_SIZE characters.
+where the 1st one is a short FITS keyword (with less than $FITS_SHORT_KEYWORD_SIZE
+characters), the 2nd one is explictely a `HIERARCH` keyword, while the 3rd, 4th, and 5th
+ones are automatically turned into `HIERARCH` keywords because the 3rd one contains
+lowercase letters, the 4th one contains a space, and the 5th one is longer than
+$FITS_SHORT_KEYWORD_SIZE characters.
 
 See also [`FITSHeaders.check_keyword`](@ref) and
 [`FITSHeaders.Parser.full_name`](@ref).
@@ -1040,7 +1044,7 @@ The returned `key` is `Fits"HIERARCH"` in 4 cases:
 function try_parse_keyword(str::Union{String,SubString{String}})
     # NOTE: `str` is encoded in UTF-8 with codeunits that are bytes. Since FITS
     # keywords must only consist in restricted ASCII characters (bytes less or
-    # equal that 0x7F), we can access the string as a vector of bytes.
+    # equal than 0x7F), we can access the string as a vector of bytes.
     # Moreover, if an illegal codeunit is encountered, its index is also the
     # correct index of the offending ASCII (byte less or equal that 0x7F) or
     # UTF8 character (byte greater that 0x7F).
@@ -1060,17 +1064,17 @@ function try_parse_keyword(str::Union{String,SubString{String}})
             #
             # 1. The string is exactly "HIERARCH".
             #
-            # 2. The string starts with "HIERARCH " and is thus a regular
-            #    HIERARCH keyword.
+            # 2. The string starts with "HIERARCH " and is thus a regular HIERARCH
+            #    keyword.
             #
-            # 2. The string starts with "HIERARCHx" where x is any valid
-            #    non-space character. The string is thus too long to be a
-            #    simple FITS keyword and the HIERARCH convention must be used.
-            #    The prefix "HIERARCH " must be prepended for that.
+            # 2. The string starts with "HIERARCHx" where x is any non-space character
+            #    valid for a HIERARCH token. The string is thus too long to be a simple
+            #    FITS keyword and the HIERARCH convention must be used. The prefix
+            #    "HIERARCH " must be prepended for that.
             #
-            # Which of these apply requires to look at next character. In any
-            # case, the leading FITS_SHORT_KEYWORD_SIZE bytes are valid, so we
-            # increment index i to not re-check this part.
+            # Which of these apply requires to look at next character. In any case, the
+            # leading FITS_SHORT_KEYWORD_SIZE bytes are valid, so we increment index i to
+            # not re-check this part.
             i += FITS_SHORT_KEYWORD_SIZE
             # If at least one more byte is available, we are in cases 2 or 3; in
             # case 1 otherwise.
@@ -1079,7 +1083,7 @@ function try_parse_keyword(str::Union{String,SubString{String}})
                 if is_space(b)
                     # Case 2: the sequence starts with "HIERARCH ".
                     any_space = true
-                elseif is_keyword(b)
+                elseif is_hierarch_token(b)
                     # Case 3: the keyword is too long and a "HIERARCH " prefix
                     # must be prepended.
                     pfx = true
@@ -1091,13 +1095,20 @@ function try_parse_keyword(str::Union{String,SubString{String}})
         elseif len ≥ 1
             # We must verify that the first byte is valid (not a space).
             b = get_byte(str, i)
-            is_keyword(b) || return str[i] # illegal character
-            i += 1
-            # A long keyword implies using the HIERARCH convention.
-            if len > FITS_SHORT_KEYWORD_SIZE
+            if is_keyword(b)
+                if len > FITS_SHORT_KEYWORD_SIZE
+                    # A long keyword implies using the HIERARCH convention.
+                    key = Fits"HIERARCH"
+                    pfx = true
+                end
+            elseif is_hierarch_token(b)
+                # Must be a HIERARCH keyword.
                 key = Fits"HIERARCH"
                 pfx = true
+            else
+                return str[i] # illegal character
             end
+            i += 1
         end
         # Check remaining bytes.
         while i ≤ len
@@ -1116,6 +1127,13 @@ function try_parse_keyword(str::Union{String,SubString{String}})
             elseif is_keyword(b)
                 # Not a space.
                 any_space = false
+            elseif is_hierarch_token(b)
+                # Not a space and must be a HIERARCH keyword.
+                any_space = false
+                if key != Fits"HIERARCH"
+                    key = Fits"HIERARCH"
+                    pfx = true
+                end
             else
                 return str[i] # illegal character
             end
