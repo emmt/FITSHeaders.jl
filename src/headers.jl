@@ -15,55 +15,52 @@ using Base.Order: Ordering, Forward, Reverse
 
 yields a FITS header object initialized with records `args..`.
 
-A FITS header object behaves as a vector of [`FitsCard`](@ref) elements with
-integer or keyword (string) indices. When indexed by keywords, a FITS header
-object is similar to a dictionary except that the order of records is preserved
-and that commentary and continuation records (with keywords `"COMMENT"`,
-`"HISTORY"`, `""`, or `"CONTINUE"`) may appear more than once.
+A FITS header object behaves as a vector of [`FitsCard`](@ref) elements with integer or
+keyword (string) indices. When indexed by keywords, a FITS header object is similar to a
+dictionary except that the order of records is preserved and that commentary and
+continuation records (with keywords `"COMMENT"`, `"HISTORY"`, `""`, or `"CONTINUE"`) may
+appear more than once.
 
 To update or append a record to the FITS header `hdr`, call one of:
 
     hdr[key] = x
     push!(hdr, key => x)
 
-where `x` is the value and/or comment of the record. If the keyword `key`
-already exists in `hdr`, the record is updated, otherwise a new record is
-appended. Commentary and continuation records are however always appended.
-More generally, the `push!` method can be called as:
+where `x` is the value and/or comment of the record. If the keyword `key` already exists
+in `hdr`, the record is updated, otherwise a new record is appended. Commentary and
+continuation records are however always appended. More generally, the `push!` method can
+be called as:
 
     push!(hdr, rec)
 
-where `rec` is a [`FitsCard`](@ref) object or anything, such as `key => x`,
-that can be converted into an instance of this type.
+where `rec` is a [`FitsCard`](@ref) object or anything, such as `key => x`, that can be
+converted into an instance of this type.
 
-To modify any existing record including commentary and continuation ones, use
-the syntax:
+To modify any existing record including commentary and continuation ones, use the syntax:
 
     hdr[i] = rec
 
-where `i` is a linear (integer) index whule `rec` is a above.
+where `i` is a linear (integer) index while `rec` is as above.
 
-Searching for the index `i` of an existing record in FITS header object `hdr`
-can be done by the usual methods:
+Searching for the index `i` of an existing record in FITS header object `hdr` can be done
+by the usual methods:
 
     findfirst(what, hdr)
     findlast(what, hdr)
     findnext(what, hdr, start)
     findprev(what, hdr, start)
 
-which all return a valid integer index if a record matching `what` is found and
-`nothing` otherwise. The matching pattern `what` can be a keyword (string), a
-FITS card (an instance of [`FitsCard`](@ref) whose name is used as a matching
-pattern), or a predicate function which takes a FITS card argument and returns
-whether it matches. The find methods just yield `nothing` for any unsupported
-kind of pattern.
+which all return a valid integer index if a record matching `what` is found and `nothing`
+otherwise. The matching pattern `what` can be a keyword (string), a FITS card (an instance
+of [`FitsCard`](@ref) whose name is used as a matching pattern), or a predicate function
+which takes a FITS card argument and returns whether it matches. The find methods just
+yield `nothing` for any unsupported kind of pattern.
 
 """
 struct FitsHeader <: AbstractVector{FitsCard}
     cards::Vector{FitsCard}
     index::Dict{String,Int} # index to first (and unique for non-commentary and
-                            # non-continuation keywords) entry with given
-                            # keyword
+                            # non-continuation keywords) entry with given keyword
 
     # Build empty header or filled by keywords.
     FitsHeader(; kwds...) =
@@ -167,36 +164,35 @@ end
 function unsafe_setindex!(hdr::FitsHeader, new_card::FitsCard, i::Int)
     @inbounds old_card = hdr.cards[i]
     if !have_same_name(new_card, old_card)
-        # The name of the i-th card will change. We have to update the index
-        # accordingly.
+        # The name of the i-th card will change. We have to update the index accordingly.
         #
-        # We first determine whether the index has to be updated for the name
-        # of the new card without touching the structure until the index has
-        # been updated for the name of the old card.
+        # We first determine whether the index has to be updated for the name of the new
+        # card without touching the structure until the index has been updated for the
+        # name of the old card.
         update_index_at_new_name = false
         j = findfirst(new_card, hdr)
         if j == nothing
             # No other card exists in the header with this name.
             update_index_at_new_name = true
         elseif i != j
-            # The card name must be unique. Throwing an error here is painless
-            # because the structure has not yet been modified.
+            # The card name must be unique. Throwing an error here is painless because the
+            # structure has not yet been modified.
             is_unique(new_card) && throw(ArgumentError(
                 "FITS keyword \"$(new_card.name)\" already exists at index $j"))
-            # Index must be updated for the new card name if new card will be
-            # the first one occurring in the header with this name.
+            # Index must be updated for the new card name if new card will be the first
+            # one occurring in the header with this name.
             update_index_at_new_name = i < j
         end
         # Now, do update index for the name of the old card.
         if is_unique(old_card)
-            # There should be no other cards with the same name as the old
-            # card. Remove this name from the index.
+            # There should be no other cards with the same name as the old card. Remove
+            # this name from the index.
             delete!(hdr.index, old_card.name)
         elseif findfirst(old_card, hdr) == i
-            # More than one card with the same name as the old card are allowed
-            # and the old card is the first with this name. Update the index
-            # with the next card with this name if one such exists in the
-            # index; otherwise, delete the name from the index.
+            # More than one card with the same name as the old card are allowed and the
+            # old card is the first with this name. Update the index with the next card
+            # with this name if one such exists in the index; otherwise, delete the name
+            # from the index.
             k = findnext(old_card, hdr, i+1)
             if k === nothing
                 delete!(hdr.index, old_card.name)
@@ -239,9 +235,9 @@ Base.haskey(hdr::FitsHeader, key) = false
 """
     push!(hdr::FitsHeader, rec) -> hdr
 
-appends a new record `rec` into the FITS header `hdr` or, if the keyword of the
-card must be unique and a record with the same name already exists in `hdr`,
-replaces the existing record.
+appends a new record `rec` into the FITS header `hdr` or, if the keyword of the card must
+be unique and a record with the same name already exists in `hdr`, replaces the existing
+record.
 
 This is strictly equivalent to:
 
@@ -249,13 +245,13 @@ This is strictly equivalent to:
 
 with `key` the name of the record, and `x` its associated value and/or comment.
 
-Note that commentary and continuation records (with keywords `"COMMENT"`,
-`"HISTORY"`, `""`, or `"CONTINUE"`) are always appended.
+Note that commentary and continuation records (with keywords `"COMMENT"`, `"HISTORY"`,
+`""`, or `"CONTINUE"`) are always appended.
 
 """
 function Base.push!(hdr::FitsHeader, card::FitsCard)
-    # Replace existing card with the same keyword if it must be unique.
-    # Otherwise, push a new card.
+    # Replace existing card with the same keyword if it must be unique. Otherwise, push a
+    # new card.
     i = findfirst(card, hdr)
     if i == nothing
         # No card exists with this name, push a new one and index it.
@@ -275,14 +271,13 @@ Base.push!(hdr::FitsHeader, rec) = push!(hdr, as(FitsCard, rec))
 """
     FITSHeaders.FullName(str) -> obj
 
-yields the full name of a FITS header record given the, possibly shortened,
-name `str`. The returned object has 2 properties: `obj.name` is the full name
-and `obj.key` is the quick key uniquely representing the 8 first characters of
-the full name.
+yields the full name of a FITS header record given the, possibly shortened, name `str`.
+The returned object has 2 properties: `obj.name` is the full name and `obj.key` is the
+quick key uniquely representing the 8 first characters of the full name.
 
-The `"HIERARCH "` prefix being optional to match a FITS keyword, and the quick
-key being useful to accelerate comparisons. `FullName` is a guarantee to have
-the full name and the quick key built from a, possibly shortened, keyword name.
+The `"HIERARCH "` prefix being optional to match a FITS keyword, and the quick key being
+useful to accelerate comparisons. `FullName` is a guarantee to have the full name and the
+quick key built from a, possibly shortened, keyword name.
 
 """
 struct FullName
@@ -292,8 +287,8 @@ end
 function FullName(str::AbstractString)
     c = try_parse_keyword(str)
     if c isa Char
-        # When parsing fails, return an instance that is unmatchable by any
-        # valid FITS card.
+        # When parsing fails, return an instance that is unmatchable by any valid FITS
+        # card.
         return FullName(zero(FitsKey), as(String, str))
     else
         key, pfx = c
@@ -318,8 +313,7 @@ end
 """
     findfirst(what, hdr::FitsHeader) -> i :: Union{Int,Nothing}
 
-finds the first occurence of a record in FITS header `hdr` matching the pattern
-`what`.
+finds the first occurence of a record in FITS header `hdr` matching the pattern `what`.
 
 """
 Base.findfirst(what, hdr::FitsHeader) = nothing
@@ -327,8 +321,7 @@ Base.findfirst(what, hdr::FitsHeader) = nothing
 """
     findlast(what, hdr::FitsHeader) -> i :: Union{Int,Nothing}
 
-find the last occurence of a record in FITS header `hdr` matching the pattern
-`what`.
+find the last occurence of a record in FITS header `hdr` matching the pattern `what`.
 
 """
 Base.findlast(what, hdr::FitsHeader) = nothing
@@ -336,16 +329,16 @@ Base.findlast(what, hdr::FitsHeader) = nothing
 """
     findnext(what, hdr::FitsHeader, start) -> i :: Union{Int,Nothing}
 
-find the next occurence of a record in FITS header `hdr` matching the pattern
-`what` at or after index `start`.
+find the next occurence of a record in FITS header `hdr` matching the pattern `what` at or
+after index `start`.
 
 """ Base.findnext
 
 """
     findprev(what, hdr::FitsHeader, start) -> i :: Union{Int,Nothing}
 
-find the previous occurence of a record in FITS header `hdr` matching the
-pattern `what` at or before index `start`.
+find the previous occurence of a record in FITS header `hdr` matching the pattern `what`
+at or before index `start`.
 
 """ Base.findprev
 
@@ -363,9 +356,8 @@ function Base.findlast(pat::Union{FitsCard,FullName}, hdr::FitsHeader)
     return first
 end
 
-# String and card patterns are treated specifically because the dictionary
-# storing the header index can be directly used. Other patterns are converted
-# to predicate functions.
+# String and card patterns are treated specifically because the dictionary storing the
+# header index can be directly used. Other patterns are converted to predicate functions.
 Base.findfirst(func::Function, hdr::FitsHeader) =
     unsafe_findnext(func, hdr, firstindex(hdr))
 Base.findlast(func::Function, hdr::FitsHeader) =
@@ -382,9 +374,9 @@ for func in (:findfirst, :findlast)
     end
 end
 
-# NOTE: First stage of `findnext` and `findprev` avoids costly conversion if
-# result can be decided without actually searching. Need to specify type of
-# `what` in function signature to avoid ambiguities.
+# NOTE: First stage of `findnext` and `findprev` avoids costly conversion if result can be
+# decided without actually searching. Need to specify type of `what` in function signature
+# to avoid ambiguities.
 for T in (Any, AbstractString, FullName, FitsCard, Function)
     @eval begin
         function Base.findnext(what::$T, hdr::FitsHeader, start::Integer)
@@ -554,8 +546,8 @@ end
 """
     collect(what, hdr::FitsHeader; order::Ordering = Forward)
 
-yields a vector of the records of `hdr` matching `what` and sorted according to
-`order` (`Base.Order.Forward` or `Base.Order.Reverse`).
+yields a vector of the records of `hdr` matching `what` and sorted according to `order`
+(`Base.Order.Forward` or `Base.Order.Reverse`).
 
 """
 function Base.collect(what, hdr::FitsHeader; order::Ordering = Forward)

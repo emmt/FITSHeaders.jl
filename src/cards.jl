@@ -1,8 +1,8 @@
 """
     FITSHeaders.Cards
 
-A sub-module of the `FITSHeaders` package implementing the methods and properties
-for FITS header cards.
+A sub-module of the `FITSHeaders` package implementing the methods and properties for FITS
+header cards.
 
 """
 module Cards
@@ -42,8 +42,7 @@ import ..FITSHeaders.Parser:
 
 using Dates, TypeUtils
 
-# Extended union of possible card values. Any of these shall extend the
-# `to_value` method.
+# Extended union of possible card values. Any of these shall extend the `to_value` method.
 const CardValueExt = Union{CardValue,DateTime}
 
 const END_STRING = "END"
@@ -55,8 +54,8 @@ const UNDEF_STRING = EMPTY_STRING
 """
     card = FitsCard(key => (val, com))
 
-builds a FITS header card associating keyword `key` with value `val` and
-comment string `com`. The value `val` may be:
+builds a FITS header card associating keyword `key` with value `val` and comment string
+`com`. The value `val` may be:
 
 - a boolean to yield a card of type `FITS_LOGICAL`;
 - an integer to yield a card of type `FITS_INTEGER`;
@@ -66,15 +65,15 @@ comment string `com`. The value `val` may be:
 - `nothing` to yield a card of type `FITS_COMMENT`;
 - `undef` or `missing` to yield a card of type `FITS_UNDEFINED`.
 
-The comment may be omitted for a normal FITS card and the value may be omitted
-for a commentary FITS card:
+The comment may be omitted for a normal FITS card and the value may be omitted for a
+commentary FITS card:
 
     card = FitsCard(key => val::Number)
     card = FitsCard(key => str::AbstractString)
 
-In the 1st case, the comment is assumed to be empty. In the 2nd case, the
-string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
-`"HISTORY"` and the card value otherwise.
+In the 1st case, the comment is assumed to be empty. In the 2nd case, the string `str` is
+assumed to be the card comment if `key` is `"COMMENT"` or `"HISTORY"` and the card value
+otherwise.
 
 FITS cards have properties:
 
@@ -86,28 +85,28 @@ FITS cards have properties:
     card.units    # units of card value
     card.unitless # comment of card without the units part if any
 
-As the values of FITS keywords have different types, `card.value` does not
-yield a Julia value but a callable object. Called without any argument, this
-object yields the actual card value:
+As the values of FITS keywords have different types, `card.value` does not yield a Julia
+value but a callable object. Called without any argument, this object yields the actual
+card value:
 
     card.value() -> val::Union{Bool,$FitsInteger,$FitsFloat,$FitsComplex,String,Nothing,$Undef}
 
 but such a call is not *type-stable* as indicated by the type assertion with an
-`Union{...}` above. For a type-stable result, the card value can be converted
-to a given data type `T`:
+`Union{...}` above. For a type-stable result, the card value can be converted to a given
+data type `T`:
 
     card.value(T)
     convert(T, card.value)
 
-both yield the value of `card` converted to type `T`. For readability, `T` may
-be an abstract type: `card.value(Integer)` yields the same result as
-`card.value($FitsInteger)`, `card.value(Real)` or `card.value(AbstractFloat)`
-yield the same result as `card.value($FitsFloat)`, `card.value(Complex)` yields
-the same result as `card.value($FitsComplex)`, and `card.value(AbstractString)`
-yields the same result as `card.value(String)`.
+both yield the value of `card` converted to type `T`. For readability, `T` may be an
+abstract type: `card.value(Integer)` yields the same result as `card.value($FitsInteger)`,
+`card.value(Real)` or `card.value(AbstractFloat)` yield the same result as
+`card.value($FitsFloat)`, `card.value(Complex)` yields the same result as
+`card.value($FitsComplex)`, and `card.value(AbstractString)` yields the same result as
+`card.value(String)`.
 
-To make things easier, a few properties are aliases that yield the card value
-converted to a specific type:
+To make things easier, a few properties are aliases that yield the card value converted to
+a specific type:
 
     card.logical :: Bool       # alias for card.value(Bool)
     card.integer :: $FitsInteger      # alias for card.value(Integer)
@@ -115,12 +114,12 @@ converted to a specific type:
     card.complex :: $FitsComplex # alias for card.value(Complex)
     card.string  :: String     # alias for card.value(String)
 
-Conversion is automatically attempted if the actual card value is of a
-different type, throwing an error if the conversion is not possible or inexact.
+Conversion is automatically attempted if the actual card value is of a different type,
+throwing an error if the conversion is not possible or inexact.
 
-`valtype(card)` yields the type of the value of `card`. `isassigned(card)`
-yields whether `card` has a value (that is whether it is neither a commentary
-card nor a card with an undefined value).
+`valtype(card)` yields the type of the value of `card`. `isassigned(card)` yields whether
+`card` has a value (that is whether it is neither a commentary card nor a card with an
+undefined value).
 
 """
 struct FitsCard
@@ -155,18 +154,16 @@ Base.convert(::Type{T}, A::FitsCard) where {T<:FitsCard} = A
 """
     FitsCard(buf; offset=0)
 
-yields a `FitsCard` object built by parsing the FITS header card stored in the
-string or vector of bytes `buf`. Keyword `offset` can be used to specify the
-number of bytes to skip at the beginning of `buf`, so that it is possible to
-extract a specific FITS header card, not just the first one. At most, the
-$FITS_CARD_SIZE first bytes after the offset are scanned to build the
-`FitsCard` object. The next FITS card to parse is then at `offset +
+yields a `FitsCard` object built by parsing the FITS header card stored in the string or
+vector of bytes `buf`. Keyword `offset` can be used to specify the number of bytes to skip
+at the beginning of `buf`, so that it is possible to extract a specific FITS header card,
+not just the first one. At most, the $FITS_CARD_SIZE first bytes after the offset are
+scanned to build the `FitsCard` object. The next FITS card to parse is then at `offset +
 $FITS_CARD_SIZE` and so on.
 
-The considered card may be shorter than $FITS_CARD_SIZE bytes, the result being
-exactly the same as if the missing bytes were spaces. If there are no bytes
-left, a `FitsCard` object equivalent to the final `END` card of a FITS header
-is returned.
+The considered card may be shorter than $FITS_CARD_SIZE bytes, the result being exactly
+the same as if the missing bytes were spaces. If there are no bytes left, a `FitsCard`
+object equivalent to the final `END` card of a FITS header is returned.
 
 """
 function FitsCard(buf::ByteBuffer; offset::Int = 0)
@@ -195,8 +192,8 @@ is_comment(card::FitsCard) = is_comment(card.type)
 is_naxis(card::FitsCard) = is_naxis(card.key)
 is_end(card::FitsCard) = is_end(card.type)
 
-# This version shall print something equivalent to Julia code to produce the
-# same object. We try to use the most concise syntax.
+# This version shall print something equivalent to Julia code to produce the same object.
+# We try to use the most concise syntax.
 function Base.show(io::IO, A::FitsCard)
     print(io, "FitsCard(\"")
     print(io, A.name, "\"")
@@ -313,8 +310,8 @@ for T in (Integer, Real, AbstractFloat, Complex,
     @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
 end
 
-# `apply(f, A, B)` apply binary operator `f` to `A` and `B` at least one being
-# a card value.
+# `apply(f, A, B)` apply binary operator `f` to `A` and `B` at least one being a card
+# value.
 function apply(f, A::FitsCardValue, B::FitsCardValue)
     A = parent(A)
     type = get_type(A)
@@ -356,14 +353,14 @@ for op in (:(==), :(<))
     end
 end
 
-# Conversion rules for a date. The FITS standard imposes ISO-8601 formatting
-# for a date and time.
+# Conversion rules for a date. The FITS standard imposes ISO-8601 formatting for a date
+# and time.
 (A::FitsCardValue)(::Type{DateTime}) = parse(DateTime, A(String), ISODateTimeFormat)
 Base.convert(::Type{DateTime}, A::FitsCardValue) = A(DateTime)
 Dates.DateTime(A::FitsCardValue) = A(DateTime)
 
-# If the FitsCard structure changes, it should be almost sufficient to change
-# the following simple accessors.
+# If the FitsCard structure changes, it should be almost sufficient to change the
+# following simple accessors.
 get_type(         A::FitsCard) = getfield(A, :type)
 get_key(          A::FitsCard) = getfield(A, :key)
 get_name(         A::FitsCard) = getfield(A, :name)

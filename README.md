@@ -1,29 +1,29 @@
 # FITSHeaders [![Build Status](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Coverage](https://codecov.io/gh/emmt/FITSHeaders.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/FITSHeaders.jl)
 
-`FITSHeaders` is a pure [Julia](https://julialang.org/) package for managing basic
-FITS structures such as FITS headers. [FITS (for *Flexible Image Transport
-System*)](https://fits.gsfc.nasa.gov/fits_standard.html) is a data file format
-widely used in astronomy. A FITS file is a concatenation of *Header Data Units*
-(HDUs) that consist in a header part and a data part. The header of a HDU is a
-collection of so-called *FITS cards*. Each such card is stored in textual form
-and associates a keyword with a value and/or a comment.
+`FITSHeaders` is a pure [Julia](https://julialang.org/) package for managing basic FITS
+structures such as FITS headers. [FITS (for *Flexible Image Transport
+System*)](https://fits.gsfc.nasa.gov/fits_standard.html) is a data file format widely used
+in astronomy. A FITS file is a concatenation of *Header Data Units* (HDUs) that consist in
+a header part and a data part. The header of a HDU is a collection of so-called *FITS
+cards*. Each such card is stored in textual form and associates a keyword with a value
+and/or a comment.
 
 The `FITSHeaders` package is intended to provide:
 
-- Methods for fast parsing of a FITS header or of a piece of a FITS header
-  (that is a single FITS header card).
+- Methods for fast parsing of a FITS header or of a piece of a FITS header (that is a
+  single FITS header card).
 
-- An expressive API for creating FITS cards and accessing their components
-  (keyword, value, and comment), possibly, in a *type-stable* way.
+- An expressive API for creating FITS cards and accessing their components (keyword,
+  value, and comment), possibly, in a *type-stable* way.
 
 - Methods for easy and efficient access to the records of a FITS header.
 
 
 ## Building FITS cards
 
-A FITS header card associates a keyword (or a name) with a value and a comment
-(both optional). A FITS header card can be efficiently stored as an instance of
-`FitsCard` built by:
+A FITS header card associates a keyword (or a name) with a value and a comment (both
+optional). A FITS header card can be efficiently stored as an instance of `FitsCard` built
+by:
 
 ``` julia
 card = FitsCard(key => (val, com))
@@ -40,26 +40,25 @@ with `key` the card name, `val` its value, and `com` its comment. The value
 - `nothing` to yield a card of type `FITS_COMMENT`;
 - `undef` or `missing` to yield a card of type `FITS_UNDEFINED`.
 
-The comment may be omitted for a normal FITS card and the value may be omitted
-for a commentary FITS card:
+The comment may be omitted for a normal FITS card and the value may be omitted for a
+commentary FITS card:
 
 ``` julia
 card = FitsCard(key => val::Number)
 card = FitsCard(key => str::AbstractString)
 ```
 
-In the 1st case, the comment is assumed to be empty. In the 2nd case, the
-string `str` is assumed to be the card comment if `key` is `"COMMENT"` or
-`"HISTORY"` and the card value otherwise.
+In the 1st case, the comment is assumed to be empty. In the 2nd case, the string `str` is
+assumed to be the card comment if `key` is `"COMMENT"` or `"HISTORY"` and the card value
+otherwise.
 
-Conversely, `Pair(card)` yields the pair `key => (val, com)`. The `convert` method
-is extended by the `FITSHeaders` package to perform these conversions.
+Conversely, `Pair(card)` yields the pair `key => (val, com)`. The `convert` method is
+extended by the `FITSHeaders` package to perform these conversions.
 
-If the string value of a FITS card is too long, it shall be split across
-several consecutive `CONTINUE` cards when writing a FITS file. Likewise, if the
-comment of a commentary keyword (`"COMMENT"` or `"HISTORY"`) is too long, it
-shall be split across several consecutive cards with the same keyword when
-writing a FITS file.
+If the string value of a FITS card is too long, it shall be split across several
+consecutive `CONTINUE` cards when writing a FITS file. Likewise, if the comment of a
+commentary keyword (`"COMMENT"` or `"HISTORY"`) is too long, it shall be split across
+several consecutive cards with the same keyword when writing a FITS file.
 
 
 ## FITS cards properties
@@ -76,32 +75,32 @@ card.units    # units of card value
 card.unitless # comment of card without the units part if any
 ```
 
-As the values of FITS keywords have different types, `card.value` does not
-yield a Julia value but a callable object. Called without any argument, this
-object yields the actual card value:
+As the values of FITS keywords have different types, `card.value` does not yield a Julia
+value but a callable object. Called without any argument, this object yields the actual
+card value:
 
 ``` julia
 card.value() -> val::Union{Bool,Int64,Float64,ComplexF64,String,Nothing,UndefInitializer}
 ```
 
-but such a call is not *type-stable* as indicated by the union `Union{...}` in
-the above type assertion. For a type-stable result, the card value can be
-converted to a given data type `T`:
+but such a call is not *type-stable* as indicated by the union `Union{...}` in the above
+type assertion. For a type-stable result, the card value can be converted to a given data
+type `T`:
 
 ``` julia
 card.value(T)
 convert(T, card.value)
 ```
 
-both yield the value of `card` converted to type `T`. For readability, `T` may
-be an abstract type: `card.value(Integer)` yields the same result as
-`card.value(Int64)`, `card.value(Real)` or `card.value(AbstractFloat)` yield
-the same result as `card.value(Float64)`, `card.value(Complex)` yields the same
-result as `card.value(ComplexF64)`, and `card.value(AbstractString)` yields the
-same result as `card.value(String)`.
+both yield the value of `card` converted to type `T`. For readability, `T` may be an
+abstract type: `card.value(Integer)` yields the same result as `card.value(Int64)`,
+`card.value(Real)` or `card.value(AbstractFloat)` yield the same result as
+`card.value(Float64)`, `card.value(Complex)` yields the same result as
+`card.value(ComplexF64)`, and `card.value(AbstractString)` yields the same result as
+`card.value(String)`.
 
-To make things easier, a few additional properties are aliases that yield the
-card value converted to a specific type:
+To make things easier, a few additional properties are aliases that yield the card value
+converted to a specific type:
 
 ``` julia
 card.logical :: Bool       # alias for card.value(Bool)
@@ -111,34 +110,33 @@ card.complex :: ComplexF64 # alias for card.value(Complex)
 card.string  :: String     # alias for card.value(String)
 ```
 
-When the actual card value is of a different type than the one requested, an
-error is thrown if the conversion is not possible or inexact.
+When the actual card value is of a different type than the one requested, an error is
+thrown if the conversion is not possible or inexact.
 
-`valtype(card)` yields the Julia type of the value of `card` while
-`isassigned(card)` yields whether `card` has a value (that is whether it is
-neither a commentary card nor a card with an undefined value).
+`valtype(card)` yields the Julia type of the value of `card` while `isassigned(card)`
+yields whether `card` has a value (that is whether it is neither a commentary card nor a
+card with an undefined value).
 
 
 ## FITS keywords
 
 There are two kinds of FITS keywords:
 
-- Short FITS keywords are words with at most 8 ASCII characters from the
-  restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
-  (hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or
-  underscore (hexadecimal code 0x5F). In a FITS file, keywords shorter than 8
-  characters are right-padded with ordinary spaces (hexadecimal code 0x20).
+- Short FITS keywords are words with at most 8 ASCII characters from the restricted set of
+  upper case letters (bytes 0x41 to 0x5A), decimal digits (hexadecimal codes 0x30 to
+  0x39), hyphen (hexadecimal code 0x2D), or underscore (hexadecimal code 0x5F). In a FITS
+  file, keywords shorter than 8 characters are right-padded with ordinary spaces
+  (hexadecimal code 0x20).
 
-- `HIERARCH` FITS keywords start with the string `"HIERARCH "` (with a single
-  trailing space) followed by one or more words composed from the same
-  restricted set of ASCII characters as short keywords and separated by a
-  single space.
+- `HIERARCH` FITS keywords start with the string `"HIERARCH "` (with a single trailing
+  space) followed by one or more words composed from the same restricted set of ASCII
+  characters as short keywords and separated by a single space.
 
-Keywords longer than 8 characters or composed of several words can only be
-represented as `HIERARCH` FITS keywords. To simplify the representation of FITS
-cards as pairs, the `FitsCard` constructor automatically converts long keywords
-or multi-word keywords into a `HIERARCH` FITS keyword by prefixing the keyword
-with the string `"HIERARCH "` for example:
+Keywords longer than 8 characters or composed of several words can only be represented as
+`HIERARCH` FITS keywords. To simplify the representation of FITS cards as pairs, the
+`FitsCard` constructor automatically converts long keywords or multi-word keywords into a
+`HIERARCH` FITS keyword by prefixing the keyword with the string `"HIERARCH "` for
+example:
 
 ``` julia
 julia> card = FitsCard("VERY-LONG-NAME" => (2, "keyword is longer than 8 characters"))
@@ -154,9 +152,8 @@ julia> card.name
 "HIERARCH SOME KEY"
 ```
 
-This rule is only applied to the construction of FITS cards from pairs. When
-parsing a FITS header card from a file, the `"HIERARCH "` prefix must be
-present.
+This rule is only applied to the construction of FITS cards from pairs. When parsing a
+FITS header card from a file, the `"HIERARCH "` prefix must be present.
 
 The non-exported method `FITSHeaders.keyword` may be used to apply this rule:
 
@@ -177,64 +174,60 @@ julia> FITSHeaders.keyword("HIERARCH NAME")
 
 ## Quick FITS keys
 
-In `FITSHeaders`, a key of type `FitsKey` is a 64-bit value computed from a FITS
-keyword. The key of a short FITS keyword is unique and exactly matches the
-first 8 bytes of the keyword as it is stored in a FITS file. Thus quick keys
-provide fast means to compare and search FITS keywords. The constructor
-`FitsKey(name)` yields the quick key of the string `name`. A quick key may be
-literally expressed by using the `@Fits_str` macro in Julia code. For example:
+In `FITSHeaders`, a key of type `FitsKey` is a 64-bit value computed from a FITS keyword.
+The key of a short FITS keyword is unique and exactly matches the first 8 bytes of the
+keyword as it is stored in a FITS file. Thus quick keys provide fast means to compare and
+search FITS keywords. The constructor `FitsKey(name)` yields the quick key of the string
+`name`. A quick key may be literally expressed by using the `@Fits_str` macro in Julia
+code. For example:
 
 ``` julia
 card.key == Fits"NAXIS"
 ```
 
-is faster than, say `card.name == "NAXIS"`, to check whether the name of the
-FITS header card `card` is `"NAXIS"`. This is because, the comparison is
-performed on a single integer (not on several characters) and expression
-`Fits"...."` is a constant computed at compile time with no run-time penalty.
-Compared to `FitsKey(name)`, `Fits"...."` checks the validity of the characters
-composing the literal short keyword (again this is done at compile time so
-without run-time penalty) and, for readability, does not allow for trailing
-spaces.
+is faster than, say `card.name == "NAXIS"`, to check whether the name of the FITS header
+card `card` is `"NAXIS"`. This is because, the comparison is performed on a single integer
+(not on several characters) and expression `Fits"...."` is a constant computed at compile
+time with no run-time penalty. Compared to `FitsKey(name)`, `Fits"...."` checks the
+validity of the characters composing the literal short keyword (again this is done at
+compile time so without run-time penalty) and, for readability, does not allow for
+trailing spaces.
 
-For a `HIERARCH` keyword, the quick key is equal to the constant
-`Fits"HIERARCH"` whatever the other part of the keyword.
+For a `HIERARCH` keyword, the quick key is equal to the constant `Fits"HIERARCH"` whatever
+the other part of the keyword.
 
 
 ## Parsing of FITS header cards
 
-Each FITS header card is stored in a FITS file as 80 consecutive bytes from the
-restricted set of ASCII characters from `' '` to `'~'` (hexadecimal codes 0x20
-to 0x7E). Hence Julia strings (whether they are encoded in ASCII or in UTF8)
-can be treated as vectors of bytes. The parsing methods provided by the
-`FITSHeaders` package exploit this to deal with FITS headers and cards stored as
-either vectors of bytes (of type `AbstractVector{UInt8}`) or as Julia strings
-(of type `String` or `SubString{String}`).
+Each FITS header card is stored in a FITS file as 80 consecutive bytes from the restricted
+set of ASCII characters from `' '` to `'~'` (hexadecimal codes 0x20 to 0x7E). Hence Julia
+strings (whether they are encoded in ASCII or in UTF8) can be treated as vectors of bytes.
+The parsing methods provided by the `FITSHeaders` package exploit this to deal with FITS
+headers and cards stored as either vectors of bytes (of type `AbstractVector{UInt8}`) or
+as Julia strings (of type `String` or `SubString{String}`).
 
-A `FitsCard` object can be built by parsing a FITS header card as it is stored
-in a FITS file:
+A `FitsCard` object can be built by parsing a FITS header card as it is stored in a FITS
+file:
 
 ``` julia
 card = FitsCard(buf; offset=0)
 ```
 
-where `buf` is either a string or a vector of bytes. Keyword `offset` can be
-used to specify the number of bytes to skip at the beginning of `buf`, so that
-it is possible to extract a specific FITS header card, not just the first one.
-At most, the 80 first bytes after the offset are scanned to build the
-`FitsCard` object. The next FITS card to parse is then at `offset + 80` and so
-on.
+where `buf` is either a string or a vector of bytes. Keyword `offset` can be used to
+specify the number of bytes to skip at the beginning of `buf`, so that it is possible to
+extract a specific FITS header card, not just the first one. At most, the 80 first bytes
+after the offset are scanned to build the `FitsCard` object. The next FITS card to parse
+is then at `offset + 80` and so on.
 
-The considered card may be shorter than 80 bytes, the result being exactly the
-same as if the missing bytes were spaces. If there are no bytes left, a
-`FitsCard` object equivalent to the final `END` card of a FITS header is
-returned.
+The considered card may be shorter than 80 bytes, the result being exactly the same as if
+the missing bytes were spaces. If there are no bytes left, a `FitsCard` object equivalent
+to the final `END` card of a FITS header is returned.
 
 
 ## FITS headers
 
-The `FITSHeaders` package provides objects of type `FitsHeader` to store,
-possibly partial, FITS headers.
+The `FITSHeaders` package provides objects of type `FitsHeader` to store, possibly
+partial, FITS headers.
 
 
 ### Building a FITS header
@@ -245,9 +238,8 @@ To build a FITS header initialized with records `args..`, call:
 hdr = FitsHeader(args...)
 ```
 
-where `args...` is a variable number of records in any form allowed by the
-`FitsCard` constructor, it can also be a vector or a tuple of records. For
-example:
+where `args...` is a variable number of records in any form allowed by the `FitsCard`
+constructor, it can also be a vector or a tuple of records. For example:
 
 ``` julia
 dims = (384, 288)
@@ -278,14 +270,14 @@ KeySet for a Dict{String, Int64} with 7 entries. Keys:
 
 ### Retrieving records from a FITS header
 
-A FITS header object behaves as a vector of `FitsCard` elements with integer or
-keyword (string) indices. When indexed by keywords, a FITS header object is
-similar to a dictionary except that the order of records is preserved and that
-commentary and continuation records (with keywords `"COMMENT"`, `"HISTORY"`,
-`""`, or `"CONTINUE"`) may appear more than once.
+A FITS header object behaves as a vector of `FitsCard` elements with integer or keyword
+(string) indices. When indexed by keywords, a FITS header object is similar to a
+dictionary except that the order of records is preserved and that commentary and
+continuation records (with keywords `"COMMENT"`, `"HISTORY"`, `""`, or `"CONTINUE"`) may
+appear more than once.
 
-An integer (linear) index `i` or a string index `key` can be used to retrieve
-a given record:
+An integer (linear) index `i` or a string index `key` can be used to retrieve a given
+record:
 
 ``` julia
 hdr[i]   # i-th record
@@ -305,9 +297,9 @@ julia> hdr["COMMENT"]
 FitsCard: COMMENT A comment.
 ```
 
-Note that, when indexing by name, the first matching record is returned. This
-may be a concern for non-unique keywords as in the last above example. All
-matching records can be collected into a vector of `FitsCard` elements by:
+Note that, when indexing by name, the first matching record is returned. This may be a
+concern for non-unique keywords as in the last above example. All matching records can be
+collected into a vector of `FitsCard` elements by:
 
 ``` julia
 collect(key, hdr) # all records whose name matches `key`
@@ -334,8 +326,8 @@ julia> collect(r"^NAXIS[0-9]+$", hdr)
  FitsCard("NAXIS2" => 288)
 ```
 
-This behavior is different from that of `filter` which yields another FITS
-header instance:
+This behavior is different from that of `filter` which yields another FITS header
+instance:
 
 ``` julia
 julia> filter(rec -> startswith(rec.name, "NAXIS"), hdr)
@@ -345,8 +337,8 @@ julia> filter(rec -> startswith(rec.name, "NAXIS"), hdr)
  FitsCard: NAXIS2  = 288
 ```
 
-For more control, searching for the index `i` of an existing record in FITS
-header object `hdr` can be done by the usual methods:
+For more control, searching for the index `i` of an existing record in FITS header object
+`hdr` can be done by the usual methods:
 
 ``` julia
 findfirst(what, hdr)
@@ -355,12 +347,11 @@ findnext(what, hdr, start)
 findprev(what, hdr, start)
 ```
 
-which all return a valid integer index if a record matching `what` is found and
-`nothing` otherwise. The matching pattern `what` can be a keyword (string), a
-FITS card (an instance of `FitsCard` whose name is used as a matching pattern),
-a regular expression, or a predicate function which takes a FITS card argument
-and shall return whether it matches. The find methods just yield `nothing` for
-any unsupported kind of pattern.
+which all return a valid integer index if a record matching `what` is found and `nothing`
+otherwise. The matching pattern `what` can be a keyword (string), a FITS card (an instance
+of `FitsCard` whose name is used as a matching pattern), a regular expression, or a
+predicate function which takes a FITS card argument and shall return whether it matches.
+The find methods just yield `nothing` for any unsupported kind of pattern.
 
 The `eachmatch` method is a simple mean to iterate over matching records:
 
@@ -406,8 +397,8 @@ i = findlast(what, hdr)
 end
 ```
 
-If it is not certain that a record exists or to avoid throwing a `KeyError`
-exception, use the `get` method. For example:
+If it is not certain that a record exists or to avoid throwing a `KeyError` exception, use
+the `get` method. For example:
 
 ``` julia
 julia> get(hdr, "BITPIX", nothing)
@@ -426,33 +417,30 @@ A record `rec` may be pushed to a FITS header `hdr` to modify the header:
 push!(hdr, rec)
 ```
 
-where `rec` may have any form allowed by the `FitsCard` constructor. If the
-keyword is `"COMMENT"`, `"HISTORY"`, `""`, or `"CONTINUE"`, `rec` is appended
-to the end of the list of records stored by `hdr`. For other keywords which
-must be unique, if a record of the same name exists in `hdr`, it is replaced by
-`rec`; otherwise, it is appended to the end of the list of records stored by
-`hdr`.
+where `rec` may have any form allowed by the `FitsCard` constructor. If the keyword is
+`"COMMENT"`, `"HISTORY"`, `""`, or `"CONTINUE"`, `rec` is appended to the end of the list
+of records stored by `hdr`. For other keywords which must be unique, if a record of the
+same name exists in `hdr`, it is replaced by `rec`; otherwise, it is appended to the end
+of the list of records stored by `hdr`.
 
-The `setindex!` method may be used with a keyword (string) index. For example,
-the two following statements are equivalent:
+The `setindex!` method may be used with a keyword (string) index. For example, the two
+following statements are equivalent:
 
 ``` julia
 hdr[key] = (val, com)
 push!(hdr, key => (val, com))
 ```
 
-The `setindex!` method may also be used with a linear (integer) index.. For
-example:
+The `setindex!` method may also be used with a linear (integer) index. For example:
 
 ``` julia
 hdr[i] = rec
 ```
 
-replaces the `i`-th record in `hdr` by `rec`. With an integer index, the rule
-for unique / non-unique keywords is not applied, so this indexing should be
-restricted to editing the value and/or comment of an existing entry. The
-following example illustrates how this can be used to modify the comment of the
-BITPIX record:
+replaces the `i`-th record in `hdr` by `rec`. With an integer index, the rule for unique /
+non-unique keywords is not applied, so this indexing should be restricted to editing the
+value and/or comment of an existing entry. The following example illustrates how this can
+be used to modify the comment of the BITPIX record:
 
 ``` julia
 julia> if (i = findfirst("BITPIX", hdr)) != nothing
@@ -464,9 +452,9 @@ julia> if (i = findfirst("BITPIX", hdr)) != nothing
 
 ## Timings
 
-`FITSHeaders` is ought to be fast. Below are times and memory allocations for
-parsing 80-byte FITS cards measured with Julia 1.8.5 on a Linux laptop with an
-Intel Core i7-5500U CPU:
+`FITSHeaders` is ought to be fast. Below are times and memory allocations for parsing
+80-byte FITS cards measured with Julia 1.8.5 on a Linux laptop with an Intel Core i7-5500U
+CPU:
 
 - parsing logical FITS card:  114.588 ns (2 allocations:  64 bytes)
 - parsing integer FITS card:  118.519 ns (2 allocations:  72 bytes)
@@ -480,16 +468,14 @@ Intel Core i7-5500U CPU:
 - parsing blank FITS card:     78.261 ns (0 allocations:   0 bytes)
 - parsing END FITS card:       82.286 ns (0 allocations:   0 bytes)
 
-The benchmark code is in file [`test/benchmarks.jl`](test/benchmarks.jl). The
-HIERARCH card has an integer value. The float and complex valued cards take
-more time to parse because parsing a floating-point value is more complex than
-parsing, say, an integer and because the string storing the floating-point
-value must be copied to replace letters `d` and `D`, allowed in FITS standard
-to indicate the exponent, by an `e`.
+The benchmark code is in file [`test/benchmarks.jl`](test/benchmarks.jl). The HIERARCH
+card has an integer value. The float and complex valued cards take more time to parse
+because parsing a floating-point value is more complex than parsing, say, an integer and
+because the string storing the floating-point value must be copied to replace letters `d`
+and `D`, allowed in FITS standard to indicate the exponent, by an `e`.
 
-For comparison, just extracting the keyword, value, and comment parts from a
-80-characters FITS card by calling the functions `fits_get_keyname` and
-`fits_parse_value` of CFITSIO library takes about 150 ns on the same machine.
-This does not includes the allocation of the buffers to store these 3 parts
-(about 120 ns for this) and the parsing of the value which are all included in
-the timings of the `FISCard` constructor above.
+For comparison, just extracting the keyword, value, and comment parts from a 80-characters
+FITS card by calling the functions `fits_get_keyname` and `fits_parse_value` of CFITSIO
+library takes about 150 ns on the same machine. This does not includes the allocation of
+the buffers to store these 3 parts (about 120 ns for this) and the parsing of the value
+which are all included in the timings of the `FISCard` constructor above.

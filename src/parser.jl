@@ -1,8 +1,8 @@
 """
     FITSHeaders.Parser
 
-A sub-module of the `FITSHeaders` package implementing methods for parsing FITS
-header cards.
+A sub-module of the `FITSHeaders` package implementing methods for parsing FITS header
+cards.
 
 """
 module Parser
@@ -45,9 +45,9 @@ const FITS_BLOCK_SIZE = 36*FITS_CARD_SIZE # 2880
 """
     FITS_SHORT_KEYWORD_SIZE
 
-is the number of bytes in a short FITS keyword, that is all FITS keyword but
-the `HIERARCH` ones. If a FITS keyword is shorther than this, it is equivalent
-to pad it with ASCII spaces (hexadecimal code 0x20).
+is the number of bytes in a short FITS keyword, that is all FITS keyword but the
+`HIERARCH` ones. If a FITS keyword is shorther than this, it is equivalent to pad it with
+ASCII spaces (hexadecimal code 0x20).
 
 """
 const FITS_SHORT_KEYWORD_SIZE = 8
@@ -55,10 +55,9 @@ const FITS_SHORT_KEYWORD_SIZE = 8
 """
     FITSHeaders.Parser.PointerCapability(T) -> Union{PointerNone,PointerFull}
 
-yields whether `Base.unsafe_convert(Ptr{UInt8},obj)` and
-`Base.cconvert(Ptr{UInt8},obj)` are fully implemented for an object `obj` of
-type `T`. This also means that the object is stored in memory for some
-contiguous range of addresses.
+yields whether `Base.unsafe_convert(Ptr{UInt8},obj)` and `Base.cconvert(Ptr{UInt8},obj)`
+are fully implemented for an object `obj` of type `T`. This also means that the object is
+stored in memory for some contiguous range of addresses.
 
 """
 abstract type PointerCapability end
@@ -71,12 +70,12 @@ PointerCapability(::Type) = PointerNone()
 """
     FITSHeaders.Parser.ByteString
 
-is the union of types of strings that can be considered as vectors of bytes to
-implement fast parsing methods (see [`FITSHeaders.Parser.ByteBuffer`](@ref)).
+is the union of types of strings that can be considered as vectors of bytes to implement
+fast parsing methods (see [`FITSHeaders.Parser.ByteBuffer`](@ref)).
 
-FITS header cards consist in character from the restricted set of ASCII
-characters from `' '` to `'~'` (hexadecimal codes 0x20 to 0x7E). Hence Julia
-strings (encoded in ASCII or in UTF8) can be treated as vectors of bytes.
+FITS header cards consist in character from the restricted set of ASCII characters from `'
+'` to `'~'` (hexadecimal codes 0x20 to 0x7E). Hence Julia strings (encoded in ASCII or in
+UTF8) can be treated as vectors of bytes.
 
 """
 const ByteString = Union{String,SubString{String}}
@@ -84,8 +83,8 @@ const ByteString = Union{String,SubString{String}}
 """
     FITSHeaders.Parser.ByteVector
 
-is an alias for types that can be considered as vectors of bytes to
-implement fast parsing methods (see [`FITSHeaders.Parser.ByteBuffer`](@ref)).
+is an alias for types that can be considered as vectors of bytes to implement fast parsing
+methods (see [`FITSHeaders.Parser.ByteBuffer`](@ref)).
 
 """
 const ByteVector = AbstractVector{UInt8}
@@ -93,9 +92,9 @@ const ByteVector = AbstractVector{UInt8}
 """
     FITSHeaders.Parser.ByteBuffer
 
-is the union of types that can be considered as buffers of bytes and that can
-treated as vectors of bytes to parse FITS header cards using the following
-helper functions (assuming `A isa ByteBuffer` holds):
+is the union of types that can be considered as buffers of bytes and that can treated as
+vectors of bytes to parse FITS header cards using the following helper functions (assuming
+`A isa ByteBuffer` holds):
 
     first_byte_index(A) # yields the index of the first byte in A
     last_byte_index(A)  # yields the index of the last byte in A
@@ -110,16 +109,15 @@ const ByteBuffer = Union{ByteString,ByteVector}
 """
     FITSHeaders.Parser.get_byte(T = UInt8, A, i)
 
-yields the `i`-th byte of `A` which may be a vector of bytes or a string.
-Optional first argument `T` is to specify the data type of the returned value.
+yields the `i`-th byte of `A` which may be a vector of bytes or a string. Optional first
+argument `T` is to specify the data type of the returned value.
 
-When parsing a FITS header or keyword, it is possible to specify the index `n`
-of the last available byte in `A` and call:
+When parsing a FITS header or keyword, it is possible to specify the index `n` of the last
+available byte in `A` and call:
 
    FITSHeaders.Parser.get_byte(T = UInt8, A, i, n)
 
-which yields the `i`-th byte of `A` if `i ≤ n` and `0x20` (an ASCII space)
-otherwise.
+which yields the `i`-th byte of `A` if `i ≤ n` and `0x20` (an ASCII space) otherwise.
 
 This function propagates the `@inbounds` macro.
 
@@ -176,19 +174,18 @@ end
 """
     FitsKey(buf, off=0, i_last=last_byte_index(buf))
 
-encodes the, at most, first $FITS_SHORT_KEYWORD_SIZE bytes (or ASCII
-characters) of `buf`, starting at offset `off`, in a 64-bit integer value which
-is exactly equal to the first $FITS_SHORT_KEYWORD_SIZE bytes of a FITS keyword
-as stored in a FITS header. Argument `buf` may be a string or a vector of
-bytes.
+encodes the, at most, first $FITS_SHORT_KEYWORD_SIZE bytes (or ASCII characters) of `buf`,
+starting at offset `off`, in a 64-bit integer value which is exactly equal to the first
+$FITS_SHORT_KEYWORD_SIZE bytes of a FITS keyword as stored in a FITS header. Argument
+`buf` may be a string or a vector of bytes.
 
-Optional argument `i_last` is the index of the last byte available in `buf`. If
-fewer than $FITS_SHORT_KEYWORD_SIZE bytes are available (that is, if `off +
-$FITS_SHORT_KEYWORD_SIZE > i_last`), the result is as if `buf` has been padded
-with ASCII spaces (hexadecimal code 0x20).
+Optional argument `i_last` is the index of the last byte available in `buf`. If fewer than
+$FITS_SHORT_KEYWORD_SIZE bytes are available (that is, if `off + $FITS_SHORT_KEYWORD_SIZE
+> i_last`), the result is as if `buf` has been padded with ASCII spaces (hexadecimal code
+0x20).
 
-The only operation that makes sense with an instance of `FitsKey` is comparison
-for equality for fast searching of keywords in a FITS header.
+The only operation that makes sense with an instance of `FitsKey` is comparison for
+equality for fast searching of keywords in a FITS header.
 
 The caller may use `@inbounds` macro if it is certain that bytes in the range
 `off+1:i_last` are in bounds for `buf`.
@@ -198,10 +195,10 @@ For the fastest, but unsafe, computations call:
     FitsKey(Val(:full), buf, off)
     FitsKey(Val(:pad), buf, off, i_last)
 
-where first argument should be `Val(:full)` if there are at least
-$FITS_SHORT_KEYWORD_SIZE bytes available after `off`, and `Val(:pad)`
-otherwise. These variants do not perfom bounds checking, it is the caller's
-responsibility to insure that the arguments are consistent.
+where first argument should be `Val(:full)` if there are at least $FITS_SHORT_KEYWORD_SIZE
+bytes available after `off`, and `Val(:pad)` otherwise. These variants do not perfom
+bounds checking, it is the caller's responsibility to insure that the arguments are
+consistent.
 
 """
 struct FitsKey
@@ -217,9 +214,9 @@ Base.convert(::Type{FitsKey}, x::Integer) = FitsKey(x)
     FitsKey()
     zero(FitsKey)
 
-yield a null FITS key, that is whose bytes are all 0. This can be asserted by
-calling `issero` on the returned key. Since any valid FITS key cannot contain
-null bytes, a null FITS key may be useful for searching keys.
+yield a null FITS key, that is whose bytes are all 0. This can be asserted by calling
+`issero` on the returned key. Since any valid FITS key cannot contain null bytes, a null
+FITS key may be useful for searching keys.
 
 """
 FitsKey() = FitsKey(zero(UInt64))
@@ -266,8 +263,8 @@ function Base.show(io::IO, key::FitsKey)
     return nothing # do not return the number of bytes written
 end
 
-# Decode FITS quick key. Returns index of last non-space character which is
-# also the length if the buffer has 1-based indices.
+# Decode FITS quick key. Returns index of last non-space character which is also the
+# length if the buffer has 1-based indices.
 @inline function decode!(buf::AbstractVector{UInt8},
                          key::FitsKey;
                          offset::Int = 0)
@@ -293,15 +290,14 @@ end
 """
     @Fits_str
 
-A macro to construct a 64-bit quick key equivalent to the FITS keyword given in
-argument and as it is stored in the header of a FITS file. The argument must be
-a short FITS keyword (e.g., not a `HIERARCH` one) specified as a literal string
-of, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters with no trailing spaces.
-For example `Fits"SIMPLE"` or `Fits"NAXIS2"`.
+A macro to construct a 64-bit quick key equivalent to the FITS keyword given in argument
+and as it is stored in the header of a FITS file. The argument must be a short FITS
+keyword (e.g., not a `HIERARCH` one) specified as a literal string of, at most,
+$FITS_SHORT_KEYWORD_SIZE ASCII characters with no trailing spaces. For example
+`Fits"SIMPLE"` or `Fits"NAXIS2"`.
 
-The result is the same as that computed by `FitsKey` but since the quick key is
-given by a string macro, it is like a constant computed at compile time with no
-runtime penalty.
+The result is the same as that computed by `FitsKey` but since the quick key is given by a
+string macro, it is like a constant computed at compile time with no runtime penalty.
 
 """
 macro Fits_str(str::String)
@@ -311,11 +307,10 @@ end
 """
     FITSHeaders.check_short_keyword(str) -> str
 
-returns the string `str` throwing an exception if `str` is not a short FITS
-keyword consisting in, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters from
-the restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
-(hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or underscore
-(hexadecimal code 0x5F).
+returns the string `str` throwing an exception if `str` is not a short FITS keyword
+consisting in, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters from the restricted set
+of upper case letters (bytes 0x41 to 0x5A), decimal digits (hexadecimal codes 0x30 to
+0x39), hyphen (hexadecimal code 0x2D), or underscore (hexadecimal code 0x5F).
 
 """
 function check_short_keyword(str::ByteString)
@@ -535,8 +530,7 @@ end
 """
     FITSHeaders.Parser.is_indexed(b...)
 
-yields whether trailing bytes `b...` of a FITS keyword indicate an indexed
-keyword.
+yields whether trailing bytes `b...` of a FITS keyword indicate an indexed keyword.
 
 """
 is_indexed() = false
@@ -551,8 +545,8 @@ yields whether `A` indicates a, possibly non-standard, commentary FITS keyword.
 
     FITSHeaders.is_comment(key::FitsKey)
 
-yields whether `key` is `Fits"COMMENT"` or `Fits"HISTORY"` which corresponds to
-a standard commentary FITS keyword.
+yields whether `key` is `Fits"COMMENT"` or `Fits"HISTORY"` which corresponds to a standard
+commentary FITS keyword.
 
 """
 is_comment(key::FitsKey) = (key == Fits"COMMENT") | (key == Fits"HISTORY")
@@ -561,8 +555,8 @@ is_comment(type::FitsCardType) = type === FITS_COMMENT
 """
     FITSHeaders.is_naxis(A::Union{FitsKey,FitsCard})
 
-yields whether `A` is a FITS "NAXIS" or "NAXIS#" keyword or card with`#`
-denoting a decimal number.
+yields whether `A` is a FITS "NAXIS" or "NAXIS#" keyword or card with`#` denoting a
+decimal number.
 
 """
 function is_naxis(key::FitsKey)
@@ -774,27 +768,24 @@ end
 """
     FITSHeaders.Parser.scan_card(A, off=0) -> type, key, name_rng, val_rng, com_rng
 
-parses a FITS header card `A` as it is written in a FITS file. `A` may be a
-string or a vector of bytes. Optional argument `off` is an offset in bytes
-where to start the parsing. At most, $FITS_CARD_SIZE bytes after `off` are
-considered in `A` which may thus belong to a larger piece of data (e.g., a FITS
-header). The result is a 5-tuple:
+parses a FITS header card `A` as it is written in a FITS file. `A` may be a string or a
+vector of bytes. Optional argument `off` is an offset in bytes where to start the parsing.
+At most, $FITS_CARD_SIZE bytes after `off` are considered in `A` which may thus belong to
+a larger piece of data (e.g., a FITS header). The result is a 5-tuple:
 
 - `type::FitsCardType` is the type of the card value.
 
-- `key::FitsKey` is the quick key corresponding to the short keyword of the
-  card.
+- `key::FitsKey` is the quick key corresponding to the short keyword of the card.
 
-- `name_rng` is the range of bytes containing the keyword name without trailing
+- `name_rng` is the range of bytes containing the keyword name without trailing spaces.
+
+- `val_rng` is the range of bytes containing the unparsed value part, without leading and
+  trailing spaces but with parenthesis or quote delimiters for a complex or a string card.
+  This range is empty for a commentary card, the `END` card, or if the card has an
+  undefined value.
+
+- `com_rng` is the range of bytes containing the comment part without non-significant
   spaces.
-
-- `val_rng` is the range of bytes containing the unparsed value part, without
-  leading and trailing spaces but with parenthesis or quote delimiters for a
-  complex or a string card. This range is empty for a commentary card, the
-  `END` card, or if the card has an undefined value.
-
-- `com_rng` is the range of bytes containing the comment part without
-  non-significant spaces.
 
 """
 function scan_card(buf::ByteBuffer, off::Int = 0)
@@ -835,20 +826,18 @@ end
 """
     FITSHeaders.Parser.scan_short_keyword_part(A, rng) -> name_rng
 
-scans the first bytes of `A` in the index range `rng` for a valid short FITS
-keyword and returns the index range to this keyword. A short FITS keyword
-consists in, at most, $FITS_SHORT_KEYWORD_SIZE ASCII characters from the
-restricted set of upper case letters (bytes 0x41 to 0x5A), decimal digits
-(hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal code 0x2D), or underscore
-(hexadecimal code 0x5F). Trailing spaces are ignored.
+scans the first bytes of `A` in the index range `rng` for a valid short FITS keyword and
+returns the index range to this keyword. A short FITS keyword consists in, at most,
+$FITS_SHORT_KEYWORD_SIZE ASCII characters from the restricted set of upper case letters
+(bytes 0x41 to 0x5A), decimal digits (hexadecimal codes 0x30 to 0x39), hyphen (hexadecimal
+code 0x2D), or underscore (hexadecimal code 0x5F). Trailing spaces are ignored.
 
 The following relations hold:
 
     first(name_rng) == first(rng)
     length(name_rng) ≤ min(length(rng), $FITS_SHORT_KEYWORD_SIZE)
 
-In case scanning shall be pursued, the next token to scan starts at or after
-index:
+In case scanning shall be pursued, the next token to scan starts at or after index:
 
     i_next = first(name_rng) + $FITS_SHORT_KEYWORD_SIZE
 
@@ -876,19 +865,18 @@ end
 """
     FITSHeaders.Parser.scan_keyword_part(A, rng) -> key, name_rng, i_next
 
-parses a the keyword part of FITS header card stored in bytes `rng` of `A`.
-Returns `key` the keyword quick key, `name_rng` the byte index range for the
-keyword name (with leading "HIERARCH "` and trailing spaces removed), and
-`i_next` the index of the first byte where next token (value marker of comment)
-may start.
+parses a the keyword part of FITS header card stored in bytes `rng` of `A`. Returns `key`
+the keyword quick key, `name_rng` the byte index range for the keyword name (with leading
+"HIERARCH "` and trailing spaces removed), and `i_next` the index of the first byte where
+next token (value marker of comment) may start.
 
 """
 function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     # Scan for the short FITS keyword part.
     name_rng = scan_short_keyword_part(buf, rng)
 
-    # Retrieve limits for byte indices and index of next token assuming a short
-    # FITS keyword for now.
+    # Retrieve limits for byte indices and index of next token assuming a short FITS
+    # keyword for now.
     i_first, i_last = first(rng), last(rng)
     i_next = i_first + FITS_SHORT_KEYWORD_SIZE
 
@@ -900,8 +888,8 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
             FitsKey(Val(:pad), buf, off, i_last)
 
         if key == Fits"HIERARCH" && i_first ≤ i_next ≤ i_last - 2 && is_space(get_byte(buf, i_next))
-            # Parse HIERARCH keyword. Errors are deferred until the value
-            # marker "= " is eventually found.
+            # Parse HIERARCH keyword. Errors are deferred until the value marker "= " is
+            # eventually found.
             i_error = i_first - 1 # index of first bad character
             nspaces = 1           # to count consecutive spaces
             i_mark = i_first - 1  # index where long FITS keyword may end
@@ -919,16 +907,16 @@ function scan_keyword_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
                     nspaces = 0
                 elseif is_equals_sign(b)
                     if i_mark ≥ i_first && i < i_last && is_space(get_byte(buf, i+1))
-                        # Value marker found. The index for the next token is
-                        # that of the = sign.
+                        # Value marker found. The index for the next token is that of the
+                        # = sign.
                         if i_error ≥ i_first
                             # Some illegal character was found.
                             bad_character_in_keyword(get_byte(buf, i_error))
                         end
                         return key, i_first:i_mark, i
                     else
-                        # This is not a long keyword, it will result in a
-                        # commentary HIERARCH card.
+                        # This is not a long keyword, it will result in a commentary
+                        # HIERARCH card.
                         break
                     end
                 elseif i_error < i_first
@@ -945,8 +933,7 @@ end
 """
     FITSHeaders.Parser.full_name(pfx, name::AbstractString)
 
-yields `"HIERARCH "*name` if `pfx` is true, `name` otherwise. The result is a
-`String`.
+yields `"HIERARCH "*name` if `pfx` is true, `name` otherwise. The result is a `String`.
 
 """
 full_name(pfx::Bool, name::AbstractString)::String =
@@ -998,9 +985,9 @@ end
 """
     FITSHeaders.check_keyword(name) -> key, full_name
 
-checks the FITS keyword `name` and returns the corresponding quick key and full
-keyword name throwing an exception if `name` is not a valid FITS keyword. The
-full keyword name is a `string` instance either equal to `name` or to `"HIERARCH "*name`.
+checks the FITS keyword `name` and returns the corresponding quick key and full keyword
+name throwing an exception if `name` is not a valid FITS keyword. The full keyword name is
+a `string` instance either equal to `name` or to `"HIERARCH "*name`.
 
 See also [`FITSHeaders.keyword`](@ref), [`FITSHeaders.parse_keyword`](@ref), and
 [`FITSHeaders.Parser.full_name`](@ref).
@@ -1017,20 +1004,18 @@ end
 """
     FITSHeaders.try_parse_keyword(str)
 
-parses the FITS keyword given by string `str`. In case of parsing error, the
-result is the first illegal character encountered in `str`. Otherwise, the
-result is the 2-tuple `(key,pfx)` with `key` the quick key of the keyword and
-`pfx` a boolean indicating whether the `"HIERARCH "` prefix should be prepended
-to `str` to form the full keyword name. If the string has more than
-$FITS_SHORT_KEYWORD_SIZE characters or if any single space separator occurs in
-the string, a `HIERARCH` keyword is assumed even though the string does not
-start with `"HIERARCH "`. Leading and trailing spaces are not allowed.
+parses the FITS keyword given by string `str`. In case of parsing error, the result is the
+first illegal character encountered in `str`. Otherwise, the result is the 2-tuple
+`(key,pfx)` with `key` the quick key of the keyword and `pfx` a boolean indicating whether
+the `"HIERARCH "` prefix should be prepended to `str` to form the full keyword name. If
+the string has more than $FITS_SHORT_KEYWORD_SIZE characters or if any single space
+separator occurs in the string, a `HIERARCH` keyword is assumed even though the string
+does not start with `"HIERARCH "`. Leading and trailing spaces are not allowed.
 
 The returned `key` is `Fits"HIERARCH"` in 4 cases:
 
-- The string starts with `"HIERARCH "` followed by a name, possibly split in
-  several words and possibly longer than $FITS_SHORT_KEYWORD_SIZE characters,
-  `pfx` is `false`.
+- The string starts with `"HIERARCH "` followed by a name, possibly split in several words
+  and possibly longer than $FITS_SHORT_KEYWORD_SIZE characters, `pfx` is `false`.
 
 - The string does not starts with `"HIERARCH "` but consists in at least two
   space-separated words, `pfx` is true.
@@ -1042,17 +1027,15 @@ The returned `key` is `Fits"HIERARCH"` in 4 cases:
 
 """
 function try_parse_keyword(str::Union{String,SubString{String}})
-    # NOTE: `str` is encoded in UTF-8 with codeunits that are bytes. Since FITS
-    # keywords must only consist in restricted ASCII characters (bytes less or
-    # equal than 0x7F), we can access the string as a vector of bytes.
-    # Moreover, if an illegal codeunit is encountered, its index is also the
-    # correct index of the offending ASCII (byte less or equal that 0x7F) or
-    # UTF8 character (byte greater that 0x7F).
+    # NOTE: `str` is encoded in UTF-8 with codeunits that are bytes. Since FITS keywords
+    # must only consist in restricted ASCII characters (bytes less or equal than 0x7F), we
+    # can access the string as a vector of bytes. Moreover, if an illegal codeunit is
+    # encountered, its index is also the correct index of the offending ASCII (byte less
+    # or equal that 0x7F) or UTF8 character (byte greater that 0x7F).
     @inbounds begin
-        # Compute quick key of the short FITS keyword, this is a cheap way to
-        # figure out whether the sequence of bytes starts with "HIERARCH". This
-        # does not check for the validity of the leading bytes, unless the key
-        # is Fits"HIERARCH".
+        # Compute quick key of the short FITS keyword, this is a cheap way to figure out
+        # whether the sequence of bytes starts with "HIERARCH". This does not check for
+        # the validity of the leading bytes, unless the key is Fits"HIERARCH".
         len = ncodeunits(str)
         key = len ≥ FITS_SHORT_KEYWORD_SIZE ? FitsKey(Val(:full), str, 0) :
             FitsKey(Val(:pad), str, 0, len)
@@ -1076,16 +1059,16 @@ function try_parse_keyword(str::Union{String,SubString{String}})
             # leading FITS_SHORT_KEYWORD_SIZE bytes are valid, so we increment index i to
             # not re-check this part.
             i += FITS_SHORT_KEYWORD_SIZE
-            # If at least one more byte is available, we are in cases 2 or 3; in
-            # case 1 otherwise.
+            # If at least one more byte is available, we are in cases 2 or 3; in case 1
+            # otherwise.
             if i ≤ len
                 b = get_byte(str, i)
                 if is_space(b)
                     # Case 2: the sequence starts with "HIERARCH ".
                     any_space = true
                 elseif is_hierarch_token(b)
-                    # Case 3: the keyword is too long and a "HIERARCH " prefix
-                    # must be prepended.
+                    # Case 3: the keyword is too long and a "HIERARCH " prefix must be
+                    # prepended.
                     pfx = true
                 else
                     return str[i] # illegal character
@@ -1117,9 +1100,8 @@ function try_parse_keyword(str::Union{String,SubString{String}})
                 # It is an error to have 2 or more consecutive spaces.
                 any_space && return str[i] # illegal character
                 any_space = true
-                # Keyword must be a HIERARCH one because it has at least one
-                # space separator. If this was not already detected, the
-                # "HIERARCH " is missing.
+                # Keyword must be a HIERARCH one because it has at least one space
+                # separator. If this was not already detected, the "HIERARCH " is missing.
                 if key != Fits"HIERARCH"
                     key = Fits"HIERARCH"
                     pfx = true
@@ -1147,13 +1129,13 @@ end
 """
     FITSHeaders.Parser.scan_value_comment_parts(buf, rng) -> type, val_rng, com_rng
 
-scans the range `rng` of bytes to find the value and comment of a FITS card
-stored in `buf`. If `rng` is not empty, `first(rng)` shall be the index of the
-first byte where the value may be found, that is right after the value
-indicator `"= "`, and `last(rng)` shall be the index of the last byte to scan.
-For speed, these are not checked. The result is a tuple with `type` the type of
-the FITS card value, `val_rng` the index range for the unparsed value part, and
-`com_rng` the index range of the comment part without leading spaces.
+scans the range `rng` of bytes to find the value and comment of a FITS card stored in
+`buf`. If `rng` is not empty, `first(rng)` shall be the index of the first byte where the
+value may be found, that is right after the value indicator `"= "`, and `last(rng)` shall
+be the index of the last byte to scan. For speed, these are not checked. The result is a
+tuple with `type` the type of the FITS card value, `val_rng` the index range for the
+unparsed value part, and `com_rng` the index range of the comment part without leading
+spaces.
 
 """
 function scan_value_comment_parts(buf::ByteBuffer, rng::AbstractUnitRange{Int})
@@ -1185,9 +1167,9 @@ function scan_value_comment_parts(buf::ByteBuffer, rng::AbstractUnitRange{Int})
         # Value with no comment.
         return type, i:k, k+1:k
     elseif is_quote(b)
-        # Quoted string value. Find the closing quote. NOTE: The search loop
-        # cannot be a for-loop because running index j has to be incremented
-        # twice when an escaped quote is encountered.
+        # Quoted string value. Find the closing quote. NOTE: The search loop cannot be a
+        # for-loop because running index j has to be incremented twice when an escaped
+        # quote is encountered.
         j = i
         while j < k
             j += 1
@@ -1221,12 +1203,11 @@ end
 """
     FITSHeaders.Parser.scan_comment_part(buf, rng) -> com_rng
 
-scans the range `rng` of bytes to find the comment part of a FITS card stored
-in `buf`. If `rng` is not empty, `first(rng)` shall be the index of the first
-byte where the comment separator may be found, that is right after the last
-byte of the value part, and `last(rng)` shall be the index of the last byte to
-scan. For speed, these are not checked. The result is the index range for the
-comment part.
+scans the range `rng` of bytes to find the comment part of a FITS card stored in `buf`. If
+`rng` is not empty, `first(rng)` shall be the index of the first byte where the comment
+separator may be found, that is right after the last byte of the value part, and
+`last(rng)` shall be the index of the last byte to scan. For speed, these are not checked.
+The result is the index range for the comment part.
 
 This method honors the bound-checking state.
 
@@ -1234,8 +1215,8 @@ This method honors the bound-checking state.
 @inline function scan_comment_part(buf::ByteBuffer, rng::AbstractUnitRange{Int})
     @boundscheck check_byte_index(buf, rng)
     @inbounds begin
-        # Find beginning of comment skipping all spaces before and after the
-        # comment separator.
+        # Find beginning of comment skipping all spaces before and after the comment
+        # separator.
         i_first, i_last = first(rng), last(rng)
         while i_first ≤ i_last
             b = get_byte(buf, i_first)
@@ -1311,9 +1292,9 @@ function get_unitless_part(str::Union{String,SubString{String}})
         else
             # There are units.
             #
-            # NOTE: In fact, scan_units_marks() warrants that last(rng)+1 is
-            #       always the first byte of the unitless part whether there
-            #       are units or not, so the code could be simplified.
+            # NOTE: In fact, scan_units_marks() warrants that last(rng)+1 is always the
+            #       first byte of the unitless part whether there are units or not, so the
+            #       code could be simplified.
             i_first = i_last + 1
             i_last = last_byte_index(str)
             # Trim leading spaces.
@@ -1333,11 +1314,10 @@ end
 """
     FITSHeaders.Parser.trim_leading_spaces(buf[, rng]) -> sub_rng
 
-yields the range `sub_rng` of byte indices in `buf` (a string or a vector of
-bytes) without the leading spaces in `buf`. Optional argument `rng` is to
-specify the range of byte indices to consider in `buf`. If `rng` is not
-provided, all the bytes of `buf` are considered. If `rng` is provided,
-`sub_rng` is such that:
+yields the range `sub_rng` of byte indices in `buf` (a string or a vector of bytes)
+without the leading spaces in `buf`. Optional argument `rng` is to specify the range of
+byte indices to consider in `buf`. If `rng` is not provided, all the bytes of `buf` are
+considered. If `rng` is provided, `sub_rng` is such that:
 
     first(sub_rng) ≥ first(rng)
     last(sub_rng) == last(rng)
@@ -1355,11 +1335,10 @@ end
 """
     FITSHeaders.Parser.trim_trailing_spaces(buf[, rng]) -> sub_rng
 
-yields the range `sub_rng` of byte indices in `buf` (a string or a vector of
-bytes) without the trailing spaces in `buf`. Optional argument `rng` is to
-specify the range of byte indices to consider in `buf`. If `rng` is not
-provided, all the bytes of `buf` are considered. If `rng` is provided,
-`sub_rng` is such that:
+yields the range `sub_rng` of byte indices in `buf` (a string or a vector of bytes)
+without the trailing spaces in `buf`. Optional argument `rng` is to specify the range of
+byte indices to consider in `buf`. If `rng` is not provided, all the bytes of `buf` are
+considered. If `rng` is provided, `sub_rng` is such that:
 
     first(sub_rng) == first(rng)
     last(sub_rng) ≤ last(rng)
