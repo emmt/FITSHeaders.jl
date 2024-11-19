@@ -98,8 +98,6 @@ Base.merge(hdr::FitsHeader, args...) = merge!(copy(hdr), args...)
 Base.merge!(dest::FitsHeader) = dest
 Base.merge!(dest::FitsHeader, A, B...) = merge!(merge!(dest, A), B...)
 
-Base.merge!(dest::FitsHeader, other::Union{Pair,FitsCard}) = push!(dest, other)
-
 function Base.merge!(dest::FitsHeader, other::FitsHeader)
     if (len = length(other)) > 0
         sizehint!(dest, length(dest) + len)

@@ -94,6 +94,8 @@ import .Headers:
     FitsHeader,
     FullName
 
+include("deprecated.jl")
+
 function __init__()
     @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin
         FITSHeaders.Parser.PointerCapability(::Type{<:MappedBuffers.MappedBuffer}) =

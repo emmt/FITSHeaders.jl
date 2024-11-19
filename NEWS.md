@@ -1,5 +1,10 @@
 # User visible changes in `FITSHeaders` package
 
+- The call `merge!(hdr,item)` with `hdr` a `FitsHeader` and `item` a keyword-value pair or
+  a FITS card is deprecated. Use `push!(hdr,item)`. This is to follow Julia conventions
+  that `push!` is to add an item to a collection while `merge!` is to merge two
+  collections.
+
 # Version 0.4.2
 
 - Lowercase letters are allowed in `HIERARCH` tokens.
