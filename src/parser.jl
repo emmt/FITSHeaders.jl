@@ -466,6 +466,15 @@ end
 
 yields whether `A` is a structural FITS keyword or card.
 
+For example, building a new FITS header from an old one, say `hdr`, with no structural
+keywords can be done by:
+
+```julia
+using FITSHeaders
+using FITSHeaders: is_structural
+hdr_new = FitsHeader(filter(!is_structural, hdr))
+```
+
 """
 function is_structural(key::FitsKey)
     # NOTE This version takes 4.5ns to 7.2ns compared to 30ns with a set of all
@@ -555,7 +564,7 @@ is_comment(type::FitsCardType) = type === FITS_COMMENT
 """
     FITSHeaders.is_naxis(A::Union{FitsKey,FitsCard})
 
-yields whether `A` is a FITS "NAXIS" or "NAXIS#" keyword or card with`#` denoting a
+yields whether `A` is a FITS "NAXIS" or "NAXIS#" keyword or card with `#` denoting a
 decimal number.
 
 """

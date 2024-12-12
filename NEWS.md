@@ -1,5 +1,9 @@
 # User visible changes in `FITSHeaders` package
 
+- In Julia ≥ 1.11, unexported documented methods `FITSHeaders.is_structural`,
+  `FITSHeaders.is_comment`, `FITSHeaders.is_naxis`, and `FITSHeaders.is_end` are marked as
+  `public`.
+
 - The call `merge!(hdr,item)` with `hdr` a `FitsHeader` and `item` a keyword-value pair or
   a FITS card is deprecated. Use `push!(hdr,item)`. This is to follow Julia conventions
   that `push!` is to add an item to a collection while `merge!` is to merge two
