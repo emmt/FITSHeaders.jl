@@ -31,9 +31,7 @@ export
     FITS_BLOCK_SIZE,
     FITS_SHORT_KEYWORD_SIZE
 
-@static if VERSION ≥ v"1.11"
-    include("public.jl")
-end
+VERSION ≥ v"1.11" && include("public.jl")
 
 using Requires
 
