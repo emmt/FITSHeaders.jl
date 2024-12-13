@@ -1,4 +1,6 @@
-public is_structural
-public is_comment
-public is_naxis
-public is_end
+public
+    is_structural,
+    is_comment,
+    is_comment,
+    is_naxis,
+    is_end
