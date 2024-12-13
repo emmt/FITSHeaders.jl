@@ -31,7 +31,9 @@ export
     FITS_BLOCK_SIZE,
     FITS_SHORT_KEYWORD_SIZE
 
-VERSION ≥ v"1.11" && include("public.jl")
+# The code complexity below is to avoid errors with CI and coverage tools.
+# See https://discourse.julialang.org/t/is-compat-jl-worth-it-for-the-public-keyword
+VERSION ≥ v"1.11.0-DEV.469" && eval(Expr(:call, :include, "public.jl"))
 
 using Requires
 
