@@ -249,8 +249,8 @@ _store!(::Type{T}, buf::Vector{UInt8}, x, off::Integer = 0) where {T} =
     end
     @testset "Parser" begin
         # Byte order.
-        @test FITSHeaders.Parser.is_big_endian() === (BYTE_ORDER === :big_endian)
-        @test FITSHeaders.Parser.is_little_endian() === (BYTE_ORDER === :little_endian)
+        @test FITSHeaders.Parser.BIG_ENDIAN === (BYTE_ORDER === :big_endian)
+        @test FITSHeaders.Parser.LITTLE_ENDIAN === (BYTE_ORDER === :little_endian)
         # Character classes according to FITS standard.
         for b in 0x00:0xFF
             c = Char(b)

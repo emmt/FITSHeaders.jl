@@ -22,9 +22,9 @@ using Base: StringVector
 
 const EMPTY_STRING = ""
 
-@inline is_little_endian() = (ENDIAN_BOM === 0x04030201)
-@inline is_big_endian()    = (ENDIAN_BOM === 0x01020304)
-is_little_endian() || is_big_endian() || error("unsupported byte order")
+const LITTLE_ENDIAN = (ENDIAN_BOM === 0x04030201)
+const BIG_ENDIAN    = (ENDIAN_BOM === 0x01020304)
+LITTLE_ENDIAN || BIG_ENDIAN || error("unsupported byte order")
 
 """
     FITS_CARD_SIZE
@@ -273,8 +273,8 @@ end
     I = i_first:i_last
     @boundscheck ((offset ≥ 0) & (i_last ≤ lastindex(buf))) || throw(BoundsError(buf, I))
     val = key.val
-    shft = is_little_endian() ? 0 : 8*(FITS_SHORT_KEYWORD_SIZE-1)
-    incr = is_little_endian() ? +8 : -8
+    shft = LITTLE_ENDIAN ? 0 : 8*(FITS_SHORT_KEYWORD_SIZE-1)
+    incr = LITTLE_ENDIAN ? +8 : -8
     i_last = offset
     @inbounds for i in I
         byte = (val >> shft) % UInt8
@@ -409,7 +409,7 @@ end
 
 @inline function FitsKey(::PointerCapability, ::Val{:full}, buf::ByteBuffer, off::Int)
     @inbounds begin
-        @static if is_little_endian()
+        @static if LITTLE_ENDIAN
             # Little-endian byte order.
             k = (get_byte(UInt64, buf, off + 1) <<  0) |
                 (get_byte(UInt64, buf, off + 2) <<  8) |
@@ -436,7 +436,7 @@ end
 
 @inline function FitsKey(::Val{:pad}, buf::ByteBuffer, off::Int, i_last::Int)
     @inbounds begin
-        @static if is_little_endian()
+        @static if LITTLE_ENDIAN
             # Little-endian byte order.
             k = (get_byte(UInt64, buf, off + 1, i_last) <<  0) |
                 (get_byte(UInt64, buf, off + 2, i_last) <<  8) |
@@ -479,7 +479,7 @@ hdr_new = FitsHeader(filter(!is_structural, hdr))
 function is_structural(key::FitsKey)
     # NOTE This version takes 4.5ns to 7.2ns compared to 30ns with a set of all
     #      such keys.
-    b = (is_little_endian() ? key.val : (key.val >> 56)) % UInt8
+    b = (LITTLE_ENDIAN ? key.val : (key.val >> 56)) % UInt8
     b == UInt8('N') ? is_structural_N(key) :
     b == UInt8('B') ? is_structural_B(key) :
     b == UInt8('S') ? is_structural_S(key) :
@@ -500,11 +500,11 @@ is_structural_G(key::FitsKey) = (key === Fits"GCOUNT")
 is_structural_N(key::FitsKey) = is_naxis(key)
 is_structural_T(key::FitsKey) = begin
     key === Fits"TFIELDS" && return true
-    mask = (is_little_endian() ? 0x000000FFFFFFFFFF : 0xFFFFFFFFFF000000)
+    mask = (LITTLE_ENDIAN ? 0x000000FFFFFFFFFF : 0xFFFFFFFFFF000000)
     root = (key.val & mask)
     if (root == (Fits"TFORM".val & mask)) | (root == (Fits"TTYPE".val & mask))
         # Get the 3 trailing bytes.
-        b1, b2, b3 = if is_little_endian()
+        b1, b2, b3 = if LITTLE_ENDIAN
             (key.val >> 40) % UInt8,
             (key.val >> 48) % UInt8,
             (key.val >> 56) % UInt8
@@ -515,10 +515,10 @@ is_structural_T(key::FitsKey) = begin
         end
         return is_indexed(b1, b2, b3)
     end
-    mask = (is_little_endian() ? 0x00000000FFFFFFFF : 0xFFFFFFFF00000000)
+    mask = (LITTLE_ENDIAN ? 0x00000000FFFFFFFF : 0xFFFFFFFF00000000)
     if (key.val & mask) == (Fits"TDIM".val & mask)
         # Get the 4 trailing bytes.
-        b1, b2, b3, b4 = if is_little_endian()
+        b1, b2, b3, b4 = if LITTLE_ENDIAN
             (key.val >> 32) % UInt8,
             (key.val >> 40) % UInt8,
             (key.val >> 48) % UInt8,
@@ -569,10 +569,10 @@ decimal number.
 
 """
 function is_naxis(key::FitsKey)
-    mask = (is_little_endian() ? 0x000000FFFFFFFFFF : 0xFFFFFFFFFF000000)
+    mask = (LITTLE_ENDIAN ? 0x000000FFFFFFFFFF : 0xFFFFFFFFFF000000)
     if (key.val & mask) == (Fits"NAXIS".val & mask)
         # Get the 3 trailing bytes.
-        b1, b2, b3 = if is_little_endian()
+        b1, b2, b3 = if LITTLE_ENDIAN
             (key.val >> 40) % UInt8,
             (key.val >> 48) % UInt8,
             (key.val >> 56) % UInt8
