@@ -6,14 +6,19 @@ version = "0.4.2"
 [deps]
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 TypeUtils = "c3b1956e-8857-4d84-9b79-890df85b1e67"
+
+[weakdeps]
+MappedBuffers = "010f96a2-bf57-4630-84b9-647e6f9999c4"
+
+[extensions]
+FITSHeadersMappedBuffersExt = ["MappedBuffers"]
 
 [compat]
 Compat = "2, 3, 4"
-Requires = "1"
+MappedBuffers = "0.1"
 TypeUtils = "0.2, 0.3, 1"
-julia = "1"
+julia = "1.9"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

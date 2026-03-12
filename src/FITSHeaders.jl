@@ -31,8 +31,6 @@ export
     FITS_BLOCK_SIZE,
     FITS_SHORT_KEYWORD_SIZE
 
-using Requires
-
 # Enumeration of keyword value type identifiers.
 @enum FitsCardType::Cint begin
     FITS_LOGICAL   = 0
@@ -97,12 +95,5 @@ import .Headers:
 include("public.jl")
 
 include("deprecated.jl")
-
-function __init__()
-    @require MappedBuffers="010f96a2-bf57-4630-84b9-647e6f9999c4" begin
-        FITSHeaders.Parser.PointerCapability(::Type{<:MappedBuffers.MappedBuffer}) =
-            FITSHeaders.Parser.PointerFull()
-    end
-end
 
 end # module
