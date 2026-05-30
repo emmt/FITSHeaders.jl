@@ -94,6 +94,4 @@ import .Headers:
 
 include("public.jl")
 
-include("deprecated.jl")
-
 end # module

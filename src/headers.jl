@@ -62,17 +62,25 @@ struct FitsHeader <: AbstractVector{FitsCard}
     index::Dict{String,Int} # index to first (and unique for non-commentary and
                             # non-continuation keywords) entry with given keyword
 
-    # Build empty header or filled by keywords.
-    FitsHeader(; kwds...) =
-        merge!(new(FitsCard[], Dict{String,Int}()), values(kwds))
+    # Build empty header.
+    FitsHeader() = new(FitsCard[], Dict{String,Int}())
 
     # Copy constructor.
     FitsHeader(hdr::FitsHeader) = new(copy(hdr.cards), copy(hdr.index))
 end
 
-FitsHeader(args...) = merge!(FitsHeader(), args...)
-
-FitsHeader(rec::Union{FitsCard,Pair}) = push!(FitsHeader(), FitsCard(rec))
+function FitsHeader(args...; kwds...)
+    hdr = FitsHeader()
+    for arg in args
+        if arg isa Union{Pair,FitsCard}
+            push!(hdr, arg)
+        else
+            merge!(hdr, arg)
+        end
+    end
+    isempty(kwds) || merge!(hdr, kwds)
+    return hdr
+end
 
 Base.copy(hdr::FitsHeader) = FitsHeader(hdr)
 
@@ -98,34 +106,14 @@ Base.merge(hdr::FitsHeader, args...) = merge!(copy(hdr), args...)
 Base.merge!(dest::FitsHeader) = dest
 Base.merge!(dest::FitsHeader, A, B...) = merge!(merge!(dest, A), B...)
 
-function Base.merge!(dest::FitsHeader, other::FitsHeader)
-    if (len = length(other)) > 0
-        sizehint!(dest, length(dest) + len)
-        for card in other
-            push!(dest, card)
-        end
-    end
-    return dest
-end
-
-function Base.merge!(dest::FitsHeader, other::NamedTuple)
-    if (len = length(other)) > 0
-        sizehint!(dest, length(dest) + len)
-        for key in keys(other)
-            push!(dest, FitsCard(key => other[key]))
-        end
-    end
-    return dest
-end
-
-# By default, assume an iterable object.
-function Base.merge!(dest::FitsHeader, other)
-    if has_length(other)
-        (len = length(other)) > 0 || return dest
+# Merge FITS header with any iterable object whose elements are convertible to FITS cards.
+function Base.merge!(dest::FitsHeader, iter)
+    if has_length(iter)
+        (len = length(iter)) > 0 || return dest
         sizehint!(dest, length(dest) + len)
     end
-    for item ∈ other
-        push!(dest, FitsCard(item))
+    for item in iter
+        push!(dest, FitsCard(item)::FitsCard)
     end
     return dest
 end

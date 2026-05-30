@@ -1,23 +1,32 @@
 # User visible changes in `FITSHeaders` package
 
-- In Julia ≥ 1.11, unexported documented methods `FITSHeaders.is_structural`,
+## Unreleased
+
+### Breaking changes
+
+- The call `merge!(hdr::FitsHeader,item)` with `item` a keyword-value pair or a FITS card is
+  not longer allowed, call `push!(hdr,item)`. This is to follow Julia conventions that
+  `push!` is to add an item to a collection while `merge!` is to merge two collections.
+
+### Added
+
+- In Julia ≥ 1.11, un-exported documented methods `FITSHeaders.is_structural`,
   `FITSHeaders.is_comment`, `FITSHeaders.is_naxis`, and `FITSHeaders.is_end` are marked as
   `public`.
 
-- The call `merge!(hdr,item)` with `hdr` a `FitsHeader` and `item` a keyword-value pair or
-  a FITS card is deprecated. Use `push!(hdr,item)`. This is to follow Julia conventions
-  that `push!` is to add an item to a collection while `merge!` is to merge two
-  collections.
+- FITS header constructors are more flexible in accepted arguments. It is possible to mix
+  FITS cards, pairs, keywords, or iterable of these.
 
-# Version 0.4.2
+
+## Version 0.4.2
 
 - Lowercase letters are allowed in `HIERARCH` tokens.
 
-# Version 0.4.1
+## Version 0.4.1
 
 - Update compatibility for `TypeUtils`.
 
-# Version 0.4.0
+## Version 0.4.0
 
 - Package renamed as `FITSHeaders`.
 
@@ -29,7 +38,7 @@
 
 - Logical value stored as an integer in `FitsCard`. This is an internal change.
 
-# Version 0.3.11
+## Version 0.3.11
 
 - Update doc.
 

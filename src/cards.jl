@@ -147,9 +147,10 @@ struct FitsCard
             UNDEF_INTEGER, UNDEF_COMPLEX, UNDEF_STRING, name, com)
 end
 
-# Constructor for imutable type does not need to return a new object.
+# Constructor for immutable type does not need to return a new object.
 FitsCard(A::FitsCard) = A
-Base.convert(::Type{T}, A::FitsCard) where {T<:FitsCard} = A
+Base.convert(::Type{T}, x::T) where {T<:FitsCard} = x
+Base.convert(::Type{T}, x) where {T<:FitsCard} = T(x)::T
 
 """
     FitsCard(buf; offset=0)
@@ -301,13 +302,13 @@ Base.show(io::IO, mime::MIME"text/plain", A::FitsCardValue) = show(io, mime, A()
 
 # General conversion rules.
 Base.convert(::Type{T}, A::FitsCardValue) where {T<:FitsCardValue} = A
-Base.convert(::Type{T}, A::FitsCardValue) where {T} = A(T)
+Base.convert(::Type{T}, A::FitsCardValue) where {T} = A(T)::T
 
-# Explict conversion rules are to avoid ambiguities.
-Base.convert(::Type{T}, A::FitsCardValue) where {T<:Number} = A(T)
+# Explicit conversion rules are to avoid ambiguities.
+Base.convert(::Type{T}, A::FitsCardValue) where {T<:Number} = A(T)::T
 for T in (Integer, Real, AbstractFloat, Complex,
           AbstractString, String, Nothing, Undef)
-    @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)
+    @eval Base.convert(::Type{$T}, A::FitsCardValue) = A($T)::$T
 end
 
 # `apply(f, A, B)` apply binary operator `f` to `A` and `B` at least one being a card
@@ -513,8 +514,7 @@ Base.valtype(t::FitsCardType) =
     throw(ArgumentError("unexpected FITS card type"))
 
 # FITS cards can be specified as pairs and conversely.
-Base.convert(::Type{T}, A::FitsCard) where {T<:Pair} = T(A)
-Base.convert(::Type{T}, pair::Pair) where {T<:FitsCard} = T(pair)
+Base.convert(::Type{T}, A::FitsCard) where {T<:Pair} = T(A)::T
 Base.Pair(A::FitsCard) = Pair(A.name, (A.value(), A.comment))
 Base.Pair{K}(A::FitsCard) where {K} = Pair(as(K, A.name), (A.value(), A.comment))
 Base.Pair{K,V}(A::FitsCard) where {K,V} = Pair(as(K, A.name), as(V, (A.value(), A.comment)))
