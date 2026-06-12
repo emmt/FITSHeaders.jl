@@ -17,7 +17,7 @@ FITSHeadersMappedBuffersExt = ["MappedBuffers"]
 [compat]
 Compat = "2, 3, 4"
 MappedBuffers = "0.1"
-TypeUtils = "0.2, 0.3, 1"
+TypeUtils = "0.2, 0.3, 1, 2"
 julia = "1"
 
 [extras]

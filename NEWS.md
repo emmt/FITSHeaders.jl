@@ -17,6 +17,9 @@
 - FITS header constructors are more flexible in accepted arguments. It is possible to mix
   FITS cards, pairs, keywords, or iterable of these.
 
+### Fixed
+
+- Bump compatibility for `TypeUtils` version 2.
 
 ## Version 0.4.2
 
