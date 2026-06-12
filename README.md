@@ -1,4 +1,8 @@
-# FITSHeaders [![Build Status](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml?query=branch%3Amain) [![Coverage](https://codecov.io/gh/emmt/FITSHeaders.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/FITSHeaders.jl)
+# FITSHeaders
+
+[![License](http://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat)](./LICENSE.md)
+[![Build Status](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/emmt/FITSHeaders.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/emmt/FITSHeaders.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/emmt/FITSHeaders.jl)
 
 `FITSHeaders` is a pure [Julia](https://julialang.org/) package for managing basic FITS
 structures such as FITS headers. [FITS (for *Flexible Image Transport
