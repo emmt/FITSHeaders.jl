@@ -1,6 +1,6 @@
 # User visible changes in `FITSHeaders` package
 
-## Unreleased
+## Version 0.5.0 [2026-06-12]
 
 ### Breaking changes
 
